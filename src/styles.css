@@ -1,0 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+.cio-checkout-root {
+  --cio-checkout-trigger-bg: #635bff;
+  --cio-checkout-trigger-color: #ffffff;
+  --cio-checkout-trigger-bg-hover: #4b45c6;
+
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+}

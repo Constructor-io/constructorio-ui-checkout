@@ -1,0 +1,31 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Dependency directories
+node_modules/
+
+# Coverage
+coverage
+*.lcov
+
+# Build output
+dist
+.output
+
+# dotenv
+.env
+.env.*
+!.env.example
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+.vite/
+
+# Storybook
+*storybook.log
+storybook-static
+
+.DS_Store

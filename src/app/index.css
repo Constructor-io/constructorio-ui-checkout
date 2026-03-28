@@ -1,0 +1,129 @@
+/* Trigger button */
+.cio-checkout-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  background-color: var(--cio-checkout-trigger-bg, #635bff);
+  color: var(--cio-checkout-trigger-color, #ffffff);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.cio-checkout-trigger:hover:not(:disabled) {
+  background-color: var(--cio-checkout-trigger-bg-hover, #4b45c6);
+}
+
+.cio-checkout-trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cio-checkout-trigger--custom {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+}
+
+.cio-checkout-trigger--custom:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Spinner */
+.cio-checkout-trigger__spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: cio-checkout-spin 0.6s linear infinite;
+}
+
+@keyframes cio-checkout-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error */
+.cio-checkout-error {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background-color: #fef2f2;
+  color: #dc2626;
+  font-size: 13px;
+  border: 1px solid #fecaca;
+}
+
+/* Overlay (dialog) */
+.cio-checkout-overlay {
+  border: none;
+  border-radius: 12px;
+  padding: 0;
+  max-width: 600px;
+  width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.cio-checkout-overlay::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.cio-checkout-overlay__content {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.cio-checkout-overlay__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.cio-checkout-overlay__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.cio-checkout-overlay__close {
+  all: unset;
+  cursor: pointer;
+  font-size: 24px;
+  color: #6b7280;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.cio-checkout-overlay__close:hover {
+  color: #1f2937;
+}
+
+.cio-checkout-overlay__body {
+  padding: 20px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 400px;
+}

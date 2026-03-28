@@ -1,0 +1,21 @@
+#storybook-root {
+  display: flex;
+  background-color: #fafafa;
+}
+
+#storybook-docs {
+  background-color: #fafafa;
+}
+
+.checkout-demo-wrapper {
+  height: 100%;
+  display: grid;
+  align-content: center;
+  width: 100%;
+}
+
+.checkout-demo-container {
+  height: 700px;
+  width: 80%;
+  margin: auto auto;
+}

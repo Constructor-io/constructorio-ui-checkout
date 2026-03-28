@@ -1,0 +1,103 @@
+{
+  "name": "@constructor-io/constructorio-ui-checkout",
+  "version": "0.1.0",
+  "description": "Constructor.io Stripe Embedded Checkout UI library for web applications",
+  "author": "Constructor.io Corporation",
+  "license": "MIT",
+  "homepage": "https://github.com/Constructor-io/constructorio-ui-checkout#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Constructor-io/constructorio-ui-checkout.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Constructor-io/constructorio-ui-checkout/issues"
+  },
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.es.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.cjs.js"
+    },
+    "./style.css": "./dist/styles.css",
+    "./constructorio-ui-checkout-standalone": {
+      "import": "./dist/standalone/constructorio-ui-checkout.standalone.js",
+      "require": "./dist/standalone/constructorio-ui-checkout.standalone.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "dist/styles.css"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build:lib": "vite build --config vite.lib.config.ts",
+    "build:standalone": "vite build --config vite.standalone.config.ts",
+    "build:types": "tsc -p tsconfig.build.json --emitDeclarationOnly",
+    "build": "npm run build:lib && npm run build:standalone && npm run build:types",
+    "lint": "eslint src stories .storybook",
+    "lint:fix": "eslint src stories --fix",
+    "check-types": "tsc -p tsconfig.json --noEmit",
+    "prepare": "husky",
+    "storybook": "storybook dev -p 6008",
+    "build-storybook": "storybook build",
+    "storybook-docs-dev": "storybook dev --docs -p 6009"
+  },
+  "peerDependencies": {
+    "@stripe/stripe-js": ">=2.0.0",
+    "@stripe/react-stripe-js": ">=2.0.0",
+    "react": ">=16.12.0",
+    "react-dom": ">=16.12.0"
+  },
+  "devDependencies": {
+    "@chromatic-com/storybook": "^3.2.5",
+    "@cspell/eslint-plugin": "^9.6.4",
+    "@storybook/addon-a11y": "^8.6.4",
+    "@storybook/addon-docs": "^8.6.4",
+    "@storybook/addon-essentials": "^8.6.4",
+    "@storybook/addon-interactions": "^8.6.4",
+    "@storybook/addon-onboarding": "^8.6.4",
+    "@storybook/blocks": "^8.6.4",
+    "@storybook/react": "^8.6.4",
+    "@storybook/react-vite": "^8.6.4",
+    "@storybook/test": "^8.6.4",
+    "@stripe/react-stripe-js": "^3.5.0",
+    "@stripe/stripe-js": "^5.5.0",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.39.3",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-prettier": "^5.2.3",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^4.3.0",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "eslint-plugin-storybook": "^0.11.4",
+    "globals": "^16.0.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.4.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "storybook": "^8.6.4",
+    "tslib": "^2.8.1",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.26.1",
+    "vite": "^6.3.5",
+    "vite-plugin-css-injected-by-js": "^3.5.2"
+  },
+  "volta": {
+    "node": "22.18.0",
+    "npm": "10.9.3"
+  }
+}

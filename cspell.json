@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "constructorio",
+    "cio",
+    "CIOCheckout",
+    "autodocs",
+    "publishable",
+    "Klarna",
+    "Bancontact"
+  ],
+  "flagWords": [],
+  "ignorePaths": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "*.log",
+    "package-lock.json"
+  ],
+  "dictionaryDefinitions": [],
+  "dictionaries": ["typescript", "node", "npm", "html", "css", "softwareTerms"],
+  "ignoreRegExpList": ["/\\b\\d{4}-\\d{2}-\\d{2}\\b/", "/\\b[0-9a-f]{8,}\\b/"]
+}

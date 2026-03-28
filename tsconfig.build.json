@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist/types",
+    "rootDir": "./src",
+    "emitDeclarationOnly": true,
+    "declarationMap": false,
+    "removeComments": false,
+    "allowJs": false,
+    "types": [],
+    "paths": {
+      "@src/*": ["src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/*.stories.ts",
+    "**/*.stories.tsx",
+    "src/standalone.tsx",
+    "**/__tests__/**",
+    "**/__mocks__/**"
+  ]
+}

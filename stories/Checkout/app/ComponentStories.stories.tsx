@@ -22,10 +22,8 @@ type Story = StoryObj;
 // Demo session function — replace with a real backend call
 const demoSession = () =>
   Promise.resolve({
-    clientSecret:
-      'cs_test_SECRET_REPLACE_secret_1234567890abcdefg',
-    publishableKey:
-      'pk_test_REPLACE_1234567890abcdefg',
+    clientSecret: 'cs_test_SECRET_REPLACE_secret_1234567890abcdefg',
+    publishableKey: 'pk_test_REPLACE_1234567890abcdefg',
   });
 
 // ---------- Basic ----------

@@ -12,7 +12,6 @@ export { defaultTranslations, t } from './utils/translate';
 
 // Types
 export type { UseCheckoutSessionReturn } from './app/hooks/useCheckoutSession';
-export type { TranslationKey } from './utils/translate';
 export type {
   CheckoutCompleteEvent,
   CheckoutConfig,

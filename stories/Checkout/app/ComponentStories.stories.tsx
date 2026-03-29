@@ -82,18 +82,12 @@ export const SessionDirect: Story = {
 export const MultipleProducts: Story = {
   render: () => (
     <div style={{ display: 'flex', gap: 12 }}>
-      <CioCheckout
-        session={demoSession}
-        triggerLabel="Buy Rug Pad - $49.99"
-      />
+      <CioCheckout session={demoSession} triggerLabel="Buy Rug Pad - $49.99" />
       <CioCheckout
         session={demoSession}
         triggerLabel="Buy Area Rug - $199.99"
       />
-      <CioCheckout
-        session={demoSession}
-        triggerLabel="Buy Gripper - $12.99"
-      />
+      <CioCheckout session={demoSession} triggerLabel="Buy Gripper - $12.99" />
     </div>
   ),
 };
@@ -104,11 +98,7 @@ export const WithRegistry: Story = {
   render: () => {
     checkoutRegistry.register(demoSession);
 
-    return (
-      <CioCheckout
-        triggerLabel="Buy via Registry - $39.99"
-      />
-    );
+    return <CioCheckout triggerLabel="Buy via Registry - $39.99" />;
   },
 };
 

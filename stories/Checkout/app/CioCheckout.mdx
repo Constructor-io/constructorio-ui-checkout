@@ -6,9 +6,7 @@ import { Meta } from '@storybook/blocks';
 
 A React component that wraps Stripe's Embedded Checkout into a drop-in checkout experience with modal/inline display modes, fulfillment verification, and lifecycle callbacks.
 
----
-
-## Props
+### Props
 
 <table>
   <thead>
@@ -21,65 +19,118 @@ A React component that wraps Stripe's Embedded Checkout into a drop-in checkout 
   </thead>
   <tbody>
     <tr>
-      <td><code>session</code></td>
-      <td><code>CheckoutSessionResponse | () =&gt; Promise&lt;...&gt;</code></td>
+      <td>
+        <code>session</code>
+      </td>
+      <td>
+        <code>CheckoutSessionResponse | () =&gt; Promise&lt;...&gt;</code>
+      </td>
       <td>—</td>
-      <td>Stripe session credentials. See <a href="#session">Session</a></td>
+      <td>
+        Stripe session credentials. See <a href="#session">Session</a>
+      </td>
     </tr>
     <tr>
-      <td><code>callbacks</code></td>
-      <td><code>CioCheckoutCallbacks</code></td>
+      <td>
+        <code>callbacks</code>
+      </td>
+      <td>
+        <code>CioCheckoutCallbacks</code>
+      </td>
       <td>—</td>
-      <td>Lifecycle callbacks (<code>onComplete</code>, <code>onClose</code>, <code>onError</code>, <code>onFulfill</code>)</td>
+      <td>
+        Lifecycle callbacks (<code>onComplete</code>, <code>onClose</code>,{' '}
+        <code>onError</code>, <code>onFulfill</code>)
+      </td>
     </tr>
     <tr>
-      <td><code>trigger</code></td>
-      <td><code>React.ReactNode</code></td>
+      <td>
+        <code>trigger</code>
+      </td>
+      <td>
+        <code>React.ReactNode</code>
+      </td>
       <td>—</td>
       <td>Custom trigger element. Falls back to a default button</td>
     </tr>
     <tr>
-      <td><code>triggerLabel</code></td>
-      <td><code>string</code></td>
-      <td><code>Checkout</code></td>
+      <td>
+        <code>triggerLabel</code>
+      </td>
+      <td>
+        <code>string</code>
+      </td>
+      <td>
+        <code>Checkout</code>
+      </td>
       <td>Label for the default trigger button</td>
     </tr>
     <tr>
-      <td><code>triggerWhen</code></td>
-      <td><code>(state) =&gt; boolean</code></td>
+      <td>
+        <code>triggerWhen</code>
+      </td>
+      <td>
+        <code>(state) =&gt; boolean</code>
+      </td>
       <td>—</td>
       <td>Controls when the trigger is visible</td>
     </tr>
     <tr>
-      <td><code>triggerState</code></td>
-      <td><code>object</code></td>
+      <td>
+        <code>triggerState</code>
+      </td>
+      <td>
+        <code>object</code>
+      </td>
       <td>—</td>
-      <td>State passed to <code>triggerWhen</code></td>
+      <td>
+        State passed to <code>triggerWhen</code>
+      </td>
     </tr>
     <tr>
-      <td><code>displayMode</code></td>
-      <td><code>'modal' | 'inline'</code></td>
-      <td><code>'modal'</code></td>
+      <td>
+        <code>displayMode</code>
+      </td>
+      <td>
+        <code>'modal' | 'inline'</code>
+      </td>
+      <td>
+        <code>'modal'</code>
+      </td>
       <td>How the checkout UI is displayed</td>
     </tr>
     <tr>
-      <td><code>onShippingDetailsChange</code></td>
-      <td><code>(event) =&gt; Promise&lt;ResultAction&gt;</code></td>
+      <td>
+        <code>onShippingDetailsChange</code>
+      </td>
+      <td>
+        <code>(event) =&gt; Promise&lt;ResultAction&gt;</code>
+      </td>
       <td>—</td>
-      <td>Stripe callback for shipping changes. See <a href="#stripe-callbacks">Stripe Callbacks</a></td>
+      <td>
+        Stripe callback for shipping changes. See{' '}
+        <a href="#stripe-callbacks">Stripe Callbacks</a>
+      </td>
     </tr>
     <tr>
-      <td><code>onLineItemsChange</code></td>
-      <td><code>(event) =&gt; Promise&lt;ResultAction&gt;</code></td>
+      <td>
+        <code>onLineItemsChange</code>
+      </td>
+      <td>
+        <code>(event) =&gt; Promise&lt;ResultAction&gt;</code>
+      </td>
       <td>—</td>
-      <td>Stripe callback for line item changes. See <a href="#stripe-callbacks">Stripe Callbacks</a></td>
+      <td>
+        Stripe callback for line item changes. See{' '}
+        <a href="#stripe-callbacks">Stripe Callbacks</a>
+      </td>
     </tr>
   </tbody>
 </table>
 
 ---
 
-## Session
+### Session
 
 The `session` prop tells the component how to get the Stripe Checkout Session credentials
 (`clientSecret` and `publishableKey`). You can provide it in two ways:
@@ -151,22 +202,36 @@ const session = await stripe.checkout.sessions.create({
 <table>
   <thead>
     <tr>
-      <th><code>redirect_on_completion</code></th>
+      <th>
+        <code>redirect_on_completion</code>
+      </th>
       <th>Behavior</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td><code>'always'</code> (default)</td>
-      <td>Stripe redirects to <code>return_url</code> after payment</td>
+      <td>
+        <code>'always'</code> (default)
+      </td>
+      <td>
+        Stripe redirects to <code>return_url</code> after payment
+      </td>
     </tr>
     <tr>
-      <td><code>'if_required'</code></td>
-      <td>Redirects only for redirect-based payment methods (e.g. bank transfers)</td>
+      <td>
+        <code>'if_required'</code>
+      </td>
+      <td>
+        Redirects only for redirect-based payment methods (e.g. bank transfers)
+      </td>
     </tr>
     <tr>
-      <td><code>'never'</code></td>
-      <td>No redirect — fires the <code>onComplete</code> callback instead</td>
+      <td>
+        <code>'never'</code>
+      </td>
+      <td>
+        No redirect — fires the <code>onComplete</code> callback instead
+      </td>
     </tr>
   </tbody>
 </table>
@@ -176,7 +241,7 @@ payment methods, use `'if_required'` and provide a `return_url` as a fallback.
 
 ---
 
-## Branding & Appearance
+### Branding & Appearance
 
 Stripe Embedded Checkout does **not** support client-side theming or an `appearance` API.
 To brand the checkout UI, configure these settings in your **Stripe Dashboard** under
@@ -191,19 +256,27 @@ To brand the checkout UI, configure these settings in your **Stripe Dashboard** 
   </thead>
   <tbody>
     <tr>
-      <td><strong>Logo</strong></td>
+      <td>
+        <strong>Logo</strong>
+      </td>
       <td>Displayed at the top of the checkout form</td>
     </tr>
     <tr>
-      <td><strong>Icon</strong></td>
+      <td>
+        <strong>Icon</strong>
+      </td>
       <td>Small icon / favicon</td>
     </tr>
     <tr>
-      <td><strong>Brand color</strong></td>
+      <td>
+        <strong>Brand color</strong>
+      </td>
       <td>Applied to buttons and accent elements</td>
     </tr>
     <tr>
-      <td><strong>Accent color</strong></td>
+      <td>
+        <strong>Accent color</strong>
+      </td>
       <td>Used for links and highlights</td>
     </tr>
   </tbody>
@@ -219,7 +292,7 @@ are available.
 
 ---
 
-## Stripe Callbacks
+### Stripe Callbacks
 
 ### `onShippingDetailsChange`
 

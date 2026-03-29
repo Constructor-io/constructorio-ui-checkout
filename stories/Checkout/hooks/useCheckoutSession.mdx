@@ -10,9 +10,7 @@ A React hook that powers `CioCheckout` internally. It manages session resolution
 import { useCheckoutSession } from '@constructor-io/constructorio-ui-checkout';
 ```
 
----
-
-## Usage
+### Usage
 
 ```tsx
 import { useCheckoutSession } from '@constructor-io/constructorio-ui-checkout';
@@ -57,7 +55,7 @@ function CustomCheckout() {
 
 ---
 
-## Parameters
+### Parameters
 
 <table>
   <thead>
@@ -69,21 +67,37 @@ function CustomCheckout() {
   </thead>
   <tbody>
     <tr>
-      <td><code>props</code></td>
-      <td><code>CioCheckoutProps</code></td>
-      <td>The same props accepted by <code>CioCheckout</code> (<code>session</code>, <code>triggerWhen</code>, <code>triggerState</code>, etc.)</td>
+      <td>
+        <code>props</code>
+      </td>
+      <td>
+        <code>CioCheckoutProps</code>
+      </td>
+      <td>
+        The same props accepted by <code>CioCheckout</code> (
+        <code>session</code>, <code>triggerWhen</code>,{' '}
+        <code>triggerState</code>, etc.)
+      </td>
     </tr>
     <tr>
-      <td><code>callbacks</code></td>
-      <td><code>CioCheckoutCallbacks</code></td>
-      <td>Optional lifecycle callbacks (<code>onComplete</code>, <code>onClose</code>, <code>onError</code>, <code>onFulfill</code>, <code>onFulfillComplete</code>)</td>
+      <td>
+        <code>callbacks</code>
+      </td>
+      <td>
+        <code>CioCheckoutCallbacks</code>
+      </td>
+      <td>
+        Optional lifecycle callbacks (<code>onComplete</code>,{' '}
+        <code>onClose</code>, <code>onError</code>, <code>onFulfill</code>,{' '}
+        <code>onFulfillComplete</code>)
+      </td>
     </tr>
   </tbody>
 </table>
 
 ---
 
-## Return value
+### Return value
 
 <table>
   <thead>
@@ -95,58 +109,120 @@ function CustomCheckout() {
   </thead>
   <tbody>
     <tr>
-      <td><code>isOpen</code></td>
-      <td><code>boolean</code></td>
+      <td>
+        <code>isOpen</code>
+      </td>
+      <td>
+        <code>boolean</code>
+      </td>
       <td>Whether the checkout UI should be shown</td>
     </tr>
     <tr>
-      <td><code>isLoading</code></td>
-      <td><code>boolean</code></td>
-      <td><code>true</code> while the session is being resolved</td>
+      <td>
+        <code>isLoading</code>
+      </td>
+      <td>
+        <code>boolean</code>
+      </td>
+      <td>
+        <code>true</code> while the session is being resolved
+      </td>
     </tr>
     <tr>
-      <td><code>session</code></td>
-      <td><code>CheckoutSessionResponse | null</code></td>
-      <td>Resolved session containing <code>clientSecret</code> and <code>publishableKey</code></td>
+      <td>
+        <code>session</code>
+      </td>
+      <td>
+        <code>CheckoutSessionResponse | null</code>
+      </td>
+      <td>
+        Resolved session containing <code>clientSecret</code> and{' '}
+        <code>publishableKey</code>
+      </td>
     </tr>
     <tr>
-      <td><code>error</code></td>
-      <td><code>Error | null</code></td>
+      <td>
+        <code>error</code>
+      </td>
+      <td>
+        <code>Error | null</code>
+      </td>
       <td>Error from session resolution or payment</td>
     </tr>
     <tr>
-      <td><code>fulfillmentStatus</code></td>
-      <td><code>'idle' | 'pending' | 'fulfilled' | 'failed'</code></td>
+      <td>
+        <code>fulfillmentStatus</code>
+      </td>
+      <td>
+        <code>'idle' | 'pending' | 'fulfilled' | 'failed'</code>
+      </td>
       <td>Current state of the fulfillment verification flow</td>
     </tr>
     <tr>
-      <td><code>fulfillmentResult</code></td>
-      <td><code>FulfillmentResult | null</code></td>
-      <td>Result from the <code>onFulfill</code> callback (<code>success</code> and optional <code>message</code>)</td>
+      <td>
+        <code>fulfillmentResult</code>
+      </td>
+      <td>
+        <code>FulfillmentResult | null</code>
+      </td>
+      <td>
+        Result from the <code>onFulfill</code> callback (<code>success</code>{' '}
+        and optional <code>message</code>)
+      </td>
     </tr>
     <tr>
-      <td><code>openCheckout</code></td>
-      <td><code>() =&gt; void</code></td>
-      <td>Resolves the session and opens the checkout. Respects <code>triggerWhen</code>.</td>
+      <td>
+        <code>openCheckout</code>
+      </td>
+      <td>
+        <code>() =&gt; void</code>
+      </td>
+      <td>
+        Resolves the session and opens the checkout. Respects{' '}
+        <code>triggerWhen</code>.
+      </td>
     </tr>
     <tr>
-      <td><code>closeCheckout</code></td>
-      <td><code>() =&gt; void</code></td>
-      <td>Closes the checkout and fires <code>onClose</code></td>
+      <td>
+        <code>closeCheckout</code>
+      </td>
+      <td>
+        <code>() =&gt; void</code>
+      </td>
+      <td>
+        Closes the checkout and fires <code>onClose</code>
+      </td>
     </tr>
     <tr>
-      <td><code>handleComplete</code></td>
-      <td><code>() =&gt; void</code></td>
-      <td>Call when Stripe reports payment complete. Fires <code>onComplete</code> and starts fulfillment if <code>onFulfill</code> is provided.</td>
+      <td>
+        <code>handleComplete</code>
+      </td>
+      <td>
+        <code>() =&gt; void</code>
+      </td>
+      <td>
+        Call when Stripe reports payment complete. Fires <code>onComplete</code>{' '}
+        and starts fulfillment if <code>onFulfill</code> is provided.
+      </td>
     </tr>
     <tr>
-      <td><code>retryFulfillment</code></td>
-      <td><code>() =&gt; void</code></td>
-      <td>Re-runs the <code>onFulfill</code> callback with the last complete event</td>
+      <td>
+        <code>retryFulfillment</code>
+      </td>
+      <td>
+        <code>() =&gt; void</code>
+      </td>
+      <td>
+        Re-runs the <code>onFulfill</code> callback with the last complete event
+      </td>
     </tr>
     <tr>
-      <td><code>reset</code></td>
-      <td><code>() =&gt; void</code></td>
+      <td>
+        <code>reset</code>
+      </td>
+      <td>
+        <code>() =&gt; void</code>
+      </td>
       <td>Resets all state back to initial values</td>
     </tr>
   </tbody>

@@ -18,7 +18,7 @@ describe('CheckoutInline: server', () => {
 
   it('renders the checkout form container', () => {
     const view = renderToString(<CheckoutInline onCancel={onCancel} />);
-    expect(view).toContain('cio-checkout-inline__body');
+    expect(view).toContain('cio-checkout-inline-body');
     expect(view).toContain('cio-checkout-form');
   });
 });

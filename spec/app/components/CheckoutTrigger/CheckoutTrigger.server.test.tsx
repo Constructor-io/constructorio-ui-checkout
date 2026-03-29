@@ -23,7 +23,7 @@ describe('CheckoutTrigger: server', () => {
   it('renders loading state', () => {
     const view = renderToString(<CheckoutTrigger onClick={noop} isLoading />);
     expect(view).toContain('Loading...');
-    expect(view).toContain('cio-checkout-trigger__spinner');
+    expect(view).toContain('cio-checkout-trigger-spinner');
   });
 
   it('renders a custom child element', () => {
@@ -42,6 +42,6 @@ describe('CheckoutTrigger: server', () => {
       </CheckoutTrigger>
     );
     expect(view).toContain('Plain text trigger');
-    expect(view).toContain('cio-checkout-trigger--custom');
+    expect(view).toContain('cio-checkout-trigger-custom');
   });
 });

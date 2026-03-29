@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import { Button } from '@constructor-io/constructorio-ui-components';
 
+import type { Translations } from '@src/types';
+import { t } from '@src/utils';
+
 import CheckoutForm from './CheckoutForm';
 
 function CloseIcon() {
@@ -24,11 +27,13 @@ function CloseIcon() {
 interface CheckoutOverlayProps {
   isOpen: boolean;
   onClose: () => void;
+  translations?: Translations;
 }
 
 export default function CheckoutOverlay({
   isOpen,
   onClose,
+  translations,
 }: CheckoutOverlayProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -73,22 +78,23 @@ export default function CheckoutOverlay({
       ref={dialogRef}
       className="cio-checkout-overlay"
       onKeyDown={handleKeyDown}
-      aria-label="Checkout"
+      aria-label={t(translations, 'CioCheckout.checkout.title')}
     >
-      <div className="cio-checkout-overlay__content">
-        <div className="cio-checkout-overlay__header">
-          <h2 className="cio-checkout-overlay__title">Checkout</h2>
+      <div className="cio-checkout-overlay-content">
+        <div className="cio-checkout-overlay-header">
+          <h2 className="cio-checkout-overlay-title">
+            {t(translations, 'CioCheckout.checkout.title')}
+          </h2>
           <Button
             variant="ghost"
             size="icon"
-            className="cio-checkout-overlay__close"
             onClick={onClose}
-            aria-label="Close checkout"
+            aria-label={t(translations, 'CioCheckout.checkout.closeLabel')}
           >
             <CloseIcon />
           </Button>
         </div>
-        <div className="cio-checkout-overlay__body">
+        <div className="cio-checkout-overlay-body">
           <CheckoutForm />
         </div>
       </div>

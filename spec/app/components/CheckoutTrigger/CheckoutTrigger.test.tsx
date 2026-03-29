@@ -82,7 +82,7 @@ describe('CheckoutTrigger', () => {
     );
 
     const btn = screen.getByRole('button', { name: 'Checkout' });
-    expect(btn).toHaveClass('cio-checkout-trigger--custom');
+    expect(btn).toHaveClass('cio-checkout-trigger-custom');
     await user.click(btn);
     expect(onClick).toHaveBeenCalledTimes(1);
   });

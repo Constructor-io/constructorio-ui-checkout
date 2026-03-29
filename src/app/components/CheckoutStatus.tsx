@@ -1,6 +1,11 @@
 import { Button } from '@constructor-io/constructorio-ui-components';
 
-import type { FulfillmentResult, FulfillmentStatus } from '@src/types';
+import type {
+  FulfillmentResult,
+  FulfillmentStatus,
+  Translations,
+} from '@src/types';
+import { t } from '@src/utils';
 
 function CheckIcon() {
   return (
@@ -50,6 +55,7 @@ interface CheckoutStatusProps {
   fulfillmentResult: FulfillmentResult | null;
   onRetry: () => void;
   onDismiss: () => void;
+  translations?: Translations;
 }
 
 export default function CheckoutStatus({
@@ -57,56 +63,62 @@ export default function CheckoutStatus({
   fulfillmentResult,
   onRetry,
   onDismiss,
+  translations,
 }: CheckoutStatusProps) {
   if (fulfillmentStatus === 'idle') return null;
 
   return (
     <div className="cio-checkout-status" role="status">
       {fulfillmentStatus === 'pending' && (
-        <div className="cio-checkout-status__pending">
-          <span className="cio-checkout-status__spinner" aria-hidden="true" />
-          <p className="cio-checkout-status__message">
-            Verifying your order...
+        <div className="cio-checkout-status-pending">
+          <span className="cio-checkout-status-spinner" aria-hidden="true" />
+          <p className="cio-checkout-status-message">
+            {t(translations, 'CioCheckout.checkout.fulfillmentPending')}
           </p>
         </div>
       )}
 
       {fulfillmentStatus === 'fulfilled' && (
-        <div className="cio-checkout-status__fulfilled">
+        <div className="cio-checkout-status-fulfilled">
           <CheckIcon />
-          <h3 className="cio-checkout-status__title">Order Confirmed</h3>
+          <h3 className="cio-checkout-status-title">
+            {t(translations, 'CioCheckout.checkout.fulfillmentSuccess')}
+          </h3>
           {fulfillmentResult?.message && (
-            <p className="cio-checkout-status__message">
+            <p className="cio-checkout-status-message">
               {fulfillmentResult.message}
             </p>
           )}
-          <Button className="cio-checkout-status__dismiss" onClick={onDismiss}>
-            Done
+          <Button className="cio-checkout-status-dismiss" onClick={onDismiss}>
+            {t(translations, 'CioCheckout.checkout.fulfillmentDismissLabel')}
           </Button>
         </div>
       )}
 
       {fulfillmentStatus === 'failed' && (
-        <div className="cio-checkout-status__failed">
+        <div className="cio-checkout-status-failed">
           <ErrorIcon />
-          <h3 className="cio-checkout-status__title">Verification Failed</h3>
+          <h3 className="cio-checkout-status-title">
+            {t(translations, 'CioCheckout.checkout.fulfillmentFailure')}
+          </h3>
           {fulfillmentResult?.message && (
-            <p className="cio-checkout-status__message">
+            <p className="cio-checkout-status-message">
               {fulfillmentResult.message}
             </p>
           )}
-          <p className="cio-checkout-status__hint">
-            Your payment was processed. Please contact support if the issue
-            persists.
+          <p className="cio-checkout-status-hint">
+            {t(translations, 'CioCheckout.checkout.fulfillmentFailureHint')}
           </p>
-          <div className="cio-checkout-status__actions">
-            <Button onClick={onRetry}>Retry</Button>
+          <div className="cio-checkout-status-actions">
+            <Button onClick={onRetry}>
+              {t(translations, 'CioCheckout.checkout.fulfillmentRetryLabel')}
+            </Button>
             <Button
               variant="outline"
-              className="cio-checkout-status__dismiss"
+              className="cio-checkout-status-dismiss"
               onClick={onDismiss}
             >
-              Dismiss
+              {t(translations, 'CioCheckout.checkout.fulfillmentDismissLabel')}
             </Button>
           </div>
         </div>

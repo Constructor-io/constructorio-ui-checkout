@@ -24,6 +24,7 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
       triggerWhen,
       triggerState,
       displayMode = 'modal',
+      translations,
       onShippingDetailsChange,
       onLineItemsChange,
     } = props;
@@ -74,6 +75,7 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
             onClick={openCheckout}
             isLoading={isLoading}
             label={triggerLabel}
+            translations={translations}
           >
             {trigger}
           </CheckoutTrigger>
@@ -91,9 +93,16 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
             options={embeddedOptions}
           >
             {isInline ? (
-              <CheckoutInline onCancel={closeCheckout} />
+              <CheckoutInline
+                onCancel={closeCheckout}
+                translations={translations}
+              />
             ) : (
-              <CheckoutOverlay isOpen={isOpen} onClose={closeCheckout} />
+              <CheckoutOverlay
+                isOpen={isOpen}
+                onClose={closeCheckout}
+                translations={translations}
+              />
             )}
           </EmbeddedCheckoutProvider>
         )}
@@ -104,6 +113,7 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
             fulfillmentResult={fulfillmentResult}
             onRetry={retryFulfillment}
             onDismiss={reset}
+            translations={translations}
           />
         )}
       </div>

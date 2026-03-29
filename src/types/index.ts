@@ -4,6 +4,20 @@ import type {
   StripeEmbeddedCheckoutShippingDetailsChangeEvent,
 } from '@stripe/stripe-js';
 
+export interface Translations {
+  'CioCheckout.checkout.title'?: string;
+  'CioCheckout.checkout.cancelLabel'?: string;
+  'CioCheckout.checkout.closeLabel'?: string;
+  'CioCheckout.checkout.buttonLabel'?: string;
+  'CioCheckout.checkout.buttonLoadingLabel'?: string;
+  'CioCheckout.checkout.fulfillmentPending'?: string;
+  'CioCheckout.checkout.fulfillmentSuccess'?: string;
+  'CioCheckout.checkout.fulfillmentFailure'?: string;
+  'CioCheckout.checkout.fulfillmentFailureHint'?: string;
+  'CioCheckout.checkout.fulfillmentDismissLabel'?: string;
+  'CioCheckout.checkout.fulfillmentRetryLabel'?: string;
+}
+
 /**
  * Represents an item for checkout.
  */
@@ -173,4 +187,7 @@ export interface CioCheckoutProps<
    * - `'inline'`: renders directly in the page with a cancel button
    */
   displayMode?: 'modal' | 'inline';
+
+  /** Custom translations for UI text. Keys correspond to i18n IDs used in the component. */
+  translations?: Translations;
 }

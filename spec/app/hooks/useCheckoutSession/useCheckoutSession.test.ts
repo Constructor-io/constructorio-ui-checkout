@@ -184,7 +184,9 @@ describe(`${useCheckoutSession.name}: client`, () => {
       expect(result.current.error).toBeInstanceOf(Error);
     });
     expect(result.current.error?.message).toBe('string error');
-    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'string error' }) as Error);
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'string error' }) as Error
+    );
   });
 
   it('calls onClose when closing checkout', async () => {

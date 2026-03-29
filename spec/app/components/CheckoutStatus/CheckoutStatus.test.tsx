@@ -86,7 +86,7 @@ describe('CheckoutStatus', () => {
   it('calls onDismiss when Dismiss button is clicked in failed state', async () => {
     const user = userEvent.setup();
     renderStatus('failed', { success: false });
-    await user.click(screen.getByText('Dismiss'));
+    await user.click(screen.getAllByText('Done')[0]);
     expect(defaultProps.onDismiss).toHaveBeenCalledTimes(1);
   });
 });

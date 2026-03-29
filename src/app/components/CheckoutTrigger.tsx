@@ -2,19 +2,30 @@ import { cloneElement, isValidElement } from 'react';
 
 import { Button } from '@constructor-io/constructorio-ui-components';
 
+import type { Translations } from '@src/types';
+import { t } from '@src/utils';
+
 interface CheckoutTriggerProps {
   onClick: () => void;
   isLoading: boolean;
   label?: string;
   children?: React.ReactNode;
+  translations?: Translations;
 }
 
 export default function CheckoutTrigger({
   onClick,
   isLoading,
-  label = 'Checkout',
+  label,
   children,
+  translations,
 }: CheckoutTriggerProps) {
+  const buttonLabel =
+    label ?? t(translations, 'CioCheckout.checkout.buttonLabel');
+  const loadingLabel = t(
+    translations,
+    'CioCheckout.checkout.buttonLoadingLabel'
+  );
   if (children) {
     if (isValidElement(children)) {
       return cloneElement(
@@ -22,17 +33,17 @@ export default function CheckoutTrigger({
         {
           onClick,
           disabled: isLoading,
-          'aria-label': label,
+          'aria-label': buttonLabel,
         }
       );
     }
 
     return (
       <Button
-        className="cio-checkout-trigger cio-checkout-trigger--custom"
+        className="cio-checkout-trigger cio-checkout-trigger-custom"
         onClick={onClick}
         disabled={isLoading}
-        aria-label={label}
+        aria-label={buttonLabel}
       >
         {children}
       </Button>
@@ -46,9 +57,9 @@ export default function CheckoutTrigger({
       disabled={isLoading}
     >
       {isLoading ? (
-        <span className="cio-checkout-trigger__spinner" aria-hidden="true" />
+        <span className="cio-checkout-trigger-spinner" aria-hidden="true" />
       ) : null}
-      {isLoading ? 'Loading...' : label}
+      {isLoading ? loadingLabel : buttonLabel}
     </Button>
   );
 }

@@ -12,10 +12,13 @@ export type { UseCheckoutSessionReturn } from './app/hooks/useCheckoutSession';
 export type {
   CheckoutCompleteEvent,
   CheckoutConfig,
+  CheckoutFulfillmentEvent,
   CheckoutItem,
   CheckoutSession,
   CheckoutSessionResponse,
   CioCheckoutCallbacks,
   CioCheckoutHandle,
   CioCheckoutProps,
+  FulfillmentResult,
+  FulfillmentStatus,
 } from './types';

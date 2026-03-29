@@ -1,12 +1,15 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import checkoutRegistry from '@src/registry/CheckoutRegistry';
 import type {
+  CheckoutCompleteEvent,
   CheckoutItem,
   CheckoutSession,
   CheckoutSessionResponse,
   CioCheckoutCallbacks,
   CioCheckoutProps,
+  FulfillmentResult,
+  FulfillmentStatus,
 } from '@src/types';
 
 export interface UseCheckoutSessionReturn {
@@ -14,9 +17,12 @@ export interface UseCheckoutSessionReturn {
   isLoading: boolean;
   session: CheckoutSessionResponse | null;
   error: Error | null;
+  fulfillmentStatus: FulfillmentStatus;
+  fulfillmentResult: FulfillmentResult | null;
   openCheckout: () => void;
   closeCheckout: () => void;
   handleComplete: () => void;
+  retryFulfillment: () => void;
   reset: () => void;
 }
 
@@ -74,6 +80,42 @@ export default function useCheckoutSession(
     CheckoutItem[] | undefined
   >(undefined);
   const [error, setError] = useState<Error | null>(null);
+  const [fulfillmentStatus, setFulfillmentStatus] =
+    useState<FulfillmentStatus>('idle');
+  const [fulfillmentResult, setFulfillmentResult] =
+    useState<FulfillmentResult | null>(null);
+
+  // Store the last complete event for retry
+  const lastCompleteEventRef = useRef<CheckoutCompleteEvent | null>(null);
+
+  const runFulfillment = useCallback(
+    (completeEvent: CheckoutCompleteEvent) => {
+      if (!callbacks?.onFulfill) return;
+
+      setFulfillmentStatus('pending');
+      setFulfillmentResult(null);
+
+      callbacks
+        .onFulfill(completeEvent)
+        .then((result) => {
+          setFulfillmentStatus(result.success ? 'fulfilled' : 'failed');
+          setFulfillmentResult(result);
+          callbacks.onFulfillComplete?.({ ...completeEvent, result });
+        })
+        .catch((err: unknown) => {
+          const message =
+            err instanceof Error ? err.message : 'Fulfillment failed';
+          const failResult: FulfillmentResult = { success: false, message };
+          setFulfillmentStatus('failed');
+          setFulfillmentResult(failResult);
+          callbacks.onFulfillComplete?.({
+            ...completeEvent,
+            result: failResult,
+          });
+        });
+    },
+    [callbacks]
+  );
 
   const openCheckout = useCallback(() => {
     if (triggerWhen && !triggerWhen(triggerState ?? {})) {
@@ -108,15 +150,36 @@ export default function useCheckoutSession(
 
   const handleComplete = useCallback(() => {
     if (sessionResponse) {
-      callbacks?.onComplete?.({
+      const completeEvent: CheckoutCompleteEvent = {
         sessionId: extractSessionId(sessionResponse.clientSecret),
         items: resolvedItems,
-      });
+      };
+
+      callbacks?.onComplete?.(completeEvent);
+      lastCompleteEventRef.current = completeEvent;
+
+      // If onFulfill is provided, transition to fulfillment phase
+      if (callbacks?.onFulfill) {
+        setIsOpen(false);
+        runFulfillment(completeEvent);
+      } else {
+        setIsOpen(false);
+        setSessionResponse(null);
+        setResolvedItems(undefined);
+      }
+    } else {
+      setIsOpen(false);
+      setSessionResponse(null);
+      setResolvedItems(undefined);
     }
-    setIsOpen(false);
-    setSessionResponse(null);
-    setResolvedItems(undefined);
-  }, [callbacks, resolvedItems, sessionResponse]);
+  }, [callbacks, resolvedItems, sessionResponse, runFulfillment]);
+
+  const retryFulfillment = useCallback(() => {
+    const event = lastCompleteEventRef.current;
+    if (event && callbacks?.onFulfill) {
+      runFulfillment(event);
+    }
+  }, [callbacks, runFulfillment]);
 
   const reset = useCallback(() => {
     setIsOpen(false);
@@ -124,6 +187,9 @@ export default function useCheckoutSession(
     setSessionResponse(null);
     setResolvedItems(undefined);
     setError(null);
+    setFulfillmentStatus('idle');
+    setFulfillmentResult(null);
+    lastCompleteEventRef.current = null;
   }, []);
 
   return {
@@ -131,9 +197,12 @@ export default function useCheckoutSession(
     isLoading,
     session: sessionResponse,
     error,
+    fulfillmentStatus,
+    fulfillmentResult,
     openCheckout,
     closeCheckout,
     handleComplete,
+    retryFulfillment,
     reset,
   };
 }

@@ -120,6 +120,67 @@
   min-height: 400px;
 }
 
-.App-Payment {
-  border: none;
+/* Status (post-payment fulfillment) */
+.cio-checkout-status {
+  margin-top: 8px;
+  padding: 24px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.cio-checkout-status__pending {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+}
+
+.cio-checkout-status__spinner {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #635bff;
+  border-radius: 50%;
+  animation: cio-checkout-spin 0.6s linear infinite;
+}
+
+.cio-checkout-status__fulfilled,
+.cio-checkout-status__failed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.cio-checkout-status__title {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.cio-checkout-status__message {
+  margin: 0;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.cio-checkout-status__hint {
+  margin: 0;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.cio-checkout-status__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cio-checkout-status__dismiss {
+  margin-top: 8px;
 }

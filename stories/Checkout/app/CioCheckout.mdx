@@ -1,0 +1,266 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Checkout/Overview" />
+
+# CioCheckout
+
+A React component that wraps Stripe's Embedded Checkout into a drop-in checkout experience with modal/inline display modes, fulfillment verification, and lifecycle callbacks.
+
+---
+
+## Props
+
+| Prop                      | Type                                                   | Default    | Description                                                                      |
+| ------------------------- | ------------------------------------------------------ | ---------- | -------------------------------------------------------------------------------- |
+| `items`                   | `CheckoutItem \| CheckoutItem[] \| () => Promise<...>` | —          | Items for display in the trigger. See [Items](#items)                            |
+| `session`                 | `CheckoutSessionResponse \| () => Promise<...>`        | —          | Stripe session credentials. See [Session](#session)                              |
+| `callbacks`               | `CioCheckoutCallbacks`                                 | —          | Lifecycle callbacks (`onComplete`, `onClose`, `onError`, `onFulfill`)            |
+| `trigger`                 | `React.ReactNode`                                      | —          | Custom trigger element. Falls back to a default button                           |
+| `triggerLabel`            | `string`                                               | `Checkout` | Label for the default trigger button                                             |
+| `triggerWhen`             | `(state) => boolean`                                   | —          | Controls when the trigger is visible                                             |
+| `triggerState`            | `object`                                               | —          | State passed to `triggerWhen`                                                    |
+| `displayMode`             | `'modal' \| 'inline'`                                  | `'modal'`  | How the checkout UI is displayed                                                 |
+| `onShippingDetailsChange` | `(event) => Promise<ResultAction>`                     | —          | Stripe callback for shipping changes. See [Stripe Callbacks](#stripe-callbacks)  |
+| `onLineItemsChange`       | `(event) => Promise<ResultAction>`                     | —          | Stripe callback for line item changes. See [Stripe Callbacks](#stripe-callbacks) |
+
+---
+
+## Session
+
+The `session` prop tells the component how to get the Stripe Checkout Session credentials
+(`clientSecret` and `publishableKey`). You can provide it in two ways:
+
+### Direct object
+
+Pass the session response directly if you already have it:
+
+```tsx
+<CioCheckout
+  session={{
+    clientSecret: 'cs_test_...',
+    publishableKey: 'pk_test_...',
+  }}
+/>
+```
+
+### Async function
+
+Pass a function that fetches the session from your backend. The function is called
+when the customer clicks the checkout trigger:
+
+```tsx
+<CioCheckout
+  session={async () => {
+    const res = await fetch('/api/checkout-session', { method: 'POST' });
+    return res.json(); // must return { clientSecret, publishableKey }
+  }}
+/>
+```
+
+### Registry pattern
+
+For non-React or multi-library setups, you can register a session globally once
+and omit the `session` prop entirely:
+
+```ts
+import { checkoutRegistry } from '@constructor-io/constructorio-ui-checkout';
+
+checkoutRegistry.register(async () => {
+  const res = await fetch('/api/checkout-session', { method: 'POST' });
+  return res.json();
+});
+```
+
+```tsx
+// No session prop needed — picks it up from the registry
+<CioCheckout items={{ name: 'Rug Pad', amount: 49.99 }} />
+```
+
+### Disabling the redirect after payment
+
+By default, Stripe redirects the customer to a `return_url` after payment completes. This library
+is designed to handle completion in-place (closing the modal/inline checkout, running fulfillment
+verification, etc.) using the `onComplete` callback — so you should **disable the redirect** when
+creating the Checkout Session on your backend:
+
+```js
+// On your backend
+const session = await stripe.checkout.sessions.create({
+  ui_mode: 'embedded',
+  redirect_on_completion: 'never', // prevents redirect, fires onComplete instead
+  // return_url: '...',            // remove this if present
+  line_items: [{ price: 'price_...', quantity: 1 }],
+  mode: 'payment',
+});
+```
+
+| `redirect_on_completion` | Behavior                                                                |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `'always'` (default)     | Stripe redirects to `return_url` after payment                          |
+| `'if_required'`          | Redirects only for redirect-based payment methods (e.g. bank transfers) |
+| `'never'`                | No redirect — fires the `onComplete` callback instead                   |
+
+Use `'never'` for the best experience with this library. If you need to support redirect-based
+payment methods, use `'if_required'` and provide a `return_url` as a fallback.
+
+---
+
+## Items
+
+The `items` prop is used for **display purposes** in the checkout trigger (e.g. showing what
+the customer is buying and the total). The actual line items and pricing are determined by the
+Checkout Session created on your backend.
+
+You can provide items in three ways:
+
+### Single item
+
+```tsx
+<CioCheckout
+  items={{ name: 'Premium Rug Pad', amount: 49.99, currencySign: '$' }}
+  session={mySession}
+/>
+```
+
+### Array of items
+
+```tsx
+<CioCheckout
+  items={[
+    { name: 'Premium Rug Pad', amount: 49.99, quantity: 1 },
+    { name: 'Wool Area Rug 5x8', amount: 199.99, quantity: 1 },
+    { name: 'Rug Gripper Tape', amount: 12.99, quantity: 2 },
+  ]}
+  session={mySession}
+/>
+```
+
+### Async function
+
+Useful when items need to be fetched (e.g. from a cart API):
+
+```tsx
+<CioCheckout
+  items={async () => {
+    const res = await fetch('/api/cart');
+    const cart = await res.json();
+    return cart.items; // single item or array
+  }}
+  session={mySession}
+/>
+```
+
+### Item properties
+
+| Property       | Type     | Required | Description                                                 |
+| -------------- | -------- | -------- | ----------------------------------------------------------- |
+| `name`         | `string` | Yes      | Product name displayed in the trigger                       |
+| `amount`       | `number` | Yes      | Price as a float (e.g. `49.99`)                             |
+| `currencySign` | `string` | No       | Currency symbol (e.g. `'$'`, `'€'`). Defaults to none       |
+| `quantity`     | `number` | No       | Quantity. Defaults to `1`                                   |
+| `priceId`      | `string` | No       | Stripe Price ID. When provided, used instead of amount/name |
+| `imageUrl`     | `string` | No       | Image URL displayed in the trigger                          |
+
+> **Note:** Items are resolved (fetched if async) when the customer clicks the trigger.
+> They are passed through to the `onComplete` and `onFulfill` callbacks for reference,
+> but do not control what Stripe charges — that is determined by your backend Checkout Session.
+
+---
+
+## Branding & Appearance
+
+Stripe Embedded Checkout does **not** support client-side theming or an `appearance` API.
+To brand the checkout UI, configure these settings in your **Stripe Dashboard** under
+**Settings > Branding**:
+
+| Setting          | What it controls                          |
+| ---------------- | ----------------------------------------- |
+| **Logo**         | Displayed at the top of the checkout form |
+| **Icon**         | Small icon / favicon                      |
+| **Brand color**  | Applied to buttons and accent elements    |
+| **Accent color** | Used for links and highlights             |
+
+These settings apply **globally** to all Embedded Checkout sessions for your Stripe account.
+There is no per-session or per-component customization — no custom CSS, fonts, or layout overrides
+are available.
+
+> For full control over checkout styling, Stripe offers the **Payment Element API**
+> (using Payment Intents with `pi_` keys instead of Checkout Sessions), which supports the
+> `appearance` option. That is a different integration path and is not covered by this library.
+
+---
+
+## Stripe Callbacks
+
+### `onShippingDetailsChange`
+
+Called when the customer completes the shipping details form inside Stripe's checkout UI.
+
+**Prerequisite:** Your backend must create the Checkout Session with
+`permissions.update.shipping_details` set to `'server_only'`.
+
+```tsx
+<CioCheckout
+  session={mySession}
+  onShippingDetailsChange={async (event) => {
+    // event.checkoutSessionId — the Stripe session ID
+    // event.shippingDetails — { name, address: { country, line1, ... } }
+
+    const res = await fetch('/api/update-shipping', {
+      method: 'POST',
+      body: JSON.stringify({
+        sessionId: event.checkoutSessionId,
+        address: event.shippingDetails.address,
+      }),
+    });
+    const data = await res.json();
+
+    if (!data.ok) {
+      return { type: 'reject', errorMessage: data.reason };
+    }
+    return { type: 'accept' };
+  }}
+/>
+```
+
+### `onLineItemsChange`
+
+Called when the customer adds, removes, or modifies a line item inside Stripe's checkout UI.
+
+**Prerequisite:** Your backend must create the Checkout Session with
+`permissions.update.line_items` set to `'server_only'`.
+
+```tsx
+<CioCheckout
+  session={mySession}
+  onLineItemsChange={async (event) => {
+    // event.checkoutSessionId — the Stripe session ID
+    // event.lineItems — array of { id, quantity, price, ... }
+
+    const res = await fetch('/api/update-line-items', {
+      method: 'POST',
+      body: JSON.stringify({
+        sessionId: event.checkoutSessionId,
+        lineItems: event.lineItems,
+      }),
+    });
+    const data = await res.json();
+
+    if (!data.ok) {
+      return { type: 'reject', errorMessage: data.reason };
+    }
+    return { type: 'accept' };
+  }}
+/>
+```
+
+### How it works
+
+1. Your backend creates a Checkout Session with the relevant permission set to `'server_only'`
+2. The customer changes shipping details or line items in Stripe's UI
+3. Your callback fires client-side with the event data
+4. Inside the callback, you call your backend to recalculate (shipping options, totals, etc.)
+5. Your backend updates the Checkout Session via the Stripe API
+6. You return `{ type: 'accept' }` or `{ type: 'reject', errorMessage: '...' }` to Stripe
+
+See [Stripe docs: Custom Shipping Options](https://docs.stripe.com/payments/checkout/custom-shipping-options) for more details.

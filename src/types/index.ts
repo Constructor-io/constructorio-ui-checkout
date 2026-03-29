@@ -1,3 +1,9 @@
+import type {
+  ResultAction,
+  StripeEmbeddedCheckoutLineItemsChangeEvent,
+  StripeEmbeddedCheckoutShippingDetailsChangeEvent,
+} from '@stripe/stripe-js';
+
 /**
  * Represents an item for checkout.
  */
@@ -53,6 +59,22 @@ export interface CheckoutConfig {
     | (() => Promise<CheckoutItem | CheckoutItem[]>);
   /** How to get the checkout session — response object or function. Optional when using the registry. */
   session?: CheckoutSession;
+  /**
+   * Called when the customer completes the shipping details form.
+   * Required when `permissions.update.shipping_details` is set to `server_only` in the Checkout Session.
+   * @see https://docs.stripe.com/payments/checkout/custom-shipping-options
+   */
+  onShippingDetailsChange?: (
+    event: StripeEmbeddedCheckoutShippingDetailsChangeEvent
+  ) => Promise<ResultAction>;
+  /**
+   * Called when the customer adds, removes, or modifies a line item.
+   * Required when `permissions.update.line_items` is set to `server_only` in the Checkout Session.
+   * @see https://docs.stripe.com/api/checkout/sessions/create#create_checkout_session-permissions-update-line_items
+   */
+  onLineItemsChange?: (
+    event: StripeEmbeddedCheckoutLineItemsChangeEvent
+  ) => Promise<ResultAction>;
 }
 
 // ---------------------------------------------------------------------------
@@ -67,6 +89,31 @@ export interface CheckoutCompleteEvent {
 }
 
 // ---------------------------------------------------------------------------
+// Fulfillment
+// ---------------------------------------------------------------------------
+
+export type FulfillmentStatus = 'idle' | 'pending' | 'fulfilled' | 'failed';
+
+/**
+ * The result returned by the consumer's fulfillment verification function.
+ * At minimum indicates success/failure; optionally carries a message.
+ */
+export interface FulfillmentResult {
+  /** Whether fulfillment succeeded */
+  success: boolean;
+  /** Optional message to display (e.g. "Order #1234 confirmed", or an error reason) */
+  message?: string;
+}
+
+/**
+ * Event passed to the onFulfill callback.
+ */
+export interface CheckoutFulfillmentEvent extends CheckoutCompleteEvent {
+  /** The fulfillment result returned by the verify function */
+  result: FulfillmentResult;
+}
+
+// ---------------------------------------------------------------------------
 // Component props
 // ---------------------------------------------------------------------------
 
@@ -77,6 +124,22 @@ export interface CioCheckoutCallbacks {
   onClose?: () => void;
   /** Called when an error occurs during session creation or payment */
   onError?: (error: Error) => void;
+  /**
+   * Async function to verify fulfillment with your backend after payment completes.
+   * Receives the session ID and items; should return a FulfillmentResult.
+   *
+   * @example
+   * ```ts
+   * onFulfill: async ({ sessionId }) => {
+   *   const res = await fetch(`/api/checkout/${sessionId}/fulfill`);
+   *   const data = await res.json();
+   *   return { success: data.fulfilled, message: data.orderNumber };
+   * }
+   * ```
+   */
+  onFulfill?: (event: CheckoutCompleteEvent) => Promise<FulfillmentResult>;
+  /** Called when fulfillment verification completes (success or failure) */
+  onFulfillComplete?: (event: CheckoutFulfillmentEvent) => void;
 }
 
 // ---------------------------------------------------------------------------

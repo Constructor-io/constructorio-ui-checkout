@@ -7,6 +7,7 @@ import type { CioCheckoutHandle, CioCheckoutProps } from '@src/types';
 
 import CheckoutInline from './components/CheckoutInline';
 import CheckoutOverlay from './components/CheckoutOverlay';
+import CheckoutStatus from './components/CheckoutStatus';
 import CheckoutTrigger from './components/CheckoutTrigger';
 import useCheckoutSession from './hooks/useCheckoutSession';
 
@@ -23,6 +24,8 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
       triggerWhen,
       triggerState,
       displayMode = 'modal',
+      onShippingDetailsChange,
+      onLineItemsChange,
     } = props;
 
     const {
@@ -30,9 +33,12 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
       isLoading,
       session,
       error,
+      fulfillmentStatus,
+      fulfillmentResult,
       openCheckout,
       closeCheckout,
       handleComplete,
+      retryFulfillment,
       reset,
     } = useCheckoutSession(props, callbacks);
 
@@ -40,6 +46,7 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
 
     const showTrigger = triggerWhen ? triggerWhen(triggerState ?? {}) : true;
     const isInline = displayMode === 'inline';
+    const isFulfilling = fulfillmentStatus !== 'idle';
 
     const stripePromise = useMemo(
       () =>
@@ -50,14 +57,19 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
     const embeddedOptions = useMemo(
       () =>
         session
-          ? { clientSecret: session.clientSecret, onComplete: handleComplete }
+          ? {
+              clientSecret: session.clientSecret,
+              onComplete: handleComplete,
+              onShippingDetailsChange,
+              onLineItemsChange,
+            }
           : undefined,
-      [session, handleComplete]
+      [session, handleComplete, onShippingDetailsChange, onLineItemsChange]
     );
 
     return (
       <div className="cio-checkout-root">
-        {showTrigger && !(isInline && isOpen) && (
+        {showTrigger && !(isInline && isOpen) && !isFulfilling && (
           <CheckoutTrigger
             onClick={openCheckout}
             isLoading={isLoading}
@@ -84,6 +96,15 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
               <CheckoutOverlay isOpen={isOpen} onClose={closeCheckout} />
             )}
           </EmbeddedCheckoutProvider>
+        )}
+
+        {isFulfilling && (
+          <CheckoutStatus
+            fulfillmentStatus={fulfillmentStatus}
+            fulfillmentResult={fulfillmentResult}
+            onRetry={retryFulfillment}
+            onDismiss={reset}
+          />
         )}
       </div>
     );

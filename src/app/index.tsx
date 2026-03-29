@@ -25,6 +25,7 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
       triggerState,
       displayMode = 'modal',
       translations,
+      componentOverrides,
       onShippingDetailsChange,
       onLineItemsChange,
     } = props;
@@ -114,6 +115,7 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
             onRetry={retryFulfillment}
             onDismiss={reset}
             translations={translations}
+            componentOverride={componentOverrides?.checkoutStatus}
           />
         )}
       </div>

@@ -1,3 +1,4 @@
+import type { ComponentOverrideProps } from '@constructor-io/constructorio-ui-components';
 import type {
   ResultAction,
   StripeEmbeddedCheckoutLineItemsChangeEvent,
@@ -128,6 +129,22 @@ export interface CheckoutFulfillmentEvent extends CheckoutCompleteEvent {
 }
 
 // ---------------------------------------------------------------------------
+// Component overrides
+// ---------------------------------------------------------------------------
+
+export interface CheckoutStatusRenderProps {
+  fulfillmentStatus: FulfillmentStatus;
+  fulfillmentResult: FulfillmentResult | null;
+  onRetry: () => void;
+  onDismiss: () => void;
+  translations?: Translations;
+}
+
+export interface CioCheckoutComponentOverrides {
+  checkoutStatus?: ComponentOverrideProps<CheckoutStatusRenderProps>;
+}
+
+// ---------------------------------------------------------------------------
 // Component props
 // ---------------------------------------------------------------------------
 
@@ -190,4 +207,7 @@ export interface CioCheckoutProps<
 
   /** Custom translations for UI text. Keys correspond to i18n IDs used in the component. */
   translations?: Translations;
+
+  /** Override sub-components with custom render functions or React nodes */
+  componentOverrides?: CioCheckoutComponentOverrides;
 }

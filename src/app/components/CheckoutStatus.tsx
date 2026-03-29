@@ -1,6 +1,11 @@
-import { Button } from '@constructor-io/constructorio-ui-components';
+import type { ComponentOverrideProps } from '@constructor-io/constructorio-ui-components';
+import {
+  Button,
+  RenderPropsWrapper,
+} from '@constructor-io/constructorio-ui-components';
 
 import type {
+  CheckoutStatusRenderProps,
   FulfillmentResult,
   FulfillmentStatus,
   Translations,
@@ -56,6 +61,7 @@ interface CheckoutStatusProps {
   onRetry: () => void;
   onDismiss: () => void;
   translations?: Translations;
+  componentOverride?: ComponentOverrideProps<CheckoutStatusRenderProps>;
 }
 
 export default function CheckoutStatus({
@@ -64,65 +70,82 @@ export default function CheckoutStatus({
   onRetry,
   onDismiss,
   translations,
+  componentOverride,
 }: CheckoutStatusProps) {
   if (fulfillmentStatus === 'idle') return null;
 
+  const renderProps: CheckoutStatusRenderProps = {
+    fulfillmentStatus,
+    fulfillmentResult,
+    onRetry,
+    onDismiss,
+    translations,
+  };
+
   return (
-    <div className="cio-checkout-status" role="status">
-      {fulfillmentStatus === 'pending' && (
-        <div className="cio-checkout-status-pending">
-          <span className="cio-checkout-status-spinner" aria-hidden="true" />
-          <p className="cio-checkout-status-message">
-            {t(translations, 'CioCheckout.checkout.fulfillmentPending')}
-          </p>
-        </div>
-      )}
-
-      {fulfillmentStatus === 'fulfilled' && (
-        <div className="cio-checkout-status-fulfilled">
-          <CheckIcon />
-          <h3 className="cio-checkout-status-title">
-            {t(translations, 'CioCheckout.checkout.fulfillmentSuccess')}
-          </h3>
-          {fulfillmentResult?.message && (
+    <RenderPropsWrapper
+      props={renderProps}
+      override={componentOverride?.reactNode}
+    >
+      <div className="cio-checkout-status" role="status">
+        {fulfillmentStatus === 'pending' && (
+          <div className="cio-checkout-status-pending">
+            <span className="cio-checkout-status-spinner" aria-hidden="true" />
             <p className="cio-checkout-status-message">
-              {fulfillmentResult.message}
+              {t(translations, 'CioCheckout.checkout.fulfillmentPending')}
             </p>
-          )}
-          <Button className="cio-checkout-status-dismiss" onClick={onDismiss}>
-            {t(translations, 'CioCheckout.checkout.fulfillmentDismissLabel')}
-          </Button>
-        </div>
-      )}
+          </div>
+        )}
 
-      {fulfillmentStatus === 'failed' && (
-        <div className="cio-checkout-status-failed">
-          <ErrorIcon />
-          <h3 className="cio-checkout-status-title">
-            {t(translations, 'CioCheckout.checkout.fulfillmentFailure')}
-          </h3>
-          {fulfillmentResult?.message && (
-            <p className="cio-checkout-status-message">
-              {fulfillmentResult.message}
-            </p>
-          )}
-          <p className="cio-checkout-status-hint">
-            {t(translations, 'CioCheckout.checkout.fulfillmentFailureHint')}
-          </p>
-          <div className="cio-checkout-status-actions">
-            <Button onClick={onRetry}>
-              {t(translations, 'CioCheckout.checkout.fulfillmentRetryLabel')}
-            </Button>
-            <Button
-              variant="outline"
-              className="cio-checkout-status-dismiss"
-              onClick={onDismiss}
-            >
+        {fulfillmentStatus === 'fulfilled' && (
+          <div className="cio-checkout-status-fulfilled">
+            <CheckIcon />
+            <h3 className="cio-checkout-status-title">
+              {t(translations, 'CioCheckout.checkout.fulfillmentSuccess')}
+            </h3>
+            {fulfillmentResult?.message && (
+              <p className="cio-checkout-status-message">
+                {fulfillmentResult.message}
+              </p>
+            )}
+            <Button className="cio-checkout-status-dismiss" onClick={onDismiss}>
               {t(translations, 'CioCheckout.checkout.fulfillmentDismissLabel')}
             </Button>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {fulfillmentStatus === 'failed' && (
+          <div className="cio-checkout-status-failed">
+            <ErrorIcon />
+            <h3 className="cio-checkout-status-title">
+              {t(translations, 'CioCheckout.checkout.fulfillmentFailure')}
+            </h3>
+            {fulfillmentResult?.message && (
+              <p className="cio-checkout-status-message">
+                {fulfillmentResult.message}
+              </p>
+            )}
+            <p className="cio-checkout-status-hint">
+              {t(translations, 'CioCheckout.checkout.fulfillmentFailureHint')}
+            </p>
+            <div className="cio-checkout-status-actions">
+              <Button onClick={onRetry}>
+                {t(translations, 'CioCheckout.checkout.fulfillmentRetryLabel')}
+              </Button>
+              <Button
+                variant="outline"
+                className="cio-checkout-status-dismiss"
+                onClick={onDismiss}
+              >
+                {t(
+                  translations,
+                  'CioCheckout.checkout.fulfillmentDismissLabel'
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </RenderPropsWrapper>
   );
 }

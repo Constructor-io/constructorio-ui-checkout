@@ -28,14 +28,9 @@ const demoSession = () =>
       'pk_test_REPLACE_1234567890abcdefg',
   });
 
-// ---------- Single Item ----------
+// ---------- Basic ----------
 
-const singleItemProps: CioCheckoutProps = {
-  items: {
-    name: 'Premium Rug Pad',
-    amount: 49.99,
-    currencySign: '$',
-  },
+const basicProps: CioCheckoutProps = {
   session: demoSession,
   triggerLabel: 'Buy Now - $49.99',
   callbacks: {
@@ -48,41 +43,8 @@ const singleItemProps: CioCheckoutProps = {
   },
 };
 
-export const SingleItem: Story = {
-  render: () => <CioCheckout {...singleItemProps} />,
-};
-
-// ---------- Cart ----------
-
-const cartProps: CioCheckoutProps = {
-  items: [
-    { name: 'Premium Rug Pad', amount: 49.99, quantity: 1 },
-    { name: 'Wool Area Rug 5x8', amount: 199.99, quantity: 1 },
-    { name: 'Rug Gripper Tape', amount: 12.99, quantity: 2 },
-  ],
-  session: demoSession,
-  triggerLabel: 'Checkout Cart - $285.96',
-};
-
-export const Cart: Story = {
-  render: () => <CioCheckout {...cartProps} />,
-};
-
-// ---------- Dynamic items (function) ----------
-
-const dynamicItemsProps: CioCheckoutProps = {
-  items: async () => {
-    await new Promise((resolve) => {
-      setTimeout(resolve, 500);
-    });
-    return [{ name: 'Dynamically Fetched Item', amount: 25.0, quantity: 1 }];
-  },
-  session: demoSession,
-  triggerLabel: 'Checkout (Dynamic)',
-};
-
-export const DynamicItems: Story = {
-  render: () => <CioCheckout {...dynamicItemsProps} />,
+export const Basic: Story = {
+  render: () => <CioCheckout {...basicProps} />,
 };
 
 // ---------- Session function ----------
@@ -106,7 +68,6 @@ export const SessionFunction: Story = {
 export const SessionDirect: Story = {
   render: () => (
     <CioCheckout
-      items={{ name: 'Direct Session Item', amount: 9.99 }}
       session={{
         clientSecret: 'cs_test_REPLACE_ME',
         publishableKey: 'pk_test_REPLACE_ME',
@@ -116,23 +77,20 @@ export const SessionDirect: Story = {
   ),
 };
 
-// ---------- Multiple Items (each with its own session) ----------
+// ---------- Multiple Products (each with its own session) ----------
 
 export const MultipleProducts: Story = {
   render: () => (
     <div style={{ display: 'flex', gap: 12 }}>
       <CioCheckout
-        items={{ name: 'Rug Pad', amount: 49.99 }}
         session={demoSession}
         triggerLabel="Buy Rug Pad - $49.99"
       />
       <CioCheckout
-        items={{ name: 'Area Rug', amount: 199.99 }}
         session={demoSession}
         triggerLabel="Buy Area Rug - $199.99"
       />
       <CioCheckout
-        items={{ name: 'Gripper Tape', amount: 12.99 }}
         session={demoSession}
         triggerLabel="Buy Gripper - $12.99"
       />
@@ -148,7 +106,6 @@ export const WithRegistry: Story = {
 
     return (
       <CioCheckout
-        items={{ name: 'Registry Item', amount: 39.99 }}
         triggerLabel="Buy via Registry - $39.99"
       />
     );
@@ -160,7 +117,6 @@ export const WithRegistry: Story = {
 export const CustomTrigger: Story = {
   render: () => (
     <CioCheckout
-      items={{ name: 'Premium Rug Pad', amount: 49.99 }}
       session={demoSession}
       trigger={
         <ProductCard
@@ -184,7 +140,6 @@ export const CustomTrigger: Story = {
 export const InlineMode: Story = {
   render: () => (
     <CioCheckout
-      items={{ name: 'Premium Rug Pad', amount: 49.99 }}
       session={demoSession}
       triggerLabel="Buy Now - $49.99"
       displayMode="inline"
@@ -205,7 +160,6 @@ export const InlineMode: Story = {
 export const WithTriggerWhen: Story = {
   render: () => (
     <CioCheckout
-      items={{ name: 'Conditional Item', amount: 19.99 }}
       session={demoSession}
       triggerLabel="Conditionally Visible"
       triggerWhen={() => true}

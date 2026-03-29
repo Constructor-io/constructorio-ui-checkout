@@ -1,0 +1,153 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Checkout/Hooks/useCheckoutSession" />
+
+# useCheckoutSession
+
+A React hook that powers `CioCheckout` internally. It manages session resolution, open/close state, completion handling, and fulfillment verification. Exported for advanced consumers who need to build a custom checkout UI.
+
+```ts
+import { useCheckoutSession } from '@constructor-io/constructorio-ui-checkout';
+```
+
+---
+
+## Usage
+
+```tsx
+import { useCheckoutSession } from '@constructor-io/constructorio-ui-checkout';
+
+function CustomCheckout() {
+  const {
+    isOpen,
+    isLoading,
+    session,
+    error,
+    fulfillmentStatus,
+    fulfillmentResult,
+    openCheckout,
+    closeCheckout,
+    handleComplete,
+    retryFulfillment,
+    reset,
+  } = useCheckoutSession(
+    {
+      session: async () => {
+        const res = await fetch('/api/checkout-session', { method: 'POST' });
+        return res.json();
+      },
+    },
+    {
+      onComplete: (event) => console.log('Done', event.sessionId),
+      onError: (err) => console.error(err),
+    }
+  );
+
+  return (
+    <div>
+      <button onClick={openCheckout} disabled={isLoading}>
+        {isLoading ? 'Loading...' : 'Checkout'}
+      </button>
+      {error && <p>{error.message}</p>}
+      {/* Use `session` to render your own Stripe Embedded Checkout */}
+    </div>
+  );
+}
+```
+
+---
+
+## Parameters
+
+<table>
+  <thead>
+    <tr>
+      <th>Parameter</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>props</code></td>
+      <td><code>CioCheckoutProps</code></td>
+      <td>The same props accepted by <code>CioCheckout</code> (<code>session</code>, <code>triggerWhen</code>, <code>triggerState</code>, etc.)</td>
+    </tr>
+    <tr>
+      <td><code>callbacks</code></td>
+      <td><code>CioCheckoutCallbacks</code></td>
+      <td>Optional lifecycle callbacks (<code>onComplete</code>, <code>onClose</code>, <code>onError</code>, <code>onFulfill</code>, <code>onFulfillComplete</code>)</td>
+    </tr>
+  </tbody>
+</table>
+
+---
+
+## Return value
+
+<table>
+  <thead>
+    <tr>
+      <th>Property</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>isOpen</code></td>
+      <td><code>boolean</code></td>
+      <td>Whether the checkout UI should be shown</td>
+    </tr>
+    <tr>
+      <td><code>isLoading</code></td>
+      <td><code>boolean</code></td>
+      <td><code>true</code> while the session is being resolved</td>
+    </tr>
+    <tr>
+      <td><code>session</code></td>
+      <td><code>CheckoutSessionResponse | null</code></td>
+      <td>Resolved session containing <code>clientSecret</code> and <code>publishableKey</code></td>
+    </tr>
+    <tr>
+      <td><code>error</code></td>
+      <td><code>Error | null</code></td>
+      <td>Error from session resolution or payment</td>
+    </tr>
+    <tr>
+      <td><code>fulfillmentStatus</code></td>
+      <td><code>'idle' | 'pending' | 'fulfilled' | 'failed'</code></td>
+      <td>Current state of the fulfillment verification flow</td>
+    </tr>
+    <tr>
+      <td><code>fulfillmentResult</code></td>
+      <td><code>FulfillmentResult | null</code></td>
+      <td>Result from the <code>onFulfill</code> callback (<code>success</code> and optional <code>message</code>)</td>
+    </tr>
+    <tr>
+      <td><code>openCheckout</code></td>
+      <td><code>() =&gt; void</code></td>
+      <td>Resolves the session and opens the checkout. Respects <code>triggerWhen</code>.</td>
+    </tr>
+    <tr>
+      <td><code>closeCheckout</code></td>
+      <td><code>() =&gt; void</code></td>
+      <td>Closes the checkout and fires <code>onClose</code></td>
+    </tr>
+    <tr>
+      <td><code>handleComplete</code></td>
+      <td><code>() =&gt; void</code></td>
+      <td>Call when Stripe reports payment complete. Fires <code>onComplete</code> and starts fulfillment if <code>onFulfill</code> is provided.</td>
+    </tr>
+    <tr>
+      <td><code>retryFulfillment</code></td>
+      <td><code>() =&gt; void</code></td>
+      <td>Re-runs the <code>onFulfill</code> callback with the last complete event</td>
+    </tr>
+    <tr>
+      <td><code>reset</code></td>
+      <td><code>() =&gt; void</code></td>
+      <td>Resets all state back to initial values</td>
+    </tr>
+  </tbody>
+</table>

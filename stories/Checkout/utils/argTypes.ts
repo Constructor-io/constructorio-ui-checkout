@@ -1,24 +1,19 @@
-import type { ArgTypes } from '@storybook/react';
-
-import type { CioCheckoutProps } from '@src/types';
-
-export const argTypes: Partial<ArgTypes<CioCheckoutProps>> = {
-  source: {
-    description:
-      'Discriminated key. "items" = provide items directly, "function" = provide async getter, "session" = provide session fetcher.',
-    control: { type: 'select' },
-    options: ['items', 'function', 'session'],
-    table: {
-      type: { summary: "'items' | 'function' | 'session'" },
-      defaultValue: { summary: 'items' },
-    },
-  },
+export const argTypes = {
   triggerLabel: {
     description: 'Label for the default checkout button',
     control: 'text',
     table: {
       type: { summary: 'string' },
       defaultValue: { summary: 'Checkout' },
+    },
+  },
+  displayMode: {
+    description: 'How the checkout UI is displayed',
+    control: 'radio',
+    options: ['modal', 'inline'],
+    table: {
+      type: { summary: "'modal' | 'inline'" },
+      defaultValue: { summary: 'modal' },
     },
   },
 };

@@ -1,145 +1,214 @@
+import { ProductCard } from '@constructor-io/constructorio-ui-components';
 import type { Meta, StoryObj } from '@storybook/react';
 
 import CioCheckout from '@src/app';
+import checkoutRegistry from '@src/registry/CheckoutRegistry';
 import type { CioCheckoutProps } from '@src/types';
 
-import { argTypes, storiesControls } from '../utils/argTypes';
-import { DEMO_PUBLISHABLE_KEY, DEMO_SESSION_URL } from '../utils/constants';
+import { storiesControls } from '../utils/argTypes';
 
-const meta: Meta<typeof CioCheckout> = {
+const meta: Meta = {
   title: 'Checkout/CioCheckout',
   component: CioCheckout,
   parameters: {
     controls: storiesControls,
   },
-  argTypes,
 };
 
 export default meta;
 
-type Story = StoryObj<typeof CioCheckout>;
+type Story = StoryObj;
 
-// ---------- Single Item (PIA-style per-item checkout) ----------
+// Demo session function — replace with a real backend call
+const demoSession = () =>
+  Promise.resolve({
+    clientSecret:
+      'cs_test_SECRET_REPLACE_secret_1234567890abcdefg',
+    publishableKey:
+      'pk_test_REPLACE_1234567890abcdefg',
+  });
+
+// ---------- Single Item ----------
+
+const singleItemProps: CioCheckoutProps = {
+  items: {
+    name: 'Premium Rug Pad',
+    amount: 49.99,
+    currencySign: '$',
+  },
+  session: demoSession,
+  triggerLabel: 'Buy Now - $49.99',
+  callbacks: {
+    onComplete: (event) => {
+      console.log('Payment complete!', event);
+    },
+    onError: (error: Error) => {
+      console.error('Checkout error:', error);
+    },
+  },
+};
 
 export const SingleItem: Story = {
-  args: {
-    source: 'items',
-    items: {
-      name: 'Premium Rug Pad',
-      amountCents: 4999,
-      currency: 'usd',
-    },
-    sessionUrl: DEMO_SESSION_URL,
-    publishableKey: DEMO_PUBLISHABLE_KEY,
-    triggerLabel: 'Buy Now - $49.99',
-    callbacks: {
-      onComplete: () => {
-        console.log('Payment complete!');
-      },
-      onError: (error) => {
-        console.error('Checkout error:', error);
-      },
-    },
-  },
+  render: () => <CioCheckout {...singleItemProps} />,
 };
 
-// ---------- Cart (multiple items) ----------
+// ---------- Cart ----------
+
+const cartProps: CioCheckoutProps = {
+  items: [
+    { name: 'Premium Rug Pad', amount: 49.99, quantity: 1 },
+    { name: 'Wool Area Rug 5x8', amount: 199.99, quantity: 1 },
+    { name: 'Rug Gripper Tape', amount: 12.99, quantity: 2 },
+  ],
+  session: demoSession,
+  triggerLabel: 'Checkout Cart - $285.96',
+};
 
 export const Cart: Story = {
-  args: {
-    source: 'items',
-    items: [
-      { name: 'Premium Rug Pad', amountCents: 4999, quantity: 1 },
-      { name: 'Wool Area Rug 5x8', amountCents: 19999, quantity: 1 },
-      { name: 'Rug Gripper Tape', amountCents: 1299, quantity: 2 },
-    ],
-    sessionUrl: DEMO_SESSION_URL,
-    publishableKey: DEMO_PUBLISHABLE_KEY,
-    triggerLabel: 'Checkout Cart - $285.96',
-    callbacks: {
-      onComplete: () => {
-        console.log('Cart payment complete!');
-      },
-    },
-  },
+  render: () => <CioCheckout {...cartProps} />,
 };
 
-// ---------- Dynamic items via function ----------
+// ---------- Dynamic items (function) ----------
+
+const dynamicItemsProps: CioCheckoutProps = {
+  items: async () => {
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
+    return [{ name: 'Dynamically Fetched Item', amount: 25.0, quantity: 1 }];
+  },
+  session: demoSession,
+  triggerLabel: 'Checkout (Dynamic)',
+};
 
 export const DynamicItems: Story = {
-  args: {
-    source: 'function',
-    getItems: async () => {
-      // Simulates fetching cart items from an API
-      await new Promise((resolve) => {
-        setTimeout(resolve, 500);
-      });
-      return [
-        { name: 'Dynamically Fetched Item', amountCents: 2500, quantity: 1 },
-      ];
-    },
-    sessionUrl: DEMO_SESSION_URL,
-    publishableKey: DEMO_PUBLISHABLE_KEY,
-    triggerLabel: 'Checkout (Dynamic)',
-    callbacks: {
-      onComplete: () => {
-        console.log('Dynamic payment complete!');
-      },
-    },
-  },
+  render: () => <CioCheckout {...dynamicItemsProps} />,
 };
 
-// ---------- Session source (full control) ----------
+// ---------- Session function ----------
 
-export const SessionSource: Story = {
-  args: {
-    source: 'session',
-    fetchSession: async () => {
-      // In a real integration, this calls your backend
-      console.log('Fetching session from custom endpoint...');
-      return {
+export const SessionFunction: Story = {
+  render: () => (
+    <CioCheckout
+      session={() =>
+        Promise.resolve({
+          clientSecret: 'cs_test_REPLACE_ME',
+          publishableKey: 'pk_test_REPLACE_ME',
+        })
+      }
+      triggerLabel="Pay with Session"
+    />
+  ),
+};
+
+// ---------- Session response directly ----------
+
+export const SessionDirect: Story = {
+  render: () => (
+    <CioCheckout
+      items={{ name: 'Direct Session Item', amount: 9.99 }}
+      session={{
         clientSecret: 'cs_test_REPLACE_ME',
-        publishableKey: DEMO_PUBLISHABLE_KEY,
-      };
-    },
-    triggerLabel: 'Pay with Session',
-    callbacks: {
-      onComplete: () => {
-        console.log('Session payment complete!');
-      },
-    },
+        publishableKey: 'pk_test_REPLACE_ME',
+      }}
+      triggerLabel="Pay (Direct Session)"
+    />
+  ),
+};
+
+// ---------- Multiple Items (each with its own session) ----------
+
+export const MultipleProducts: Story = {
+  render: () => (
+    <div style={{ display: 'flex', gap: 12 }}>
+      <CioCheckout
+        items={{ name: 'Rug Pad', amount: 49.99 }}
+        session={demoSession}
+        triggerLabel="Buy Rug Pad - $49.99"
+      />
+      <CioCheckout
+        items={{ name: 'Area Rug', amount: 199.99 }}
+        session={demoSession}
+        triggerLabel="Buy Area Rug - $199.99"
+      />
+      <CioCheckout
+        items={{ name: 'Gripper Tape', amount: 12.99 }}
+        session={demoSession}
+        triggerLabel="Buy Gripper - $12.99"
+      />
+    </div>
+  ),
+};
+
+// ---------- Registry pattern ----------
+
+export const WithRegistry: Story = {
+  render: () => {
+    checkoutRegistry.register(demoSession);
+
+    return (
+      <CioCheckout
+        items={{ name: 'Registry Item', amount: 39.99 }}
+        triggerLabel="Buy via Registry - $39.99"
+      />
+    );
   },
 };
 
 // ---------- Custom trigger ----------
 
-function CustomTriggerTemplate(args: CioCheckoutProps) {
-  return (
+export const CustomTrigger: Story = {
+  render: () => (
     <CioCheckout
-      {...args}
+      items={{ name: 'Premium Rug Pad', amount: 49.99 }}
+      session={demoSession}
       trigger={
-        <div
-          style={{
-            padding: '12px 24px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            borderRadius: '8px',
-            fontWeight: 600,
-            textAlign: 'center',
-          }}>
-          Custom Checkout Button
-        </div>
+        <ProductCard
+          product={{
+            id: 'rug-pad-001',
+            name: 'Premium Rug Pad',
+            price: 49.99,
+            imageUrl: 'https://placehold.co/300x300/e2e8f0/475569?text=Rug+Pad',
+            description: 'Non-slip cushioned rug pad for any surface',
+          }}
+          priceCurrency="$"
+          addToCartText="Buy Now"
+        />
       }
     />
-  );
-}
+  ),
+};
 
-export const CustomTrigger: Story = {
-  args: {
-    source: 'items',
-    items: { name: 'Premium Rug Pad', amountCents: 4999 },
-    sessionUrl: DEMO_SESSION_URL,
-    publishableKey: DEMO_PUBLISHABLE_KEY,
-  },
-  render: (args) => <CustomTriggerTemplate {...args} />,
+// ---------- Inline Mode ----------
+
+export const InlineMode: Story = {
+  render: () => (
+    <CioCheckout
+      items={{ name: 'Premium Rug Pad', amount: 49.99 }}
+      session={demoSession}
+      triggerLabel="Buy Now - $49.99"
+      displayMode="inline"
+      callbacks={{
+        onComplete: (event) => {
+          console.log('Payment complete!', event);
+        },
+        onClose: () => {
+          console.log('Checkout cancelled');
+        },
+      }}
+    />
+  ),
+};
+
+// ---------- triggerWhen ----------
+
+export const WithTriggerWhen: Story = {
+  render: () => (
+    <CioCheckout
+      items={{ name: 'Conditional Item', amount: 19.99 }}
+      session={demoSession}
+      triggerLabel="Conditionally Visible"
+      triggerWhen={() => true}
+    />
+  ),
 };

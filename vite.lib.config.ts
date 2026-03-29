@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import prefixer from 'postcss-prefix-selector';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -12,6 +13,22 @@ export default defineConfig({
   resolve: {
     alias: {
       '@src': path.resolve(dirname, 'src'),
+    },
+  },
+  css: {
+    postcss: {
+      plugins: [
+        prefixer({
+          prefix: rootClass,
+          exclude: [':root', 'html', 'body', rootClass],
+          transform(_, selector, prefixedSelector, filePath) {
+            if (filePath.includes('node_modules')) {
+              return selector;
+            }
+            return prefixedSelector;
+          },
+        }),
+      ],
     },
   },
   build: {
@@ -25,6 +42,7 @@ export default defineConfig({
         'react',
         'react-dom',
         'react/jsx-runtime',
+        '@constructor-io/constructorio-ui-components',
         '@stripe/stripe-js',
         '@stripe/react-stripe-js',
       ],

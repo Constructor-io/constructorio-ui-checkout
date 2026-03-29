@@ -1,8 +1,14 @@
-import React from 'react';
+import React, { createRef } from 'react';
+
 import ReactDOM from 'react-dom/client';
 
+import checkoutRegistry from './registry/CheckoutRegistry';
 import CioCheckoutComponent from './app';
-import type { CioCheckoutProps } from './types';
+import type {
+  CheckoutSession,
+  CioCheckoutHandle,
+  CioCheckoutProps,
+} from './types';
 import version from './version';
 
 import './styles.css';
@@ -20,12 +26,15 @@ const CioCheckout = (() => {
     {
       root: ReactDOM.Root;
       currentProps: CioCheckoutProps;
+      ref: React.RefObject<CioCheckoutHandle | null>;
     }
   >();
 
   function handleStylesheet(includeCSS: boolean): void {
     const styleId = 'cio-checkout-styles';
-    const stylesheet = document.getElementById(styleId) as HTMLStyleElement | null;
+    const stylesheet = document.getElementById(
+      styleId
+    ) as HTMLStyleElement | null;
     if (stylesheet) {
       stylesheet.disabled = !includeCSS;
     }
@@ -34,15 +43,51 @@ const CioCheckout = (() => {
   return {
     VERSION: version || '0.1.0',
 
-    init({ selector, includeCSS = true, ...componentProps }: CioCheckoutInitOptions): Element | undefined {
+    /**
+     * Register a shared checkout session globally.
+     * Any CIO library on the page can inherit this session.
+     *
+     * @example
+     * ```js
+     * CioCheckout.register(() =>
+     *   fetch('/api/checkout', { method: 'POST' }).then(r => r.json())
+     * );
+     * ```
+     */
+    register(session: CheckoutSession): void {
+      checkoutRegistry.register(session);
+    },
+
+    /**
+     * Check whether a session has been registered.
+     */
+    isRegistered(): boolean {
+      return checkoutRegistry.isRegistered();
+    },
+
+    /**
+     * Reset checkout state and clear all registered sessions.
+     */
+    reset(): void {
+      instances.forEach((instance) => {
+        const handle = instance.ref.current;
+        if (handle) handle.reset();
+      });
+      checkoutRegistry.clear();
+    },
+
+    init(options: CioCheckoutInitOptions): Element | undefined {
       if (typeof document === 'undefined') {
         console.error('CioCheckout.init() requires a browser environment');
         return undefined;
       }
 
+      const { selector, includeCSS = true } = options;
       const container = document.querySelector<HTMLElement>(selector);
       if (!container) {
-        console.error(`CioCheckout.init(): Element not found for selector "${selector}"`);
+        console.error(
+          `CioCheckout.init(): Element not found for selector "${selector}"`
+        );
         return undefined;
       }
 
@@ -54,13 +99,16 @@ const CioCheckout = (() => {
         instances.delete(container);
       }
 
+      const componentProps = options as CioCheckoutProps;
+      const ref = createRef<CioCheckoutHandle>();
+
       try {
         const root = ReactDOM.createRoot(container);
-        instances.set(container, { root, currentProps: componentProps });
+        instances.set(container, { root, currentProps: componentProps, ref });
 
         root.render(
           <React.StrictMode>
-            <CioCheckoutComponent {...componentProps} />
+            <CioCheckoutComponent ref={ref} {...componentProps} />
           </React.StrictMode>
         );
 
@@ -76,22 +124,29 @@ const CioCheckout = (() => {
 
       const container = document.querySelector<HTMLElement>(selector);
       if (!container) {
-        console.error(`CioCheckout.update(): Element not found for selector "${selector}"`);
+        console.error(
+          `CioCheckout.update(): Element not found for selector "${selector}"`
+        );
         return;
       }
 
       const instance = instances.get(container);
       if (!instance) {
-        console.warn(`CioCheckout.update(): No instance found for selector "${selector}"`);
+        console.warn(
+          `CioCheckout.update(): No instance found for selector "${selector}"`
+        );
         return;
       }
 
-      const mergedProps = { ...instance.currentProps, ...newProps } as CioCheckoutProps;
+      const mergedProps = {
+        ...instance.currentProps,
+        ...newProps,
+      } as CioCheckoutProps;
       instance.currentProps = mergedProps;
 
       instance.root.render(
         <React.StrictMode>
-          <CioCheckoutComponent {...mergedProps} />
+          <CioCheckoutComponent ref={instance.ref} {...mergedProps} />
         </React.StrictMode>
       );
     },

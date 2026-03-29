@@ -1,127 +1,139 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
+import checkoutRegistry from '@src/registry/CheckoutRegistry';
 import type {
   CheckoutItem,
+  CheckoutSession,
   CheckoutSessionResponse,
-  CheckoutSourceConfig,
   CioCheckoutCallbacks,
+  CioCheckoutProps,
 } from '@src/types';
 
-interface UseCheckoutSessionReturn {
+export interface UseCheckoutSessionReturn {
   isOpen: boolean;
   isLoading: boolean;
-  clientSecret: string | null;
-  publishableKey: string | null;
+  session: CheckoutSessionResponse | null;
   error: Error | null;
   openCheckout: () => void;
   closeCheckout: () => void;
   handleComplete: () => void;
+  reset: () => void;
+}
+
+/**
+ * Extract the Stripe Checkout Session ID from a clientSecret.
+ * Format: `cs_test_<sessionId>_secret_<secret>` or `cs_live_<sessionId>_secret_<secret>`
+ */
+function extractSessionId(clientSecret: string): string {
+  const match = clientSecret.match(/^(cs_(?:test|live)_[A-Za-z0-9]+)/);
+  return match ? match[1] : clientSecret;
 }
 
 function normalizeItems(items: CheckoutItem | CheckoutItem[]): CheckoutItem[] {
   return Array.isArray(items) ? items : [items];
 }
 
-async function fetchSessionFromBackend(
-  sessionUrl: string,
-  items: CheckoutItem[],
-  headers?: Record<string, string>
+async function resolveItems(
+  items: CioCheckoutProps['items']
+): Promise<CheckoutItem[] | undefined> {
+  if (!items) return undefined;
+  if (typeof items === 'function') {
+    const result = await items();
+    return normalizeItems(result);
+  }
+  return normalizeItems(items);
+}
+
+async function resolveSession(
+  session: CheckoutSession
 ): Promise<CheckoutSessionResponse> {
-  const response = await fetch(sessionUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers,
-    },
-    body: JSON.stringify({ items }),
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Checkout session creation failed (${String(response.status)}): ${body}`);
+  if (typeof session === 'function') {
+    return session();
   }
-
-  const data: unknown = await response.json();
-  const session = data as CheckoutSessionResponse;
-
-  if (!session.clientSecret || !session.publishableKey) {
-    throw new Error('Invalid session response: missing clientSecret or publishableKey');
-  }
-
   return session;
 }
 
 export default function useCheckoutSession(
-  config: CheckoutSourceConfig,
+  props: CioCheckoutProps,
   callbacks?: CioCheckoutCallbacks
 ): UseCheckoutSessionReturn {
+  const { items, triggerState, triggerWhen, session: propsSession } = props;
+
+  const registrySession = checkoutRegistry.getSession();
+
+  const session = useMemo<CheckoutSession>(
+    () => propsSession ?? registrySession!,
+    [propsSession, registrySession]
+  );
+
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [publishableKey, setPublishableKey] = useState<string | null>(null);
+  const [sessionResponse, setSessionResponse] =
+    useState<CheckoutSessionResponse | null>(null);
+  const [resolvedItems, setResolvedItems] = useState<
+    CheckoutItem[] | undefined
+  >(undefined);
   const [error, setError] = useState<Error | null>(null);
 
-  const openCheckout = useCallback(async () => {
+  const openCheckout = useCallback(() => {
+    if (triggerWhen && !triggerWhen(triggerState ?? {})) {
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
-    try {
-      let session: CheckoutSessionResponse;
-
-      if (config.source === 'session') {
-        session = await config.fetchSession();
-      } else if (config.source === 'function') {
-        const resolved = await config.getItems();
-        const items = normalizeItems(resolved);
-        session = await fetchSessionFromBackend(
-          config.sessionUrl,
-          items,
-          config.sessionHeaders
-        );
-      } else {
-        // source === 'items'
-        const items = normalizeItems(config.items);
-        session = await fetchSessionFromBackend(
-          config.sessionUrl,
-          items,
-          config.sessionHeaders
-        );
-      }
-
-      setClientSecret(session.clientSecret);
-      setPublishableKey(session.publishableKey);
-      setIsOpen(true);
-    } catch (err) {
-      const wrappedError = err instanceof Error ? err : new Error(String(err));
-      setError(wrappedError);
-      callbacks?.onError?.(wrappedError);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [config, callbacks]);
+    Promise.all([resolveSession(session), resolveItems(items)])
+      .then(([result, items]) => {
+        setSessionResponse(result);
+        setResolvedItems(items);
+        setIsOpen(true);
+      })
+      .catch((err: unknown) => {
+        const wrapped = err instanceof Error ? err : new Error(String(err));
+        setError(wrapped);
+        callbacks?.onError?.(wrapped);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [session, items, triggerWhen, triggerState, callbacks]);
 
   const closeCheckout = useCallback(() => {
     setIsOpen(false);
-    setClientSecret(null);
-    setPublishableKey(null);
+    setSessionResponse(null);
+    setResolvedItems(undefined);
     callbacks?.onClose?.();
   }, [callbacks]);
 
   const handleComplete = useCallback(() => {
+    if (sessionResponse) {
+      callbacks?.onComplete?.({
+        sessionId: extractSessionId(sessionResponse.clientSecret),
+        items: resolvedItems,
+      });
+    }
     setIsOpen(false);
-    setClientSecret(null);
-    setPublishableKey(null);
-    callbacks?.onComplete?.();
-  }, [callbacks]);
+    setSessionResponse(null);
+    setResolvedItems(undefined);
+  }, [callbacks, resolvedItems, sessionResponse]);
+
+  const reset = useCallback(() => {
+    setIsOpen(false);
+    setIsLoading(false);
+    setSessionResponse(null);
+    setResolvedItems(undefined);
+    setError(null);
+  }, []);
 
   return {
     isOpen,
     isLoading,
-    clientSecret,
-    publishableKey,
+    session: sessionResponse,
     error,
     openCheckout,
     closeCheckout,
     handleComplete,
+    reset,
   };
 }

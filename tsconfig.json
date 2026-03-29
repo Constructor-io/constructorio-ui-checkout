@@ -8,10 +8,13 @@
     "declarationMap": true,
     "sourceMap": true,
     "strict": true,
+    "allowUnusedLabels": false,
+    "allowUnreachableCode": false,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
     "moduleResolution": "bundler",
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -21,15 +24,19 @@
     "importHelpers": true,
     "noEmit": true,
     "allowJs": true,
+    "types": ["vitest/globals", "node", "@testing-library/jest-dom"],
     "baseUrl": ".",
     "paths": {
       "@src/*": ["src/*"],
+      "@spec/*": ["spec/*"],
       "@stories/*": ["stories/*"]
     }
   },
   "include": [
     "src/**/*",
+    "spec/**/*",
     "stories/**/*",
+    "vitest.config.ts",
     ".storybook/**/*",
     "vite.**.ts",
     "eslint.config.mjs"

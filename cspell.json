@@ -3,13 +3,14 @@
   "version": "0.2",
   "language": "en",
   "words": [
-    "constructorio",
+    "autodocs",
+    "Bancontact",
     "cio",
     "CIOCheckout",
-    "autodocs",
-    "publishable",
+    "constructorio",
     "Klarna",
-    "Bancontact"
+    "prefixer",
+    "publishable"
   ],
   "flagWords": [],
   "ignorePaths": [
@@ -20,6 +21,17 @@
     "package-lock.json"
   ],
   "dictionaryDefinitions": [],
-  "dictionaries": ["typescript", "node", "npm", "html", "css", "softwareTerms"],
-  "ignoreRegExpList": ["/\\b\\d{4}-\\d{2}-\\d{2}\\b/", "/\\b[0-9a-f]{8,}\\b/"]
+  "dictionaries": [
+    "typescript",
+    "node",
+    "npm",
+    "html",
+    "css",
+    "softwareTerms"
+  ],
+  "ignoreRegExpList": [
+    "/\\b\\d{4}-\\d{2}-\\d{2}\\b/",
+    "/\\b[0-9a-f]{8,}\\b/",
+    "/(?:cs|pk)_(?:test|live)_\\S+/"
+  ]
 }

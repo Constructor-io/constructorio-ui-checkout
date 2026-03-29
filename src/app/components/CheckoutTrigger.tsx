@@ -1,3 +1,7 @@
+import { cloneElement, isValidElement } from 'react';
+
+import { Button } from '@constructor-io/constructorio-ui-components';
+
 interface CheckoutTriggerProps {
   onClick: () => void;
   isLoading: boolean;
@@ -12,28 +16,39 @@ export default function CheckoutTrigger({
   children,
 }: CheckoutTriggerProps) {
   if (children) {
+    if (isValidElement(children)) {
+      return cloneElement(
+        children as React.ReactElement<Record<string, unknown>>,
+        {
+          onClick,
+          disabled: isLoading,
+          'aria-label': label,
+        }
+      );
+    }
+
     return (
-      <button
-        type="button"
+      <Button
         className="cio-checkout-trigger cio-checkout-trigger--custom"
         onClick={onClick}
         disabled={isLoading}
-        aria-label={label}>
+        aria-label={label}
+      >
         {children}
-      </button>
+      </Button>
     );
   }
 
   return (
-    <button
-      type="button"
+    <Button
       className="cio-checkout-trigger"
       onClick={onClick}
-      disabled={isLoading}>
+      disabled={isLoading}
+    >
       {isLoading ? (
         <span className="cio-checkout-trigger__spinner" aria-hidden="true" />
       ) : null}
       {isLoading ? 'Loading...' : label}
-    </button>
+    </Button>
   );
 }

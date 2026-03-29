@@ -8,6 +8,9 @@ import prettierPlugin from 'eslint-plugin-prettier';
 import storybookPlugin from 'eslint-plugin-storybook';
 import cspellPlugin from '@cspell/eslint-plugin';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
+import vitestPlugin from 'eslint-plugin-vitest';
+import testingLibraryPlugin from 'eslint-plugin-testing-library';
+import noSnapshotPlugin from 'eslint-plugin-no-snapshot-testing';
 import globals from 'globals';
 
 export default tseslint.config(
@@ -17,6 +20,8 @@ export default tseslint.config(
       'lib/**/*.js',
       'lib/**/*.d.ts',
       'docs/**/*.js',
+      'spec/setup.ts',
+      'spec/__mocks__/**',
       'node_modules/',
       'dist/',
       'storybook-static/',
@@ -36,7 +41,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {
-    files: ['{src,stories}/**/*.{js,jsx,ts,tsx}'],
+    files: ['{src,spec,stories}/**/*.{js,jsx,ts,tsx}'],
     plugins: {
       import: importPlugin,
       'jsx-a11y': jsxA11y,
@@ -68,6 +73,8 @@ export default tseslint.config(
           devDependencies: [
             'stories/**/*.*',
             '**/.storybook/**/*.*',
+            'spec/**/*.*',
+            '**/*.test.{js,jsx,ts,tsx}',
           ],
           peerDependencies: true,
         },
@@ -100,6 +107,7 @@ export default tseslint.config(
             ['^node:'],
             ['^react$', '^react-dom$'],
             ['^@?\\w'],
+            ['^@spec(/.*|$)'],
             ['^@stories(/.*|$)'],
             ['^@src(/.*|$)'],
             ['^\\.\\.(?!/?$)', '^\\.\\./?$'],
@@ -147,6 +155,42 @@ export default tseslint.config(
     ],
     plugins: {
       storybook: storybookPlugin,
+    },
+  },
+  {
+    files: ['spec/**/*.{js,jsx,ts,tsx}', '**/*.test.{js,jsx,ts,tsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.vitest,
+      },
+    },
+    plugins: {
+      vitest: vitestPlugin,
+      import: importPlugin,
+      'testing-library': testingLibraryPlugin,
+      'no-snapshot-testing': noSnapshotPlugin,
+    },
+    rules: {
+      ...vitestPlugin.configs.recommended.rules,
+      ...testingLibraryPlugin.configs['flat/react'].rules,
+      'vitest/consistent-test-it': [
+        'error',
+        { fn: 'test', withinDescribe: 'it' },
+      ],
+      'vitest/prefer-hooks-in-order': 'error',
+      'vitest/prefer-hooks-on-top': 'error',
+      'vitest/no-identical-title': 'error',
+      'vitest/require-top-level-describe': 'error',
+      'no-snapshot-testing/no-snapshot-testing': 'error',
+      'testing-library/no-node-access': [
+        'error',
+        { allowContainerFirstChild: true },
+      ],
+      'import/no-extraneous-dependencies': [
+        'error',
+        { devDependencies: true, peerDependencies: true },
+      ],
     },
   }
 );

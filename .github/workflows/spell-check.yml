@@ -1,0 +1,22 @@
+name: Spell check
+
+on:
+  pull_request:
+    branches:
+      - '**'
+concurrency:
+  group: spell-check-${{ github.head_ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    name: Run spell check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+      - name: Spell check
+        run: npx cspell "**/*.{ts,tsx}"

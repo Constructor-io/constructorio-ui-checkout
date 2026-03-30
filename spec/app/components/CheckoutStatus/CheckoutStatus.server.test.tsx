@@ -2,7 +2,7 @@ import { renderToString } from 'react-dom/server';
 
 import CheckoutStatus from '@src/app/components/CheckoutStatus';
 
-describe('CheckoutStatus: server', () => {
+describe(`${CheckoutStatus.name}: server`, () => {
   it('renders nothing when idle', () => {
     const view = renderToString(
       <CheckoutStatus

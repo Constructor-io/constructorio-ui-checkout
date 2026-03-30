@@ -6,7 +6,7 @@ import {
   DEMO_PUBLISHABLE_KEY,
 } from '../__tests__/constants';
 
-describe('CheckoutRegistry', () => {
+describe('CheckoutRegistry: client', () => {
   afterEach(() => {
     checkoutRegistry.clear();
   });

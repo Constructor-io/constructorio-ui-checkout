@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import CheckoutOverlay from '@src/app/components/CheckoutOverlay';
 
-describe('CheckoutOverlay', () => {
+describe(`${CheckoutOverlay.name}: client`, () => {
   const onClose = vi.fn();
 
   it('returns null when not open', () => {

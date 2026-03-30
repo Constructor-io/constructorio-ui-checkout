@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import CheckoutInline from '@src/app/components/CheckoutInline';
 
-describe('CheckoutInline', () => {
+describe(`${CheckoutInline.name}: client`, () => {
   const onCancel = vi.fn();
 
   it('renders with title and cancel button', () => {

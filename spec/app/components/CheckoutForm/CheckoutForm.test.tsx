@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 
 import CheckoutForm from '@src/app/components/CheckoutForm';
 
-describe('CheckoutForm', () => {
+describe(`${CheckoutForm.name}: client`, () => {
   it('renders the Stripe embedded checkout', () => {
     render(<CheckoutForm />);
     expect(screen.getByTestId('stripe-embedded-checkout')).toBeInTheDocument();

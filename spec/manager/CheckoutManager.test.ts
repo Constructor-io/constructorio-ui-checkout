@@ -4,7 +4,7 @@ import checkoutManager from '@src/manager/CheckoutManager';
 
 import { DEMO_PUBLISHABLE_KEY } from '../__tests__/constants';
 
-describe('CheckoutManager', () => {
+describe('CheckoutManager: client', () => {
   afterEach(() => {
     checkoutManager.clearAll();
   });

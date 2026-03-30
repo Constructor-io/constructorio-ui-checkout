@@ -2,7 +2,7 @@ import { renderToString } from 'react-dom/server';
 
 import CheckoutOverlay from '@src/app/components/CheckoutOverlay';
 
-describe('CheckoutOverlay: server', () => {
+describe(`${CheckoutOverlay.name}: server`, () => {
   const onClose = vi.fn();
 
   it('renders nothing when not open', () => {

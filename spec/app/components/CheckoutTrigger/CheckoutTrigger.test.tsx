@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import CheckoutTrigger from '@src/app/components/CheckoutTrigger';
 
-describe('CheckoutTrigger', () => {
+describe(`${CheckoutTrigger.name}: client`, () => {
   it('renders the default trigger button with label', () => {
     render(<CheckoutTrigger onClick={vi.fn()} isLoading={false} />);
     expect(screen.getByText('Checkout')).toBeInTheDocument();

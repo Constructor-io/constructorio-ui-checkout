@@ -2,7 +2,7 @@ import { renderToString } from 'react-dom/server';
 
 import CheckoutTrigger from '@src/app/components/CheckoutTrigger';
 
-describe('CheckoutTrigger: server', () => {
+describe(`${CheckoutTrigger.name}: server`, () => {
   const noop = () => {};
 
   it('renders the default trigger with label', () => {

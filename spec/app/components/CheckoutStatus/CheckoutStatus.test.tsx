@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import CheckoutStatus from '@src/app/components/CheckoutStatus';
 import type { FulfillmentResult, FulfillmentStatus } from '@src/types';
 
-describe('CheckoutStatus', () => {
+describe(`${CheckoutStatus.name}: client`, () => {
   const defaultProps = {
     onRetry: vi.fn(),
     onDismiss: vi.fn(),

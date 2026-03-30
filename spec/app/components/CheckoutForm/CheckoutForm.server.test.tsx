@@ -2,7 +2,7 @@ import { renderToString } from 'react-dom/server';
 
 import CheckoutForm from '@src/app/components/CheckoutForm';
 
-describe('CheckoutForm: server', () => {
+describe(`${CheckoutForm.name}: server`, () => {
   it('renders without throwing on the server', () => {
     const view = renderToString(<CheckoutForm />);
     expect(view).toContain('cio-checkout-form');

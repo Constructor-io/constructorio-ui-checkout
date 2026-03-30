@@ -2,7 +2,7 @@ import { renderToString } from 'react-dom/server';
 
 import CheckoutInline from '@src/app/components/CheckoutInline';
 
-describe('CheckoutInline: server', () => {
+describe(`${CheckoutInline.name}: server`, () => {
   const onCancel = vi.fn();
 
   it('renders inline checkout markup', () => {

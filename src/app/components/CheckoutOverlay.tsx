@@ -57,6 +57,14 @@ export default function CheckoutOverlay({
     [onClose]
   );
 
+  const handleCancel = useCallback(
+    (e: React.SyntheticEvent<HTMLDialogElement>) => {
+      e.preventDefault();
+      onClose();
+    },
+    [onClose]
+  );
+
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return undefined;
@@ -78,6 +86,7 @@ export default function CheckoutOverlay({
       ref={dialogRef}
       className="cio-checkout-overlay"
       onKeyDown={handleKeyDown}
+      onCancel={handleCancel}
       aria-label={t(translations, 'CioCheckout.checkout.title')}
     >
       <div className="cio-checkout-overlay-content">

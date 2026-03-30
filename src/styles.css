@@ -2,6 +2,18 @@
 
 .cio-checkout-root {
   --cio-checkout-font-family: 'Inter', sans-serif;
+  --cio-checkout-color-border: #e5e7eb;
+  --cio-checkout-color-text: #1f2937;
+  --cio-checkout-color-text-secondary: #4b5563;
+  --cio-checkout-color-text-muted: #9ca3af;
+  --cio-checkout-color-accent: #635bff;
+  --cio-checkout-color-error: #dc2626;
+  --cio-checkout-color-error-bg: #fef2f2;
+  --cio-checkout-color-error-border: #fecaca;
+  --cio-checkout-color-spinner-track: rgba(255, 255, 255, 0.3);
+  --cio-checkout-color-spinner-head: #ffffff;
+  --cio-checkout-color-backdrop: rgba(0, 0, 0, 0.5);
+  --cio-checkout-color-shadow: rgba(0, 0, 0, 0.25);
 
   font-family: var(--cio-checkout-font-family);
   font-size: 16px;

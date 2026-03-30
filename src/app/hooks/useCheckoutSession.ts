@@ -67,8 +67,8 @@ export default function useCheckoutSession(
 
   const registrySession = checkoutRegistry.getSession();
 
-  const session = useMemo<CheckoutSession>(
-    () => propsSession ?? registrySession!,
+  const session = useMemo<CheckoutSession | null>(
+    () => propsSession ?? registrySession ?? null,
     [propsSession, registrySession]
   );
 
@@ -119,6 +119,15 @@ export default function useCheckoutSession(
 
   const openCheckout = useCallback(() => {
     if (triggerWhen && !triggerWhen(triggerState ?? {})) {
+      return;
+    }
+
+    if (!session) {
+      const err = new Error(
+        'No checkout session provided. Pass a session prop or register one via CheckoutRegistry.'
+      );
+      setError(err);
+      callbacks?.onError?.(err);
       return;
     }
 

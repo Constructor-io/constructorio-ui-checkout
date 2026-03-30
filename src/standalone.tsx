@@ -82,7 +82,7 @@ const CioCheckout = (() => {
         return undefined;
       }
 
-      const { selector, includeCSS = true } = options;
+      const { selector, includeCSS = true, ...componentProps } = options;
       const container = document.querySelector<HTMLElement>(selector);
       if (!container) {
         console.error(
@@ -99,7 +99,6 @@ const CioCheckout = (() => {
         instances.delete(container);
       }
 
-      const componentProps = options as CioCheckoutProps;
       const ref = createRef<CioCheckoutHandle>();
 
       try {

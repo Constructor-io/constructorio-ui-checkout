@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act } from '@testing-library/react';
 
 import {
   DEMO_CLIENT_SECRET,

@@ -9,27 +9,23 @@ Perform a comprehensive code review of all changes in the current branch (or spe
 ## Process
 
 1. **Branch Diff Analysis**
-
    - Determine the name of the current branch to review
-   - Run `git merge-base origin/master [branch]` to find the common ancestor commit
+   - Run `git merge-base origin/main [branch]` to find the common ancestor commit
    - Run `git diff [common ancestor commit]..[branch]` to capture all changes in the branch
    - Run `git log [common ancestor commit]..[branch] --oneline --no-merges` to understand the commit progression
      - Use `--no-merges` flag to ignore merge commits
    - Identify all modified, added, and deleted files for comprehensive analysis
 
 2. **File-by-File Code Review**
-
    - Read each modified file completely to understand context and changes
    - Focus on the specific diff sections but maintain awareness of surrounding code
 
 3. **Quality Validation**
-
    - Verify the changes are covered with tests
    - Ensure critical code paths have unit tests and edge cases are covered
    - Check that new components have corresponding test files
 
 4. **Security and Performance Audit**
-
    - Scan for potential security vulnerabilities following OWASP Top 10
      - **A01: Broken Access Control** - Authorization bypass, privilege escalation
      - **A02: Cryptographic Failures** - Weak encryption, exposed secrets, insecure data transmission
@@ -111,11 +107,11 @@ Perform a comprehensive code review of all changes in the current branch (or spe
 #### Testing Requirements
 
 - **Mandatory test coverage**: All code changes must be covered by tests unless explicitly discussed with team
-- **Mocking with jest.spyOn**: Ensure proper mocking with `jest.spyOn`
+- **Mocking with vi.spyOn**: Ensure proper mocking with `vi.spyOn`
 - **Test edge cases explicitly**: Include tests for empty strings, null values, undefined data
 - **Use proper testing methodology**: Don't use `renderHook` for non-hook functions
 - **Comprehensive test coverage**: When adding new nullable or undefinable props, test both presence and absence
-- **Use test factories**: Use existing factories from `__tests__/factories` instead of manually creating test objects
+- **Use test factories**: Use existing factories from `spec/factory` instead of manually creating test objects
 - **Test with realistic data structures**: Update test data to match new data models when extending types
 
 #### Performance & UX Guidelines

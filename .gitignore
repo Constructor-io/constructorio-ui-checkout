@@ -27,5 +27,6 @@ vite.config.ts.timestamp-*
 # Storybook
 *storybook.log
 storybook-static
+docs
 
 .DS_Store

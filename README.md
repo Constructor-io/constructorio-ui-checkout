@@ -44,7 +44,7 @@ function App() {
 
 ### Using the JavaScript Bundle
 
-This is a framework-agnostic method that can be used in any JavaScript project.
+This is a framework-agnostic method that can be used in any JavaScript project. The `CioCheckout` object provides a simple interface to inject an entire Checkout UI into the provided `selector`.
 
 ```html
 <div id="checkout-container"></div>
@@ -59,6 +59,18 @@ This is a framework-agnostic method that can be used in any JavaScript project.
   });
 </script>
 ```
+
+#### Standalone API
+
+| Method                                   | Description                                            |
+| ---------------------------------------- | ------------------------------------------------------ |
+| `CioCheckout.init(options)`              | Mount the checkout UI into the given `selector`        |
+| `CioCheckout.update(selector, newProps)` | Update props on an existing instance                   |
+| `CioCheckout.destroy(selector?)`         | Unmount one or all instances                           |
+| `CioCheckout.register(session)`          | Register a shared checkout session globally            |
+| `CioCheckout.isRegistered()`             | Check whether a session has been registered            |
+| `CioCheckout.reset()`                    | Reset checkout state and clear all registered sessions |
+| `CioCheckout.VERSION`                    | The current library version                            |
 
 ### Registry Pattern
 

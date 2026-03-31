@@ -11,7 +11,6 @@ import CheckoutStatus from './components/CheckoutStatus';
 import CheckoutTrigger from './components/CheckoutTrigger';
 import useCheckoutSession from './hooks/useCheckoutSession';
 
-import '@constructor-io/constructorio-ui-components/styles.css';
 import '../styles.css';
 import './index.css';
 

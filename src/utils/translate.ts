@@ -6,20 +6,18 @@ export const defaultTranslations: Required<Translations> = {
   'CioCheckout.checkout.closeLabel': 'Close checkout',
   'CioCheckout.checkout.buttonLabel': 'Checkout',
   'CioCheckout.checkout.buttonLoadingLabel': 'Loading...',
-  'CioCheckout.checkout.fulfillmentPending': 'Verifying your order...',
-  'CioCheckout.checkout.fulfillmentSuccess': 'Order Confirmed',
-  'CioCheckout.checkout.fulfillmentFailure': 'Verification Failed',
-  'CioCheckout.checkout.fulfillmentFailureHint':
+  'CioCheckout.fulfillment.pending': 'Verifying your order...',
+  'CioCheckout.fulfillment.success': 'Order Confirmed',
+  'CioCheckout.fulfillment.failure': 'Verification Failed',
+  'CioCheckout.fulfillment.failureHint':
     'Your payment was processed. Please contact support if the issue persists.',
-  'CioCheckout.checkout.fulfillmentDismissLabel': 'Done',
-  'CioCheckout.checkout.fulfillmentRetryLabel': 'Retry',
+  'CioCheckout.fulfillment.dismissLabel': 'Done',
+  'CioCheckout.fulfillment.retryLabel': 'Retry',
 };
-
-export type TranslationKey = keyof Required<Translations>;
 
 export function t(
   translations: Translations | undefined,
-  key: TranslationKey
+  key: keyof Required<Translations>
 ): string {
   return translations?.[key] ?? defaultTranslations[key];
 }

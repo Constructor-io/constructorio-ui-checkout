@@ -22,7 +22,7 @@ npm i @constructor-io/constructorio-ui-checkout
 
 ```tsx
 import { CioCheckout } from '@constructor-io/constructorio-ui-checkout';
-import '@constructor-io/constructorio-ui-checkout/style.css';
+import '@constructor-io/constructorio-ui-checkout/styles.css';
 
 function App() {
   return (
@@ -33,7 +33,8 @@ function App() {
       }}
       triggerLabel="Buy Now"
       callbacks={{
-        onComplete: (event) => console.log('Payment complete!', event.sessionId),
+        onComplete: (event) =>
+          console.log('Payment complete!', event.sessionId),
         onError: (error) => console.error('Checkout error:', error),
       }}
     />
@@ -49,7 +50,7 @@ This is a framework-agnostic method that can be used in any JavaScript project.
 <div id="checkout-container"></div>
 <script src="@constructor-io/constructorio-ui-checkout/constructorio-ui-checkout-standalone"></script>
 <script>
-  CioCheckout({
+  CioCheckout.init({
     selector: '#checkout-container',
     session: {
       clientSecret: 'cs_test_...',
@@ -99,12 +100,12 @@ npm run build-storybook # build Storybook for deployment
 - Node.js >= 18
 - React >= 16.12.0
 - React DOM >= 16.12.0
-- @stripe/stripe-js >= 2.0.0
-- @stripe/react-stripe-js >= 2.0.0
+- @stripe/stripe-js >= 5.0.0
+- @stripe/react-stripe-js >= 3.0.0
+- @constructor-io/constructorio-ui-components >= 1.0.0
 
 ## Supporting Docs
 
-- [Storybook Docs](https://constructor-io.github.io/constructorio-ui-checkout)
 - [Stripe Embedded Checkout](https://docs.stripe.com/checkout/embedded/quickstart)
 - [Constructor.io](https://constructor.io)
 

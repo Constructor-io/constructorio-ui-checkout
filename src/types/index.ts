@@ -11,12 +11,12 @@ export interface Translations {
   'CioCheckout.checkout.closeLabel'?: string;
   'CioCheckout.checkout.buttonLabel'?: string;
   'CioCheckout.checkout.buttonLoadingLabel'?: string;
-  'CioCheckout.checkout.fulfillmentPending'?: string;
-  'CioCheckout.checkout.fulfillmentSuccess'?: string;
-  'CioCheckout.checkout.fulfillmentFailure'?: string;
-  'CioCheckout.checkout.fulfillmentFailureHint'?: string;
-  'CioCheckout.checkout.fulfillmentDismissLabel'?: string;
-  'CioCheckout.checkout.fulfillmentRetryLabel'?: string;
+  'CioCheckout.fulfillment.pending'?: string;
+  'CioCheckout.fulfillment.success'?: string;
+  'CioCheckout.fulfillment.failure'?: string;
+  'CioCheckout.fulfillment.failureHint'?: string;
+  'CioCheckout.fulfillment.dismissLabel'?: string;
+  'CioCheckout.fulfillment.retryLabel'?: string;
 }
 
 /**
@@ -67,7 +67,9 @@ export type CheckoutSession =
  * CioCheckoutProps extends this with UI-specific fields.
  */
 export interface CheckoutConfig {
-  /** Items for checkout display — static value, array, or async function */
+  /** Items that the customer is purchasing — can be a single item, an array,
+   * or a function that returns either.
+   * */
   items?:
     | CheckoutItem
     | CheckoutItem[]

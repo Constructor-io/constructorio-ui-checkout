@@ -32,6 +32,19 @@ A React component that wraps Stripe's Embedded Checkout into a drop-in checkout 
     </tr>
     <tr>
       <td>
+        <code>items</code>
+      </td>
+      <td>
+        <code>CheckoutItem | CheckoutItem[] | () =&gt; Promise&lt;...&gt;</code>
+      </td>
+      <td>—</td>
+      <td>
+        Items the customer is purchasing. Passed through to{' '}
+        <code>onComplete</code> and <code>onFulfill</code> callbacks.
+      </td>
+    </tr>
+    <tr>
+      <td>
         <code>callbacks</code>
       </td>
       <td>
@@ -123,6 +136,32 @@ A React component that wraps Stripe's Embedded Checkout into a drop-in checkout 
       <td>
         Stripe callback for line item changes. See{' '}
         <a href="#stripe-callbacks">Stripe Callbacks</a>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>translations</code>
+      </td>
+      <td>
+        <code>Translations</code>
+      </td>
+      <td>—</td>
+      <td>
+        Custom translations for UI text. Keys correspond to i18n IDs used in the
+        component (e.g. <code>'CioCheckout.checkout.title'</code>).
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>componentOverrides</code>
+      </td>
+      <td>
+        <code>CioCheckoutComponentOverrides</code>
+      </td>
+      <td>—</td>
+      <td>
+        Override sub-components with custom render functions or React nodes.
+        Currently supports <code>checkoutStatus</code>.
       </td>
     </tr>
   </tbody>

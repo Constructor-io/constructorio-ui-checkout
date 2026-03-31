@@ -39,13 +39,19 @@ export default function CheckoutOverlay({
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (!dialog) return;
+    if (!dialog) return undefined;
 
     if (isOpen && !dialog.open) {
       dialog.showModal();
     } else if (!isOpen && dialog.open) {
       dialog.close();
     }
+
+    return () => {
+      if (dialog.open) {
+        dialog.close();
+      }
+    };
   }, [isOpen]);
 
   const handleKeyDown = useCallback(
@@ -110,3 +116,4 @@ export default function CheckoutOverlay({
     </dialog>
   );
 }
+

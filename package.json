@@ -21,7 +21,7 @@
       "import": "./dist/index.es.js",
       "require": "./dist/index.cjs.js"
     },
-    "./style.css": "./dist/styles.css",
+    "./styles.css": "./dist/styles.css",
     "./constructorio-ui-checkout-standalone": {
       "import": "./dist/standalone/constructorio-ui-checkout.standalone.js",
       "require": "./dist/standalone/constructorio-ui-checkout.standalone.js"

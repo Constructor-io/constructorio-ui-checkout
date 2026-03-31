@@ -92,7 +92,7 @@ export default function CheckoutStatus({
           <div className="cio-checkout-status-pending">
             <span className="cio-checkout-status-spinner" aria-hidden="true" />
             <p className="cio-checkout-status-message">
-              {t(translations, 'CioCheckout.checkout.fulfillmentPending')}
+              {t(translations, 'CioCheckout.fulfillment.pending')}
             </p>
           </div>
         )}
@@ -101,7 +101,7 @@ export default function CheckoutStatus({
           <div className="cio-checkout-status-fulfilled">
             <CheckIcon />
             <h3 className="cio-checkout-status-title">
-              {t(translations, 'CioCheckout.checkout.fulfillmentSuccess')}
+              {t(translations, 'CioCheckout.fulfillment.success')}
             </h3>
             {fulfillmentResult?.message && (
               <p className="cio-checkout-status-message">
@@ -109,7 +109,7 @@ export default function CheckoutStatus({
               </p>
             )}
             <Button className="cio-checkout-status-dismiss" onClick={onDismiss}>
-              {t(translations, 'CioCheckout.checkout.fulfillmentDismissLabel')}
+              {t(translations, 'CioCheckout.fulfillment.dismissLabel')}
             </Button>
           </div>
         )}
@@ -118,7 +118,7 @@ export default function CheckoutStatus({
           <div className="cio-checkout-status-failed">
             <ErrorIcon />
             <h3 className="cio-checkout-status-title">
-              {t(translations, 'CioCheckout.checkout.fulfillmentFailure')}
+              {t(translations, 'CioCheckout.fulfillment.failure')}
             </h3>
             {fulfillmentResult?.message && (
               <p className="cio-checkout-status-message">
@@ -126,21 +126,18 @@ export default function CheckoutStatus({
               </p>
             )}
             <p className="cio-checkout-status-hint">
-              {t(translations, 'CioCheckout.checkout.fulfillmentFailureHint')}
+              {t(translations, 'CioCheckout.fulfillment.failureHint')}
             </p>
             <div className="cio-checkout-status-actions">
               <Button onClick={onRetry}>
-                {t(translations, 'CioCheckout.checkout.fulfillmentRetryLabel')}
+                {t(translations, 'CioCheckout.fulfillment.retryLabel')}
               </Button>
               <Button
                 variant="outline"
                 className="cio-checkout-status-dismiss"
                 onClick={onDismiss}
               >
-                {t(
-                  translations,
-                  'CioCheckout.checkout.fulfillmentDismissLabel'
-                )}
+                {t(translations, 'CioCheckout.fulfillment.dismissLabel')}
               </Button>
             </div>
           </div>

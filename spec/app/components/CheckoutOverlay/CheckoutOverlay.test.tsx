@@ -113,4 +113,43 @@ describe(`${CheckoutOverlay.name}: client`, () => {
     fireEvent.click(content);
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it('calls onClose on cancel event (browser native Escape)', () => {
+    render(
+      <CheckoutOverlay isOpen onClose={onClose} onComplete={onComplete} />
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Checkout' });
+    fireEvent(dialog, new Event('cancel', { bubbles: false, cancelable: true }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the dialog when isOpen changes to false', () => {
+    const { rerender } = render(
+      <CheckoutOverlay isOpen onClose={onClose} onComplete={onComplete} />
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Checkout' });
+    expect(dialog).toHaveAttribute('open');
+
+    rerender(
+      <CheckoutOverlay
+        isOpen={false}
+        onClose={onClose}
+        onComplete={onComplete}
+      />
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('passes translations to the checkout form', () => {
+    render(
+      <CheckoutOverlay
+        isOpen
+        onClose={onClose}
+        onComplete={onComplete}
+        translations={{ 'CioCheckout.checkout.title': 'Payment' }}
+      />
+    );
+    expect(screen.getByText('Payment')).toBeInTheDocument();
+  });
 });

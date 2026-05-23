@@ -4,12 +4,28 @@ vi.mock('@stripe/stripe-js', () => ({
 
 vi.mock('@stripe/react-stripe-js/checkout', () => ({
   CheckoutForm: ({ onConfirm }: { onConfirm?: (event: unknown) => void }) => (
-    <div data-testid="stripe-checkout-form" data-on-confirm={!!onConfirm}>
+    <div
+      data-testid="stripe-checkout-form"
+      data-on-confirm={!!onConfirm}
+      onClick={() => onConfirm?.({})}
+    >
       Stripe Checkout Form
     </div>
   ),
-  PaymentElement: () => (
-    <div data-testid="stripe-payment-element">Payment Element</div>
+  PaymentElement: ({
+    onChange,
+  }: {
+    onChange?: (event: { complete: boolean }) => void;
+  }) => (
+    <div
+      data-testid="stripe-payment-element"
+      onClick={() => onChange?.({ complete: true })}
+    >
+      Payment Element
+    </div>
+  ),
+  CurrencySelectorElement: () => (
+    <div data-testid="stripe-currency-selector">Currency Selector</div>
   ),
   CheckoutFormProvider: ({
     children,
@@ -33,7 +49,7 @@ vi.mock('@stripe/react-stripe-js/checkout', () => ({
       options;
     return <div data-testid="stripe-provider">{children}</div>;
   },
-  useCheckoutForm: () => ({
+  useCheckoutForm: vi.fn().mockReturnValue({
     type: 'success' as const,
     checkout: {
       status: { type: 'open' },
@@ -41,12 +57,13 @@ vi.mock('@stripe/react-stripe-js/checkout', () => ({
       session: () => ({ status: { type: 'open' } }),
     },
   }),
-  useCheckoutElements: () => ({
+  useCheckoutElements: vi.fn().mockReturnValue({
     type: 'success' as const,
     checkout: {
       status: { type: 'open' },
       confirm: vi.fn().mockResolvedValue({ type: 'success' }),
-        total: { total: 4999 },
+      total: { total: { amount: '$49.99' } },
+      currencyOptions: [],
     },
   }),
 }));

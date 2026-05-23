@@ -1,8 +1,7 @@
+import * as stripeCheckout from '@stripe/react-stripe-js/checkout';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import CheckoutFormElements from '@src/app/components/CheckoutFormElements';
-
-import * as stripeCheckout from '@stripe/react-stripe-js/checkout';
 
 describe(`${CheckoutFormElements.name}: client`, () => {
   const onComplete = vi.fn();
@@ -30,8 +29,7 @@ describe(`${CheckoutFormElements.name}: client`, () => {
     const { container } = render(
       <CheckoutFormElements onComplete={onComplete} />
     );
-    // eslint-disable-next-line testing-library/no-node-access, testing-library/no-container
-    expect(container.querySelector('.cio-checkout-form')).toBeInTheDocument();
+    expect(container.firstChild).toHaveClass('cio-checkout-form');
   });
 
   it('renders the pay button with amount', () => {
@@ -86,9 +84,7 @@ describe(`${CheckoutFormElements.name}: client`, () => {
       },
     } as unknown as ReturnType<typeof stripeCheckout.useCheckoutElements>);
 
-    render(
-      <CheckoutFormElements onComplete={onComplete} onError={onError} />
-    );
+    render(<CheckoutFormElements onComplete={onComplete} onError={onError} />);
     fireEvent.click(screen.getByTestId('stripe-payment-element'));
     fireEvent.click(screen.getByRole('button'));
 
@@ -109,9 +105,7 @@ describe(`${CheckoutFormElements.name}: client`, () => {
       },
     } as unknown as ReturnType<typeof stripeCheckout.useCheckoutElements>);
 
-    render(
-      <CheckoutFormElements onComplete={onComplete} onError={onError} />
-    );
+    render(<CheckoutFormElements onComplete={onComplete} onError={onError} />);
     fireEvent.click(screen.getByTestId('stripe-payment-element'));
     fireEvent.click(screen.getByRole('button'));
 
@@ -132,9 +126,7 @@ describe(`${CheckoutFormElements.name}: client`, () => {
       },
     } as unknown as ReturnType<typeof stripeCheckout.useCheckoutElements>);
 
-    render(
-      <CheckoutFormElements onComplete={onComplete} onError={onError} />
-    );
+    render(<CheckoutFormElements onComplete={onComplete} onError={onError} />);
     fireEvent.click(screen.getByTestId('stripe-payment-element'));
     fireEvent.click(screen.getByRole('button'));
 
@@ -164,9 +156,7 @@ describe(`${CheckoutFormElements.name}: client`, () => {
       error: { message: 'Something went wrong' },
     } as unknown as ReturnType<typeof stripeCheckout.useCheckoutElements>);
 
-    render(
-      <CheckoutFormElements onComplete={onComplete} onError={onError} />
-    );
+    render(<CheckoutFormElements onComplete={onComplete} onError={onError} />);
     expect(onError).toHaveBeenCalledWith(new Error('Something went wrong'));
   });
 
@@ -176,11 +166,10 @@ describe(`${CheckoutFormElements.name}: client`, () => {
       error: { message: 'Something went wrong' },
     } as unknown as ReturnType<typeof stripeCheckout.useCheckoutElements>);
 
-    const { container } = render(
-      <CheckoutFormElements onComplete={onComplete} onError={onError} />
-    );
-    // eslint-disable-next-line testing-library/no-node-access, testing-library/no-container
-    expect(container.querySelector('.cio-checkout-form')).not.toBeInTheDocument();
+    render(<CheckoutFormElements onComplete={onComplete} onError={onError} />);
+    expect(
+      screen.queryByTestId('stripe-payment-element')
+    ).not.toBeInTheDocument();
   });
 
   it('calls onSessionExpired when checkout status is expired', () => {
@@ -215,7 +204,10 @@ describe(`${CheckoutFormElements.name}: client`, () => {
   it('shows "Processing..." label while submitting', async () => {
     let resolveConfirm!: (value: unknown) => void;
     const confirmMock = vi.fn(
-      () => new Promise((resolve) => { resolveConfirm = resolve; })
+      () =>
+        new Promise((resolve) => {
+          resolveConfirm = resolve;
+        })
     );
     vi.mocked(stripeCheckout.useCheckoutElements).mockReturnValue({
       type: 'success' as const,

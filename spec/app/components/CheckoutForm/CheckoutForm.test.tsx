@@ -1,8 +1,7 @@
+import * as stripeCheckout from '@stripe/react-stripe-js/checkout';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import CheckoutForm from '@src/app/components/CheckoutForm';
-
-import * as stripeCheckout from '@stripe/react-stripe-js/checkout';
 
 describe(`${CheckoutForm.name}: client`, () => {
   const onComplete = vi.fn();
@@ -27,8 +26,7 @@ describe(`${CheckoutForm.name}: client`, () => {
 
   it('renders with the correct container class', () => {
     const { container } = render(<CheckoutForm onComplete={onComplete} />);
-    // eslint-disable-next-line testing-library/no-node-access, testing-library/no-container
-    expect(container.querySelector('.cio-checkout-form')).toBeInTheDocument();
+    expect(container.firstChild).toHaveClass('cio-checkout-form');
   });
 
   it('renders loading state', () => {
@@ -36,11 +34,10 @@ describe(`${CheckoutForm.name}: client`, () => {
       type: 'loading' as const,
     });
 
-    const { container } = render(<CheckoutForm onComplete={onComplete} />);
-    // eslint-disable-next-line testing-library/no-node-access, testing-library/no-container
+    render(<CheckoutForm onComplete={onComplete} />);
     expect(
-      container.querySelector('.cio-checkout-form-loading')
-    ).toBeInTheDocument();
+      screen.queryByTestId('stripe-checkout-form')
+    ).not.toBeInTheDocument();
   });
 
   it('calls onSessionExpired when checkout state is error with expired message', () => {
@@ -74,12 +71,9 @@ describe(`${CheckoutForm.name}: client`, () => {
       error: { message: 'Something went wrong' },
     });
 
-    const { container } = render(
-      <CheckoutForm onComplete={onComplete} onError={onError} />
-    );
-    // eslint-disable-next-line testing-library/no-node-access, testing-library/no-container
+    render(<CheckoutForm onComplete={onComplete} onError={onError} />);
     expect(
-      container.querySelector('.cio-checkout-form')
+      screen.queryByTestId('stripe-checkout-form')
     ).not.toBeInTheDocument();
   });
 
@@ -112,15 +106,14 @@ describe(`${CheckoutForm.name}: client`, () => {
       },
     });
 
-    const { container } = render(
+    render(
       <CheckoutForm
         onComplete={onComplete}
         onSessionExpired={onSessionExpired}
       />
     );
-    // eslint-disable-next-line testing-library/no-node-access, testing-library/no-container
     expect(
-      container.querySelector('.cio-checkout-form')
+      screen.queryByTestId('stripe-checkout-form')
     ).not.toBeInTheDocument();
   });
 

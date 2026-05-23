@@ -120,7 +120,10 @@ describe(`${CheckoutOverlay.name}: client`, () => {
     );
 
     const dialog = screen.getByRole('dialog', { name: 'Checkout' });
-    fireEvent(dialog, new Event('cancel', { bubbles: false, cancelable: true }));
+    fireEvent(
+      dialog,
+      new Event('cancel', { bubbles: false, cancelable: true })
+    );
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

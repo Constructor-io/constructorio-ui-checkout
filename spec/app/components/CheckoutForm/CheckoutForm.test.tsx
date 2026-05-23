@@ -14,9 +14,8 @@ describe(`${CheckoutForm.name}: client`, () => {
       checkout: {
         status: { type: 'open' },
         confirm: vi.fn().mockResolvedValue({ type: 'success' }),
-        session: () => ({ status: { type: 'open' } }),
       },
-    });
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutForm>);
   });
 
   it('renders the Stripe checkout form', () => {
@@ -32,7 +31,7 @@ describe(`${CheckoutForm.name}: client`, () => {
   it('renders loading state', () => {
     vi.mocked(stripeCheckout.useCheckoutForm).mockReturnValue({
       type: 'loading' as const,
-    });
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutForm>);
 
     render(<CheckoutForm onComplete={onComplete} />);
     expect(
@@ -44,7 +43,7 @@ describe(`${CheckoutForm.name}: client`, () => {
     vi.mocked(stripeCheckout.useCheckoutForm).mockReturnValue({
       type: 'error' as const,
       error: { message: 'Session has expired' },
-    });
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutForm>);
 
     render(
       <CheckoutForm
@@ -59,7 +58,7 @@ describe(`${CheckoutForm.name}: client`, () => {
     vi.mocked(stripeCheckout.useCheckoutForm).mockReturnValue({
       type: 'error' as const,
       error: { message: 'Something went wrong' },
-    });
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutForm>);
 
     render(<CheckoutForm onComplete={onComplete} onError={onError} />);
     expect(onError).toHaveBeenCalledWith(new Error('Something went wrong'));
@@ -69,7 +68,7 @@ describe(`${CheckoutForm.name}: client`, () => {
     vi.mocked(stripeCheckout.useCheckoutForm).mockReturnValue({
       type: 'error' as const,
       error: { message: 'Something went wrong' },
-    });
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutForm>);
 
     render(<CheckoutForm onComplete={onComplete} onError={onError} />);
     expect(
@@ -83,9 +82,8 @@ describe(`${CheckoutForm.name}: client`, () => {
       checkout: {
         status: { type: 'expired' },
         confirm: vi.fn(),
-        session: () => ({ status: { type: 'expired' } }),
       },
-    });
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutForm>);
 
     render(
       <CheckoutForm
@@ -102,9 +100,8 @@ describe(`${CheckoutForm.name}: client`, () => {
       checkout: {
         status: { type: 'expired' },
         confirm: vi.fn(),
-        session: () => ({ status: { type: 'expired' } }),
       },
-    });
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutForm>);
 
     render(
       <CheckoutForm
@@ -124,9 +121,8 @@ describe(`${CheckoutForm.name}: client`, () => {
       checkout: {
         status: { type: 'open' },
         confirm: confirmMock,
-        session: () => ({ status: { type: 'open' } }),
       },
-    });
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutForm>);
 
     render(<CheckoutForm onComplete={onComplete} />);
     fireEvent.click(screen.getByTestId('stripe-checkout-form'));
@@ -146,9 +142,8 @@ describe(`${CheckoutForm.name}: client`, () => {
       checkout: {
         status: { type: 'open' },
         confirm: confirmMock,
-        session: () => ({ status: { type: 'open' } }),
       },
-    });
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutForm>);
 
     render(<CheckoutForm onComplete={onComplete} onError={onError} />);
     fireEvent.click(screen.getByTestId('stripe-checkout-form'));
@@ -165,9 +160,8 @@ describe(`${CheckoutForm.name}: client`, () => {
       checkout: {
         status: { type: 'open' },
         confirm: confirmMock,
-        session: () => ({ status: { type: 'open' } }),
       },
-    });
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutForm>);
 
     render(<CheckoutForm onComplete={onComplete} onError={onError} />);
     fireEvent.click(screen.getByTestId('stripe-checkout-form'));
@@ -184,9 +178,8 @@ describe(`${CheckoutForm.name}: client`, () => {
       checkout: {
         status: { type: 'open' },
         confirm: confirmMock,
-        session: () => ({ status: { type: 'open' } }),
       },
-    });
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutForm>);
 
     render(<CheckoutForm onComplete={onComplete} onError={onError} />);
     fireEvent.click(screen.getByTestId('stripe-checkout-form'));

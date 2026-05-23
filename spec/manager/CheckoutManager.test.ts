@@ -9,9 +9,20 @@ describe('CheckoutManager: client', () => {
     checkoutManager.clearAll();
   });
 
-  it('calls loadStripe for a new key', async () => {
+  it('calls loadStripe for a new key without beta flag in elements mode', async () => {
     const result = checkoutManager.getStripe(DEMO_PUBLISHABLE_KEY);
-    expect(loadStripe).toHaveBeenCalledWith(DEMO_PUBLISHABLE_KEY);
+    expect(loadStripe).toHaveBeenCalledWith(DEMO_PUBLISHABLE_KEY, undefined);
+    expect(result).toBeInstanceOf(Promise);
+    await expect(result).resolves.toEqual({
+      elements: expect.any(Function) as unknown,
+    });
+  });
+
+  it('calls loadStripe with beta flag in form mode', async () => {
+    const result = checkoutManager.getStripe(DEMO_PUBLISHABLE_KEY, 'form');
+    expect(loadStripe).toHaveBeenCalledWith(DEMO_PUBLISHABLE_KEY, {
+      betas: ['custom_checkout_payment_form_1'],
+    });
     expect(result).toBeInstanceOf(Promise);
     await expect(result).resolves.toEqual({
       elements: expect.any(Function) as unknown,

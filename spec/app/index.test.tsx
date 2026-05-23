@@ -6,32 +6,64 @@ import * as factories from '@spec/factory';
 import CioCheckout from '@src/app';
 import type { CioCheckoutProps, FulfillmentResult } from '@src/types';
 
-// Capture options passed to EmbeddedCheckoutProvider so we can simulate
-// Stripe calling onComplete and verify callback passthrough.
-let capturedOnComplete: (() => void) | undefined;
-let capturedOptions: Record<string, unknown> | undefined;
+let capturedProviderOptions: Record<string, unknown> | undefined;
+let mockConfirm: ReturnType<typeof vi.fn>;
 
-vi.mock('@stripe/react-stripe-js', () => ({
-  EmbeddedCheckout: () => (
-    <div data-testid="stripe-embedded-checkout">Stripe Checkout</div>
+vi.mock('@stripe/react-stripe-js/checkout', () => ({
+  CheckoutForm: ({ onConfirm }: { onConfirm?: (event: unknown) => void }) => (
+    <div data-testid="stripe-checkout-form">
+      <button
+        data-testid="stripe-pay-button"
+        onClick={() => onConfirm?.({ type: 'payButton' })}
+      >
+        Pay
+      </button>
+    </div>
   ),
-  EmbeddedCheckoutProvider: ({
+  PaymentElement: () => (
+    <div data-testid="stripe-payment-element">Payment Element</div>
+  ),
+  CheckoutFormProvider: ({
     children,
     options,
   }: {
     children: React.ReactNode;
     options?: Record<string, unknown>;
   }) => {
-    capturedOnComplete = options?.onComplete as (() => void) | undefined;
-    capturedOptions = options;
+    capturedProviderOptions = options;
     return <div data-testid="stripe-provider">{children}</div>;
   },
+  CheckoutElementsProvider: ({
+    children,
+    options,
+  }: {
+    children: React.ReactNode;
+    options?: Record<string, unknown>;
+  }) => {
+    capturedProviderOptions = options;
+    return <div data-testid="stripe-provider">{children}</div>;
+  },
+  useCheckoutForm: () => ({
+    type: 'success' as const,
+    checkout: {
+      status: { type: 'open' },
+      confirm: mockConfirm,
+    },
+  }),
+  useCheckoutElements: () => ({
+    type: 'success' as const,
+    checkout: {
+      status: { type: 'open' },
+      confirm: mockConfirm,
+      total: { total: { minorUnitsAmount: 4999, amount: '$49.99' } },
+    },
+  }),
 }));
 
 describe(`${CioCheckout.displayName}: client`, () => {
   beforeEach(() => {
-    capturedOnComplete = undefined;
-    capturedOptions = undefined;
+    capturedProviderOptions = undefined;
+    mockConfirm = vi.fn().mockResolvedValue({ type: 'success' });
   });
 
   it('renders the trigger button', () => {
@@ -66,7 +98,7 @@ describe(`${CioCheckout.displayName}: client`, () => {
         screen.getByRole('dialog', { name: 'Checkout' })
       ).toBeInTheDocument();
     });
-    expect(screen.getByTestId('stripe-embedded-checkout')).toBeInTheDocument();
+    expect(screen.getByTestId('stripe-payment-element')).toBeInTheDocument();
   });
 
   it('opens inline checkout on trigger click', async () => {
@@ -77,12 +109,9 @@ describe(`${CioCheckout.displayName}: client`, () => {
     await user.click(screen.getByRole('button', { name: 'Checkout' }));
 
     await waitFor(() => {
-      expect(
-        screen.getByTestId('stripe-embedded-checkout')
-      ).toBeInTheDocument();
+      expect(screen.getByTestId('stripe-payment-element')).toBeInTheDocument();
     });
     expect(screen.getByText('Cancel')).toBeInTheDocument();
-    // Trigger should be hidden in inline mode when open
     expect(
       screen.queryByRole('button', { name: 'Checkout' })
     ).not.toBeInTheDocument();
@@ -184,7 +213,13 @@ describe(`${CioCheckout.displayName}: client`, () => {
 
   it('exposes reset via ref', async () => {
     const user = userEvent.setup();
-    const ref = { current: null as { reset: () => void } | null };
+    const ref = {
+      current: null as {
+        open: () => void;
+        close: () => void;
+        reset: () => void;
+      } | null,
+    };
     const props = factories.checkoutProps.build();
 
     render(<CioCheckout ref={ref} {...props} />);
@@ -205,13 +240,9 @@ describe(`${CioCheckout.displayName}: client`, () => {
     });
   });
 
-  it('forwards onShippingDetailsChange to EmbeddedCheckoutProvider', async () => {
+  it('passes clientSecret to CheckoutFormProvider', async () => {
     const user = userEvent.setup();
-    const onShippingDetailsChange = vi.fn();
-    const props: CioCheckoutProps = {
-      ...factories.checkoutProps.build(),
-      onShippingDetailsChange,
-    };
+    const props = factories.checkoutProps.build();
 
     render(<CioCheckout {...props} />);
     await user.click(screen.getByRole('button', { name: 'Checkout' }));
@@ -220,31 +251,7 @@ describe(`${CioCheckout.displayName}: client`, () => {
       expect(screen.getByTestId('stripe-provider')).toBeInTheDocument();
     });
 
-    expect(capturedOptions?.onShippingDetailsChange).toBe(
-      onShippingDetailsChange
-    );
-    expect(capturedOptions?.clientSecret).toBeTypeOf('string');
-    expect(capturedOptions?.onComplete).toBeTypeOf('function');
-  });
-
-  it('forwards onLineItemsChange to EmbeddedCheckoutProvider', async () => {
-    const user = userEvent.setup();
-    const onLineItemsChange = vi.fn();
-    const props: CioCheckoutProps = {
-      ...factories.checkoutProps.build(),
-      onLineItemsChange,
-    };
-
-    render(<CioCheckout {...props} />);
-    await user.click(screen.getByRole('button', { name: 'Checkout' }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('stripe-provider')).toBeInTheDocument();
-    });
-
-    expect(capturedOptions?.onLineItemsChange).toBe(onLineItemsChange);
-    expect(capturedOptions?.clientSecret).toBeTypeOf('string');
-    expect(capturedOptions?.onComplete).toBeTypeOf('function');
+    expect(capturedProviderOptions?.clientSecret).toBeTypeOf('string');
   });
 
   // ---------------------------------------------------------------------------
@@ -260,6 +267,7 @@ describe(`${CioCheckout.displayName}: client`, () => {
 
       const props: CioCheckoutProps = {
         ...factories.checkoutProps.build(),
+        uiMode: 'form',
         callbacks: { onFulfill, ...extraCallbacks },
       };
 
@@ -267,15 +275,11 @@ describe(`${CioCheckout.displayName}: client`, () => {
       await user.click(screen.getByRole('button', { name: 'Checkout' }));
 
       await waitFor(() => {
-        expect(
-          screen.getByTestId('stripe-embedded-checkout')
-        ).toBeInTheDocument();
+        expect(screen.getByTestId('stripe-checkout-form')).toBeInTheDocument();
       });
 
-      // Simulate Stripe payment completion via captured onComplete
-      act(() => {
-        capturedOnComplete?.();
-      });
+      // Simulate payment via the mocked Pay button which triggers onConfirm
+      await user.click(screen.getByTestId('stripe-pay-button'));
 
       return user;
     }
@@ -291,17 +295,14 @@ describe(`${CioCheckout.displayName}: client`, () => {
 
       await openAndComplete(onFulfill);
 
-      // Should show pending state
       await waitFor(() => {
         expect(screen.getByText('Verifying your order...')).toBeInTheDocument();
       });
 
-      // Trigger should be hidden while fulfilling
       expect(
         screen.queryByRole('button', { name: 'Checkout' })
       ).not.toBeInTheDocument();
 
-      // Resolve fulfillment
       act(() => {
         resolveFulfill({ success: true, message: 'Order #5678' });
       });
@@ -325,7 +326,6 @@ describe(`${CioCheckout.displayName}: client`, () => {
 
       const user = await openAndComplete(onFulfill);
 
-      // Resolve first call as failed
       act(() => {
         resolveFn({ success: false, message: 'Server busy' });
       });
@@ -335,10 +335,8 @@ describe(`${CioCheckout.displayName}: client`, () => {
       });
       expect(screen.getByText('Server busy')).toBeInTheDocument();
 
-      // Retry
       await user.click(screen.getByText('Retry'));
 
-      // Resolve second call as success
       act(() => {
         resolveFn({ success: true, message: 'Order #9999' });
       });
@@ -369,14 +367,12 @@ describe(`${CioCheckout.displayName}: client`, () => {
         expect(screen.getByText('Order Confirmed')).toBeInTheDocument();
       });
 
-      // Click the Done button (not the message text)
       const doneButton = screen.getByRole('button', { name: 'Done' });
       await user.click(doneButton);
 
       await waitFor(() => {
         expect(screen.queryByText('Order Confirmed')).not.toBeInTheDocument();
       });
-      // Trigger should be visible again
       expect(
         screen.getByRole('button', { name: 'Checkout' })
       ).toBeInTheDocument();

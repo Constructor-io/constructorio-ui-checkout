@@ -4,9 +4,18 @@ import { Meta } from '@storybook/blocks';
 
 # CioCheckout
 
-A React component that wraps Stripe's Embedded Checkout into a drop-in checkout experience with modal/inline display modes, fulfillment verification, and lifecycle callbacks.
+A React component that wraps Stripe's Custom Checkout into a drop-in checkout experience with modal/inline display modes, fulfillment verification, and lifecycle callbacks.
 
-### Props
+Supports two Stripe surface modes via the `uiMode` prop:
+
+- **`'elements'`** (default): Uses the GA Custom Checkout with `PaymentElement`. Full control over styling, field visibility, and the pay button.
+- **`'form'`**: Uses the beta Checkout Form surface. Stripe manages the entire UI including the submit button. Requires Stripe to enable the beta on the account. Requires the `custom_checkout_payment_form_1` beta flag (handled internally by the library).
+
+> **Server-side:** Both modes use `ui_mode: 'custom'` when creating the Checkout Session. The `uiMode` prop only affects the client-side Stripe.js surface.
+
+## Props
+
+### Core
 
 <table>
   <thead>
@@ -45,60 +54,15 @@ A React component that wraps Stripe's Embedded Checkout into a drop-in checkout 
     </tr>
     <tr>
       <td>
-        <code>callbacks</code>
+        <code>uiMode</code>
       </td>
       <td>
-        <code>CioCheckoutCallbacks</code>
-      </td>
-      <td>—</td>
-      <td>
-        Lifecycle callbacks (<code>onComplete</code>, <code>onClose</code>,{' '}
-        <code>onError</code>, <code>onFulfill</code>)
-      </td>
-    </tr>
-    <tr>
-      <td>
-        <code>trigger</code>
+        <code>'elements' | 'form'</code>
       </td>
       <td>
-        <code>React.ReactNode</code>
+        <code>'elements'</code>
       </td>
-      <td>—</td>
-      <td>Custom trigger element. Falls back to a default button</td>
-    </tr>
-    <tr>
-      <td>
-        <code>triggerLabel</code>
-      </td>
-      <td>
-        <code>string</code>
-      </td>
-      <td>
-        <code>Checkout</code>
-      </td>
-      <td>Label for the default trigger button</td>
-    </tr>
-    <tr>
-      <td>
-        <code>triggerWhen</code>
-      </td>
-      <td>
-        <code>(state) =&gt; boolean</code>
-      </td>
-      <td>—</td>
-      <td>Controls when the trigger is visible</td>
-    </tr>
-    <tr>
-      <td>
-        <code>triggerState</code>
-      </td>
-      <td>
-        <code>object</code>
-      </td>
-      <td>—</td>
-      <td>
-        State passed to <code>triggerWhen</code>
-      </td>
+      <td>Which Stripe Checkout surface to use.</td>
     </tr>
     <tr>
       <td>
@@ -110,32 +74,20 @@ A React component that wraps Stripe's Embedded Checkout into a drop-in checkout 
       <td>
         <code>'modal'</code>
       </td>
-      <td>How the checkout UI is displayed</td>
-    </tr>
-    <tr>
       <td>
-        <code>onShippingDetailsChange</code>
-      </td>
-      <td>
-        <code>(event) =&gt; Promise&lt;ResultAction&gt;</code>
-      </td>
-      <td>—</td>
-      <td>
-        Stripe callback for shipping changes. See{' '}
-        <a href="#stripe-callbacks">Stripe Callbacks</a>
+        Renders checkout in a dialog overlay or directly in the page flow.
       </td>
     </tr>
     <tr>
       <td>
-        <code>onLineItemsChange</code>
+        <code>callbacks</code>
       </td>
       <td>
-        <code>(event) =&gt; Promise&lt;ResultAction&gt;</code>
+        <code>CioCheckoutCallbacks</code>
       </td>
       <td>—</td>
       <td>
-        Stripe callback for line item changes. See{' '}
-        <a href="#stripe-callbacks">Stripe Callbacks</a>
+        Lifecycle callbacks. See <a href="#callbacks">Callbacks</a>.
       </td>
     </tr>
     <tr>
@@ -147,8 +99,7 @@ A React component that wraps Stripe's Embedded Checkout into a drop-in checkout 
       </td>
       <td>—</td>
       <td>
-        Custom translations for UI text. Keys correspond to i18n IDs used in the
-        component (e.g. <code>'CioCheckout.checkout.title'</code>).
+        Override default UI text. See <a href="#translations">Translations</a>.
       </td>
     </tr>
     <tr>
@@ -160,19 +111,182 @@ A React component that wraps Stripe's Embedded Checkout into a drop-in checkout 
       </td>
       <td>—</td>
       <td>
-        Override sub-components with custom render functions or React nodes.
-        Currently supports <code>checkoutStatus</code>.
+        Replace sub-components with custom implementations. See{' '}
+        <a href="#component-overrides">Component Overrides</a>.
       </td>
     </tr>
   </tbody>
 </table>
 
----
+### Trigger
 
-### Session
+<table>
+  <thead>
+    <tr>
+      <th>Prop</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <code>trigger</code>
+      </td>
+      <td>
+        <code>React.ReactNode</code>
+      </td>
+      <td>—</td>
+      <td>Custom trigger element. Replaces the default button entirely.</td>
+    </tr>
+    <tr>
+      <td>
+        <code>triggerLabel</code>
+      </td>
+      <td>
+        <code>string</code>
+      </td>
+      <td>
+        <code>'Checkout'</code>
+      </td>
+      <td>Label for the default trigger button.</td>
+    </tr>
+    <tr>
+      <td>
+        <code>triggerWhen</code>
+      </td>
+      <td>
+        <code>(state) =&gt; boolean</code>
+      </td>
+      <td>—</td>
+      <td>Controls when the trigger is visible based on external state.</td>
+    </tr>
+    <tr>
+      <td>
+        <code>triggerState</code>
+      </td>
+      <td>
+        <code>object</code>
+      </td>
+      <td>—</td>
+      <td>
+        State object passed to <code>triggerWhen</code>.
+      </td>
+    </tr>
+  </tbody>
+</table>
 
-The `session` prop tells the component how to get the Stripe Checkout Session credentials
-(`clientSecret` and `publishableKey`). You can provide it in two ways:
+### Behavior Notes
+
+- **Billing details hidden in elements mode** — The `PaymentElement` renders with all billing detail fields (`name`, `email`, `phone`, `address`) set to `'never'`. Pre-fill customer details using the `defaultValues` prop instead.
+- **Built-in error display** — When session resolution fails, the component renders an inline error `<div>` with `role="alert"` containing the error message. The `onError` callback still fires, but the error is also visible in the DOM without additional handling.
+- **`triggerWhen` gates imperative open** — `triggerWhen` controls both trigger visibility _and_ the imperative `open()` method. If the condition returns `false`, calling `ref.current.open()` is a no-op.
+
+### Stripe Styling & Behavior
+
+These props are passed through to the Stripe SDK. They apply to both `uiMode` values unless noted.
+
+<table>
+  <thead>
+    <tr>
+      <th>Prop</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <code>appearance</code>
+      </td>
+      <td>
+        <code>Omit&lt;Appearance, 'rules'&gt;</code>
+      </td>
+      <td>
+        Stripe Appearance API theme and variables for styling the payment form.
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>loader</code>
+      </td>
+      <td>
+        <code>'auto' | 'always' | 'never'</code>
+      </td>
+      <td>
+        Controls the skeleton loading UI shown while Stripe elements mount.
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>fonts</code>
+      </td>
+      <td>
+        <code>Array&lt;CssFontSource | CustomFontSource&gt;</code>
+      </td>
+      <td>Custom web fonts for the Stripe payment form.</td>
+    </tr>
+    <tr>
+      <td>
+        <code>layout</code>
+      </td>
+      <td>
+        <code>'expanded' | 'compact'</code>
+      </td>
+      <td>
+        Payment method layout. <code>'expanded'</code> shows all methods open;{' '}
+        <code>'compact'</code> uses an accordion. Form mode only.
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>defaultValues</code>
+      </td>
+      <td>
+        <code>
+          {'{ billingAddress?, shippingAddress?, email?, phoneNumber? }'}
+        </code>
+      </td>
+      <td>Pre-fill customer details in the payment form.</td>
+    </tr>
+    <tr>
+      <td>
+        <code>savedPaymentMethod</code>
+      </td>
+      <td>
+        <code>SavedPaymentMethodOption</code>
+      </td>
+      <td>Controls saved payment method save/redisplay behavior.</td>
+    </tr>
+    <tr>
+      <td>
+        <code>adaptivePricing</code>
+      </td>
+      <td>
+        <code>{'{ allowed?: boolean }'}</code>
+      </td>
+      <td>Show prices in the customer's local currency. Elements mode only.</td>
+    </tr>
+    <tr>
+      <td>
+        <code>syncAddressCheckbox</code>
+      </td>
+      <td>
+        <code>
+          {'{ billingToShipping?: boolean; shippingToBilling?: boolean }'}
+        </code>
+      </td>
+      <td>
+        Controls the "same as shipping/billing" checkbox. Elements mode only.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+## Session
+
+The `session` prop tells the component how to get Stripe Checkout Session credentials (`clientSecret` and `publishableKey`).
 
 ### Direct object
 
@@ -189,22 +303,20 @@ Pass the session response directly if you already have it:
 
 ### Async function
 
-Pass a function that fetches the session from your backend. The function is called
-when the customer clicks the checkout trigger:
+Pass a function that fetches the session from your backend. Called lazily when the customer clicks the trigger:
 
 ```tsx
 <CioCheckout
   session={async () => {
     const res = await fetch('/api/checkout-session', { method: 'POST' });
-    return res.json(); // must return { clientSecret, publishableKey }
+    return res.json(); // { clientSecret, publishableKey }
   }}
 />
 ```
 
 ### Registry pattern
 
-For non-React or multi-library setups, you can register a session globally once
-and omit the `session` prop entirely:
+For non-React or multi-library setups, register a session globally and omit the `session` prop:
 
 ```ts
 import { checkoutRegistry } from '@constructor-io/constructorio-ui-checkout';
@@ -216,75 +328,308 @@ checkoutRegistry.register(async () => {
 ```
 
 ```tsx
-// No session prop needed — picks it up from the registry
 <CioCheckout />
 ```
 
-### Disabling the redirect after payment
+> **Note:** If a `session` prop is also provided, it takes precedence over the registry.
 
-By default, Stripe redirects the customer to a `return_url` after payment completes. This library
-is designed to handle completion in-place (closing the modal/inline checkout, running fulfillment
-verification, etc.) using the `onComplete` callback — so you should **disable the redirect** when
-creating the Checkout Session on your backend:
+### Creating the Checkout Session (server-side)
+
+Both `uiMode` values use `ui_mode: 'custom'` on the server. The difference between elements and form mode is entirely client-side.
 
 ```js
-// On your backend
+// Works for both elements and form mode
 const session = await stripe.checkout.sessions.create({
-  ui_mode: 'embedded',
-  redirect_on_completion: 'never', // prevents redirect, fires onComplete instead
-  // return_url: '...',            // remove this if present
-  line_items: [{ price: 'price_...', quantity: 1 }],
+  ui_mode: 'custom',
   mode: 'payment',
+  line_items: [{ price: 'price_...', quantity: 1 }],
+  return_url: 'https://example.com/order-confirm?session_id={CHECKOUT_SESSION_ID}',
 });
+// Return { clientSecret: session.client_secret, publishableKey }
+```
+
+> **Note:** Requires `stripe` Node SDK v18+ for `ui_mode: 'custom'` support.
+
+#### Redirect behavior
+
+For `ui_mode: 'custom'`, redirect behavior is controlled client-side by the Stripe.js SDK. Card payments complete in-place via the `onComplete` callback. Bank-redirect methods (iDEAL, Bancontact) navigate to `return_url`. The `return_url` is required when creating the session.
+
+## Callbacks
+
+```tsx
+<CioCheckout
+  session={mySession}
+  callbacks={{
+    onComplete: (event) => {
+      // Payment succeeded. event.sessionId, event.items available.
+    },
+    onClose: () => {
+      // User dismissed checkout without completing.
+    },
+    onError: (error) => {
+      // Session creation or payment error.
+    },
+    onFulfill: async (event) => {
+      // Verify fulfillment on your server. Return { success, message? }.
+      const res = await fetch(`/api/verify/${event.sessionId}`);
+      return res.json();
+    },
+    onFulfillComplete: (event) => {
+      // Called after onFulfill resolves. event.result.success available.
+    },
+    onSessionExpired: () => {
+      // Stripe session expired while form was open.
+    },
+  }}
+/>
+```
+
+## Imperative Handle
+
+Access `open`, `close`, and `reset` methods via a ref:
+
+```tsx
+import { useRef } from 'react';
+import { CioCheckout } from '@constructor-io/constructorio-ui-checkout';
+import type { CioCheckoutHandle } from '@constructor-io/constructorio-ui-checkout';
+
+function App() {
+  const checkoutRef = useRef<CioCheckoutHandle>(null);
+
+  return (
+    <>
+      <button onClick={() => checkoutRef.current?.open()}>Open Checkout</button>
+      <CioCheckout ref={checkoutRef} session={mySession} />
+    </>
+  );
+}
 ```
 
 <table>
   <thead>
     <tr>
-      <th>
-        <code>redirect_on_completion</code>
-      </th>
-      <th>Behavior</th>
+      <th>Method</th>
+      <th>Description</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>
-        <code>'always'</code> (default)
+        <code>open()</code>
       </td>
-      <td>
-        Stripe redirects to <code>return_url</code> after payment
-      </td>
+      <td>Resolves the session (if async) and opens the checkout UI.</td>
     </tr>
     <tr>
       <td>
-        <code>'if_required'</code>
+        <code>close()</code>
       </td>
-      <td>
-        Redirects only for redirect-based payment methods (e.g. bank transfers)
-      </td>
+      <td>Closes the checkout without completing payment.</td>
     </tr>
     <tr>
       <td>
-        <code>'never'</code>
+        <code>reset()</code>
       </td>
       <td>
-        No redirect — fires the <code>onComplete</code> callback instead
+        Closes the form and clears all internal state (fulfillment, errors).
       </td>
     </tr>
   </tbody>
 </table>
 
-Use `'never'` for the best experience with this library. If you need to support redirect-based
-payment methods, use `'if_required'` and provide a `return_url` as a fallback.
+## Component Overrides
+
+Replace built-in sub-components using `componentOverrides`. Available in elements mode only.
+
+### Pay Button
+
+Replace the default pay button with a custom component:
+
+```tsx
+<CioCheckout
+  session={mySession}
+  componentOverrides={{
+    payButton: {
+      reactNode: (props) => (
+        <button
+          onClick={props.onClick}
+          disabled={props.isDisabled}
+          className="my-custom-button"
+        >
+          {props.isSubmitting
+            ? 'Processing...'
+            : `Complete Purchase ${props.amount}`}
+        </button>
+      ),
+    },
+  }}
+/>
+```
+
+`PayButtonRenderProps` passed to your component:
+
+<table>
+  <thead>
+    <tr>
+      <th>Prop</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <code>isSubmitting</code>
+      </td>
+      <td>
+        <code>boolean</code>
+      </td>
+      <td>Payment is currently being processed</td>
+    </tr>
+    <tr>
+      <td>
+        <code>isDisabled</code>
+      </td>
+      <td>
+        <code>boolean</code>
+      </td>
+      <td>Button should be non-interactive (loading or form incomplete)</td>
+    </tr>
+    <tr>
+      <td>
+        <code>amount</code>
+      </td>
+      <td>
+        <code>string</code>
+      </td>
+      <td>Formatted total (e.g. "$49.99")</td>
+    </tr>
+    <tr>
+      <td>
+        <code>onClick</code>
+      </td>
+      <td>
+        <code>() =&gt; void</code>
+      </td>
+      <td>Triggers payment confirmation</td>
+    </tr>
+  </tbody>
+</table>
+
+### Checkout Status
+
+Replace the post-payment fulfillment status UI:
+
+```tsx
+<CioCheckout
+  session={mySession}
+  componentOverrides={{
+    checkoutStatus: {
+      reactNode: (props) => (
+        <div>
+          {props.fulfillmentStatus === 'pending' && <p>Verifying...</p>}
+          {props.fulfillmentStatus === 'fulfilled' && <p>Done!</p>}
+          {props.fulfillmentStatus === 'failed' && (
+            <button onClick={props.onRetry}>Retry</button>
+          )}
+          <button onClick={props.onDismiss}>Close</button>
+        </div>
+      ),
+    },
+  }}
+/>
+```
+
+## Translations
+
+Override any UI text via the `translations` prop:
+
+```tsx
+<CioCheckout
+  session={mySession}
+  translations={{
+    'CioCheckout.checkout.title': 'Complete Your Order',
+    'CioCheckout.checkout.payButtonLabel': 'Purchase',
+    'CioCheckout.checkout.payButtonLoadingLabel': 'Submitting...',
+    'CioCheckout.checkout.cancelLabel': 'Go Back',
+    'CioCheckout.checkout.closeLabel': 'Close',
+    'CioCheckout.checkout.buttonLabel': 'Buy Now',
+    'CioCheckout.checkout.buttonLoadingLabel': 'Please wait...',
+    'CioCheckout.fulfillment.pending': 'Confirming your order...',
+    'CioCheckout.fulfillment.success': 'Purchase Complete',
+    'CioCheckout.fulfillment.failure': 'Something went wrong',
+    'CioCheckout.fulfillment.failureHint': 'Contact support if this persists.',
+    'CioCheckout.fulfillment.dismissLabel': 'Close',
+    'CioCheckout.fulfillment.retryLabel': 'Try Again',
+  }}
+/>
+```
+
+## Session Expiry
+
+Checkout Sessions expire after 24 hours by default (configurable via `expires_at`).
+
+When a session expires while the form is displayed, the component closes the UI and fires `onSessionExpired`:
+
+```tsx
+<CioCheckout
+  session={mySession}
+  callbacks={{
+    onSessionExpired: () => {
+      alert('Your session has expired. Please try again.');
+    },
+  }}
+/>
+```
+
+To set a shorter expiry on the server:
+
+```js
+const session = await stripe.checkout.sessions.create({
+  // ...
+  expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // 30 minutes
+});
+```
 
 ---
 
-### Branding & Appearance
+## Styling
 
-Stripe Embedded Checkout does **not** support client-side theming or an `appearance` API.
-To brand the checkout UI, configure these settings in your **Stripe Dashboard** under
-**Settings > Branding**:
+### Appearance API
+
+Use the `appearance` prop to customize Stripe element colors, fonts, and spacing:
+
+```tsx
+<CioCheckout
+  session={mySession}
+  appearance={{
+    theme: 'stripe',
+    variables: {
+      colorPrimary: '#0f172a',
+      colorBackground: '#ffffff',
+      borderRadius: '8px',
+      fontFamily: 'Inter, system-ui, sans-serif',
+    },
+  }}
+/>
+```
+
+### Custom Fonts
+
+Load custom fonts into the Stripe iframe:
+
+```tsx
+<CioCheckout
+  session={mySession}
+  fonts={[{ cssSrc: 'https://fonts.googleapis.com/css2?family=Inter' }]}
+  appearance={{
+    variables: { fontFamily: 'Inter' },
+  }}
+/>
+```
+
+### Dashboard Branding
+
+Configure branding in the Stripe Dashboard under **Settings > Branding**. These settings apply to form mode only.
 
 <table>
   <thead>
@@ -298,13 +643,7 @@ To brand the checkout UI, configure these settings in your **Stripe Dashboard** 
       <td>
         <strong>Logo</strong>
       </td>
-      <td>Displayed at the top of the checkout form</td>
-    </tr>
-    <tr>
-      <td>
-        <strong>Icon</strong>
-      </td>
-      <td>Small icon / favicon</td>
+      <td>Displayed at the top of the form</td>
     </tr>
     <tr>
       <td>
@@ -320,88 +659,3 @@ To brand the checkout UI, configure these settings in your **Stripe Dashboard** 
     </tr>
   </tbody>
 </table>
-
-These settings apply **globally** to all Embedded Checkout sessions for your Stripe account.
-There is no per-session or per-component customization — no custom CSS, fonts, or layout overrides
-are available.
-
-> For full control over checkout styling, Stripe offers the **Payment Element API**
-> (using Payment Intents with `pi_` keys instead of Checkout Sessions), which supports the
-> `appearance` option. That is a different integration path and is not covered by this library.
-
----
-
-### Stripe Callbacks
-
-### `onShippingDetailsChange`
-
-Called when the customer completes the shipping details form inside Stripe's checkout UI.
-
-**Prerequisite:** Your backend must create the Checkout Session with
-`permissions.update.shipping_details` set to `'server_only'`.
-
-```tsx
-<CioCheckout
-  session={mySession}
-  onShippingDetailsChange={async (event) => {
-    // event.checkoutSessionId — the Stripe session ID
-    // event.shippingDetails — { name, address: { country, line1, ... } }
-
-    const res = await fetch('/api/update-shipping', {
-      method: 'POST',
-      body: JSON.stringify({
-        sessionId: event.checkoutSessionId,
-        address: event.shippingDetails.address,
-      }),
-    });
-    const data = await res.json();
-
-    if (!data.ok) {
-      return { type: 'reject', errorMessage: data.reason };
-    }
-    return { type: 'accept' };
-  }}
-/>
-```
-
-### `onLineItemsChange`
-
-Called when the customer adds, removes, or modifies a line item inside Stripe's checkout UI.
-
-**Prerequisite:** Your backend must create the Checkout Session with
-`permissions.update.line_items` set to `'server_only'`.
-
-```tsx
-<CioCheckout
-  session={mySession}
-  onLineItemsChange={async (event) => {
-    // event.checkoutSessionId — the Stripe session ID
-    // event.lineItems — array of { id, quantity, price, ... }
-
-    const res = await fetch('/api/update-line-items', {
-      method: 'POST',
-      body: JSON.stringify({
-        sessionId: event.checkoutSessionId,
-        lineItems: event.lineItems,
-      }),
-    });
-    const data = await res.json();
-
-    if (!data.ok) {
-      return { type: 'reject', errorMessage: data.reason };
-    }
-    return { type: 'accept' };
-  }}
-/>
-```
-
-### How it works
-
-1. Your backend creates a Checkout Session with the relevant permission set to `'server_only'`
-2. The customer changes shipping details or line items in Stripe's UI
-3. Your callback fires client-side with the event data
-4. Inside the callback, you call your backend to recalculate (shipping options, totals, etc.)
-5. Your backend updates the Checkout Session via the Stripe API
-6. You return `{ type: 'accept' }` or `{ type: 'reject', errorMessage: '...' }` to Stripe
-
-See [Stripe docs: Custom Shipping Options](https://docs.stripe.com/payments/checkout/custom-shipping-options) for more details.

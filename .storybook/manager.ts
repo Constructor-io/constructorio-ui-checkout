@@ -10,6 +10,4 @@ const theme = create({
   brandTarget: '_blank',
 });
 
-addons.setConfig({
-  theme,
-});
+addons.setConfig({ theme });

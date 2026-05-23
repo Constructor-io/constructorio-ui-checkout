@@ -1,6 +1,9 @@
-import { forwardRef, useImperativeHandle, useMemo } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useMemo } from 'react';
 
-import { EmbeddedCheckoutProvider } from '@stripe/react-stripe-js';
+import {
+  CheckoutElementsProvider,
+  CheckoutFormProvider,
+} from '@stripe/react-stripe-js/checkout';
 
 import checkoutManager from '@src/manager/CheckoutManager';
 import type { CioCheckoutHandle, CioCheckoutProps } from '@src/types';
@@ -23,10 +26,17 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
       triggerWhen,
       triggerState,
       displayMode = 'modal',
+      uiMode = 'elements',
+      appearance,
+      loader,
+      fonts,
+      savedPaymentMethod,
+      defaultValues,
+      adaptivePricing,
+      syncAddressCheckbox,
       translations,
       componentOverrides,
-      onShippingDetailsChange,
-      onLineItemsChange,
+      layout,
     } = props;
 
     const {
@@ -43,7 +53,16 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
       reset,
     } = useCheckoutSession(props, callbacks);
 
-    useImperativeHandle(ref, () => ({ reset }), [reset]);
+    useImperativeHandle(
+      ref,
+      () => ({ open: openCheckout, close: closeCheckout, reset }),
+      [openCheckout, closeCheckout, reset]
+    );
+
+    const handleSessionExpired = useCallback(() => {
+      closeCheckout();
+      callbacks?.onSessionExpired?.();
+    }, [closeCheckout, callbacks]);
 
     const showTrigger = triggerWhen ? triggerWhen(triggerState ?? {}) : true;
     const isInline = displayMode === 'inline';
@@ -51,22 +70,54 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
 
     const stripePromise = useMemo(
       () =>
-        session ? checkoutManager.getStripe(session.publishableKey) : null,
-      [session]
+        session
+          ? checkoutManager.getStripe(session.publishableKey, uiMode)
+          : null,
+      [session, uiMode]
     );
 
-    const embeddedOptions = useMemo(
-      () =>
-        session
-          ? {
-              clientSecret: session.clientSecret,
-              onComplete: handleComplete,
-              onShippingDetailsChange,
-              onLineItemsChange,
-            }
-          : undefined,
-      [session, handleComplete, onShippingDetailsChange, onLineItemsChange]
-    );
+    const providerOptions = useMemo(() => {
+      if (!session) return undefined;
+
+      if (uiMode === 'form') {
+        const opts = {
+          clientSecret: session.clientSecret,
+          appearance,
+          loader,
+          fonts,
+          savedPaymentMethod,
+          defaultValues,
+        };
+        return opts;
+      }
+
+      const opts = {
+        clientSecret: session.clientSecret,
+        elementsOptions: {
+          appearance,
+          loader,
+          fonts,
+          savedPaymentMethod,
+          syncAddressCheckbox,
+        },
+        adaptivePricing,
+        defaultValues,
+      };
+      return opts;
+    }, [
+      session,
+      uiMode,
+      appearance,
+      loader,
+      fonts,
+      savedPaymentMethod,
+      syncAddressCheckbox,
+      adaptivePricing,
+      defaultValues,
+    ]);
+
+    const Provider =
+      uiMode === 'form' ? CheckoutFormProvider : CheckoutElementsProvider;
 
     return (
       <div className="cio-checkout-root">
@@ -87,24 +138,33 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
           </div>
         )}
 
-        {isOpen && stripePromise && embeddedOptions && (
-          <EmbeddedCheckoutProvider
-            stripe={stripePromise}
-            options={embeddedOptions}
-          >
+        {isOpen && stripePromise && providerOptions && (
+          <Provider stripe={stripePromise} options={providerOptions}>
             {isInline ? (
               <CheckoutInline
                 onCancel={closeCheckout}
+                onComplete={handleComplete}
+                onError={callbacks?.onError}
+                onSessionExpired={handleSessionExpired}
+                uiMode={uiMode}
+                layout={layout}
                 translations={translations}
+                componentOverrides={componentOverrides}
               />
             ) : (
               <CheckoutOverlay
                 isOpen={isOpen}
                 onClose={closeCheckout}
+                onComplete={handleComplete}
+                onError={callbacks?.onError}
+                onSessionExpired={handleSessionExpired}
+                uiMode={uiMode}
+                layout={layout}
                 translations={translations}
+                componentOverrides={componentOverrides}
               />
             )}
-          </EmbeddedCheckoutProvider>
+          </Provider>
         )}
 
         {isFulfilling && (

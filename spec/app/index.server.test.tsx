@@ -23,6 +23,6 @@ describe(`${CioCheckout.displayName}: server`, () => {
 
   it('does not render checkout form in initial server render', () => {
     const view = renderToString(<CioCheckout {...props} />);
-    expect(view).not.toContain('stripe-embedded-checkout');
+    expect(view).not.toContain('stripe-checkout-form');
   });
 });

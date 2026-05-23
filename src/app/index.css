@@ -115,6 +115,12 @@
   min-height: 400px;
 }
 
+/* Pay button */
+.cio-checkout-pay-button {
+  display: block;
+  margin: 16px auto 0;
+}
+
 /* Status (post-payment fulfillment) */
 .cio-checkout-status {
   margin-top: 8px;

@@ -2,10 +2,15 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import { Button } from '@constructor-io/constructorio-ui-components';
 
-import type { Translations } from '@src/types';
+import type {
+  CheckoutUiMode,
+  CioCheckoutComponentOverrides,
+  Translations,
+} from '@src/types';
 import { t } from '@src/utils';
 
 import CheckoutForm from './CheckoutForm';
+import CheckoutFormElements from './CheckoutFormElements';
 
 function CloseIcon() {
   return (
@@ -27,13 +32,25 @@ function CloseIcon() {
 interface CheckoutOverlayProps {
   isOpen: boolean;
   onClose: () => void;
+  onComplete: () => void;
+  onError?: (error: Error) => void;
+  onSessionExpired?: () => void;
+  uiMode?: CheckoutUiMode;
+  layout?: 'expanded' | 'compact';
   translations?: Translations;
+  componentOverrides?: CioCheckoutComponentOverrides;
 }
 
 export default function CheckoutOverlay({
   isOpen,
   onClose,
+  onComplete,
+  onError,
+  onSessionExpired,
+  uiMode = 'elements',
+  layout,
   translations,
+  componentOverrides,
 }: CheckoutOverlayProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -110,7 +127,22 @@ export default function CheckoutOverlay({
           </Button>
         </div>
         <div className="cio-checkout-overlay-body">
-          <CheckoutForm />
+          {uiMode === 'form' ? (
+            <CheckoutForm
+              onComplete={onComplete}
+              onError={onError}
+              onSessionExpired={onSessionExpired}
+              layout={layout}
+            />
+          ) : (
+            <CheckoutFormElements
+              onComplete={onComplete}
+              onError={onError}
+              onSessionExpired={onSessionExpired}
+              translations={translations}
+              componentOverrides={componentOverrides}
+            />
+          )}
         </div>
       </div>
     </dialog>

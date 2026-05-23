@@ -6,7 +6,7 @@
 
 ## Introduction
 
-A React UI library that wraps Stripe's Embedded Checkout into a drop-in checkout experience with modal/inline display modes, fulfillment verification, and lifecycle callbacks.
+A React UI library that wraps Stripe's Custom Checkout into a drop-in checkout experience with modal/inline display modes, fulfillment verification, and lifecycle callbacks. Supports two Stripe surface modes: **elements** (GA Custom Checkout with PaymentElement) and **form** (beta Checkout Form with built-in UI).
 
 Our [Storybook Docs](https://constructor-io.github.io/constructorio-ui-checkout) are the best place to explore the behavior and the available configuration options for this UI library.
 
@@ -107,18 +107,52 @@ npm run build           # build the library
 npm run build-storybook # build Storybook for deployment
 ```
 
+## Server-Side Setup
+
+Both `uiMode` values (`'elements'` and `'form'`) require creating a Checkout Session with `ui_mode: 'custom'` on the server:
+
+```js
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+app.post('/api/checkout-session', async (req, res) => {
+  const session = await stripe.checkout.sessions.create({
+    ui_mode: 'custom',
+    mode: 'payment',
+    line_items: [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: { name: 'Product Name' },
+          unit_amount: 4999, // $49.99 in cents
+        },
+        quantity: 1,
+      },
+    ],
+    return_url: 'https://example.com/order-confirm?session_id={CHECKOUT_SESSION_ID}',
+  });
+
+  res.json({
+    clientSecret: session.client_secret,
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+  });
+});
+```
+
+> **Note:** Requires `stripe` SDK v18+ for `ui_mode: 'custom'` support.
+
 ## Requirements
 
 - Node.js >= 18
 - React >= 16.12.0
 - React DOM >= 16.12.0
-- @stripe/stripe-js >= 5.0.0
-- @stripe/react-stripe-js >= 3.0.0
+- @stripe/stripe-js >= 9.3.1
+- @stripe/react-stripe-js >= 6.3.0
 - @constructor-io/constructorio-ui-components >= 1.0.0
 
 ## Supporting Docs
 
-- [Stripe Embedded Checkout](https://docs.stripe.com/checkout/embedded/quickstart)
+- [Stripe Custom Checkout](https://docs.stripe.com/payments/checkout/custom)
+- [Stripe Checkout Form (Beta)](https://docs.stripe.com/payments/checkout/custom/checkout-form)
 - [Constructor.io](https://constructor.io)
 
 ## License

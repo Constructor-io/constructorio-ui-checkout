@@ -24,8 +24,10 @@ type Story = StoryObj;
 
 const demoSession = () =>
   Promise.resolve({
-    clientSecret: 'cs_test_SECRET_REPLACE_secret_1234567890abcdefg',
-    publishableKey: 'pk_test_REPLACE_1234567890abcdefg',
+    clientSecret:
+      'cs_test_REDACTED_secret_REDACTED',
+    publishableKey:
+      'pk_test_REDACTED',
   });
 
 // ===================== Playground =====================
@@ -254,6 +256,7 @@ export const TriggerWhen: Story = {
   render: () => (
     <CioCheckout
       session={demoSession}
+      uiMode="form"
       triggerLabel="Visible when cart has items"
       triggerWhen={(state) => (state as { count: number }).count > 0}
       triggerState={{ count: 2 }}

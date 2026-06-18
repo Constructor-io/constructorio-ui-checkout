@@ -24,8 +24,10 @@ type Story = StoryObj;
 
 const demoSession = () =>
   Promise.resolve({
-    clientSecret: 'cs_test_SECRET_REPLACE_secret_1234567890abcdefg',
-    publishableKey: 'pk_test_REPLACE_1234567890abcdefg',
+    clientSecret:
+      'cs_test_a1clZ7YGuMhgRkHaFOTOuOnnrxijZGjd6WGOSZMoDqLFhcXVX51i24RG7k_secret_fidnandhYHdWcXxpYCc%2FJ2FgY2RwaXEnKSdwbEhqYWAnPydjandoJ3gl',
+    publishableKey:
+      'pk_test_51S822pI85K729ZM3RxrYHoYNJMHnMzpIleasLpIDA0xvsKrBjhD4c5Q65t4Iza1C2Qmx2vIVtRBHdMzp0Y4yfqST00nZq12JMe',
   });
 
 // ===================== Playground =====================
@@ -254,6 +256,7 @@ export const TriggerWhen: Story = {
   render: () => (
     <CioCheckout
       session={demoSession}
+      uiMode="form"
       triggerLabel="Visible when cart has items"
       triggerWhen={(state) => (state as { count: number }).count > 0}
       triggerState={{ count: 2 }}

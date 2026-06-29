@@ -26,7 +26,8 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
       triggerWhen,
       triggerState,
       displayMode = 'modal',
-      uiMode = 'elements',
+      uiMode = 'form',
+      redirectBehavior,
       appearance,
       loader,
       fonts,
@@ -148,6 +149,7 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
                 onSessionExpired={handleSessionExpired}
                 uiMode={uiMode}
                 layout={layout}
+                redirectBehavior={redirectBehavior}
                 translations={translations}
                 componentOverrides={componentOverrides}
               />
@@ -160,6 +162,7 @@ const CioCheckout = forwardRef<CioCheckoutHandle, CioCheckoutProps>(
                 onSessionExpired={handleSessionExpired}
                 uiMode={uiMode}
                 layout={layout}
+                redirectBehavior={redirectBehavior}
                 translations={translations}
                 componentOverrides={componentOverrides}
               />

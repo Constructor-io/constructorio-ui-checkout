@@ -8,10 +8,10 @@ A React component that wraps Stripe's Custom Checkout into a drop-in checkout ex
 
 Supports two Stripe surface modes via the `uiMode` prop:
 
-- **`'elements'`** (default): Uses the GA Custom Checkout with `PaymentElement`. Full control over styling, field visibility, and the pay button.
-- **`'form'`**: Uses the beta Checkout Form surface. Stripe manages the entire UI including the submit button. Requires Stripe to enable the beta on the account. Requires the `custom_checkout_payment_form_1` beta flag (handled internally by the library).
+- **`'form'`** (default): Uses the beta Checkout Form surface. Stripe manages the entire UI including the submit button. Requires Stripe to enable the beta on the account. Requires the `custom_checkout_payment_form_1` beta flag (handled internally by the library).
+- **`'elements'`**: Uses the GA Custom Checkout with `PaymentElement`. Full control over styling, field visibility, and the pay button.
 
-> **Server-side:** Both modes use `ui_mode: 'custom'` when creating the Checkout Session. The `uiMode` prop only affects the client-side Stripe.js surface.
+> **Server-side:** The session's `ui_mode` must match the `uiMode` prop — `'form'` mode requires `ui_mode: 'form'` (beta) and `'elements'` mode requires `ui_mode: 'elements'` when creating the Checkout Session.
 
 ## Props
 
@@ -60,7 +60,7 @@ Supports two Stripe surface modes via the `uiMode` prop:
         <code>'elements' | 'form'</code>
       </td>
       <td>
-        <code>'elements'</code>
+        <code>'form'</code>
       </td>
       <td>Which Stripe Checkout surface to use.</td>
     </tr>
@@ -335,12 +335,12 @@ checkoutRegistry.register(async () => {
 
 ### Creating the Checkout Session (server-side)
 
-Both `uiMode` values use `ui_mode: 'custom'` on the server. The difference between elements and form mode is entirely client-side.
+The session's `ui_mode` must match the `uiMode` prop: `'form'` mode (the default) requires `ui_mode: 'form'` (beta), and `'elements'` mode requires `ui_mode: 'elements'`.
 
 ```js
-// Works for both elements and form mode
+// Form mode (default) — use ui_mode: 'elements' for elements mode
 const session = await stripe.checkout.sessions.create({
-  ui_mode: 'custom',
+  ui_mode: 'form',
   mode: 'payment',
   line_items: [{ price: 'price_...', quantity: 1 }],
   return_url: 'https://example.com/order-confirm?session_id={CHECKOUT_SESSION_ID}',
@@ -348,11 +348,11 @@ const session = await stripe.checkout.sessions.create({
 // Return { clientSecret: session.client_secret, publishableKey }
 ```
 
-> **Note:** Requires `stripe` Node SDK v18+ for `ui_mode: 'custom'` support.
+> **Note:** Requires `stripe` Node SDK v18+. `ui_mode: 'form'` is in beta and requires Stripe to enable it on the account.
 
 #### Redirect behavior
 
-For `ui_mode: 'custom'`, redirect behavior is controlled client-side by the Stripe.js SDK. Card payments complete in-place via the `onComplete` callback. Bank-redirect methods (iDEAL, Bancontact) navigate to `return_url`. The `return_url` is required when creating the session.
+Redirect behavior is controlled client-side by the Stripe.js SDK. Card payments complete in-place via the `onComplete` callback. Bank-redirect methods (iDEAL, Bancontact) navigate to `return_url`. The `return_url` is required when creating the session.
 
 ## Callbacks
 

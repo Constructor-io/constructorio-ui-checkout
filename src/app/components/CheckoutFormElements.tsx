@@ -12,6 +12,7 @@ import {
 import type { StripePaymentElementChangeEvent } from '@stripe/stripe-js';
 
 import type {
+  CheckoutRedirectBehavior,
   CioCheckoutComponentOverrides,
   PayButtonRenderProps,
   Translations,
@@ -24,6 +25,7 @@ interface CheckoutFormElementsProps {
   onSessionExpired?: () => void;
   translations?: Translations;
   componentOverrides?: CioCheckoutComponentOverrides;
+  redirectBehavior?: CheckoutRedirectBehavior;
 }
 
 export default function CheckoutFormElements({
@@ -32,6 +34,7 @@ export default function CheckoutFormElements({
   onSessionExpired,
   translations,
   componentOverrides,
+  redirectBehavior = 'if_required',
 }: CheckoutFormElementsProps) {
   const checkoutState = useCheckoutElements();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,7 +71,7 @@ export default function CheckoutFormElements({
 
     setIsSubmitting(true);
     try {
-      const result = await checkout.confirm();
+      const result = await checkout.confirm({ redirect: redirectBehavior });
       if (result.type === 'success') {
         onComplete();
       } else if (result.type === 'error') {

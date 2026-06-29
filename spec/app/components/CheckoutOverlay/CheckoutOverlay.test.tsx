@@ -39,7 +39,12 @@ describe(`${CheckoutOverlay.name}: client`, () => {
 
   it('renders the Stripe payment element in elements mode', () => {
     render(
-      <CheckoutOverlay isOpen onClose={onClose} onComplete={onComplete} />
+      <CheckoutOverlay
+        isOpen
+        onClose={onClose}
+        onComplete={onComplete}
+        uiMode="elements"
+      />
     );
     expect(screen.getByTestId('stripe-payment-element')).toBeInTheDocument();
   });

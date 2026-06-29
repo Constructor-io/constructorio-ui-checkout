@@ -1,6 +1,6 @@
 {
   "name": "@constructor-io/constructorio-ui-checkout",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Constructor.io Stripe Embedded Checkout UI library for web applications",
   "author": "Constructor.io Corporation",
   "license": "MIT",
@@ -57,7 +57,7 @@
   },
   "peerDependencies": {
     "@constructor-io/constructorio-ui-components": ">=1.4.0",
-    "@stripe/react-stripe-js": ">=6.3.0",
+    "@stripe/react-stripe-js": ">=6.6.0",
     "@stripe/stripe-js": ">=9.3.1",
     "react": ">=16.12.0",
     "react-dom": ">=16.12.0"
@@ -75,7 +75,7 @@
     "@storybook/react": "^8.6.4",
     "@storybook/react-vite": "^8.6.4",
     "@storybook/test": "^8.6.4",
-    "@stripe/react-stripe-js": "^6.3.0",
+    "@stripe/react-stripe-js": "^6.6.0",
     "@stripe/stripe-js": "^9.5.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

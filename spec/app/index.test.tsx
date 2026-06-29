@@ -89,7 +89,7 @@ describe(`${CioCheckout.displayName}: client`, () => {
   it('opens modal checkout on trigger click', async () => {
     const user = userEvent.setup();
     const props = factories.checkoutProps.build();
-    render(<CioCheckout {...props} />);
+    render(<CioCheckout {...props} uiMode="elements" />);
 
     await user.click(screen.getByRole('button', { name: 'Checkout' }));
 
@@ -104,7 +104,7 @@ describe(`${CioCheckout.displayName}: client`, () => {
   it('opens inline checkout on trigger click', async () => {
     const user = userEvent.setup();
     const props = factories.checkoutProps.build();
-    render(<CioCheckout {...props} displayMode="inline" />);
+    render(<CioCheckout {...props} uiMode="elements" displayMode="inline" />);
 
     await user.click(screen.getByRole('button', { name: 'Checkout' }));
 

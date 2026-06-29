@@ -53,8 +53,8 @@ export const Playground: StoryObj<PlaygroundArgs> = {
   args: {
     triggerLabel: 'Pay $49.99',
     displayMode: 'modal',
-    uiMode: 'elements',
-    layout: 'expanded',
+    uiMode: 'form',
+    layout: 'compact',
     loader: 'auto',
     theme: 'stripe',
     colorPrimary: '#0f172a',
@@ -142,7 +142,7 @@ export const Inline: Story = {
 // ===================== UI Modes (Elements vs Form) =====================
 
 export const ElementsMode: Story = {
-  name: 'UI Mode: Elements (Default)',
+  name: 'UI Mode: Elements',
   render: () => (
     <CioCheckout
       session={demoSession}
@@ -156,12 +156,28 @@ export const ElementsMode: Story = {
 };
 
 export const FormMode: Story = {
-  name: 'UI Mode: Form (Beta)',
+  name: 'UI Mode: Form (Beta, Default)',
   render: () => (
     <CioCheckout
       session={demoSession}
       uiMode="form"
       triggerLabel="Pay with Checkout Form"
+      callbacks={{
+        onComplete: (event) => console.log('Complete', event),
+      }}
+    />
+  ),
+};
+
+// `layout` applies to form mode only and defaults to 'expanded'.
+export const LayoutCompact: Story = {
+  name: 'Layout: Compact (Form mode)',
+  render: () => (
+    <CioCheckout
+      session={demoSession}
+      uiMode="form"
+      layout="compact"
+      triggerLabel="Pay (Compact Layout)"
       callbacks={{
         onComplete: (event) => console.log('Complete', event),
       }}

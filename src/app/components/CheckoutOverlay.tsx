@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Button } from '@constructor-io/constructorio-ui-components';
 
 import type {
+  CheckoutLayout,
+  CheckoutRedirectBehavior,
   CheckoutUiMode,
   CioCheckoutComponentOverrides,
   Translations,
@@ -36,7 +38,8 @@ interface CheckoutOverlayProps {
   onError?: (error: Error) => void;
   onSessionExpired?: () => void;
   uiMode?: CheckoutUiMode;
-  layout?: 'expanded' | 'compact';
+  layout?: CheckoutLayout;
+  redirectBehavior?: CheckoutRedirectBehavior;
   translations?: Translations;
   componentOverrides?: CioCheckoutComponentOverrides;
 }
@@ -47,8 +50,9 @@ export default function CheckoutOverlay({
   onComplete,
   onError,
   onSessionExpired,
-  uiMode = 'elements',
+  uiMode = 'form',
   layout,
+  redirectBehavior,
   translations,
   componentOverrides,
 }: CheckoutOverlayProps) {
@@ -133,6 +137,7 @@ export default function CheckoutOverlay({
               onError={onError}
               onSessionExpired={onSessionExpired}
               layout={layout}
+              redirectBehavior={redirectBehavior}
             />
           ) : (
             <CheckoutFormElements
@@ -141,6 +146,7 @@ export default function CheckoutOverlay({
               onSessionExpired={onSessionExpired}
               translations={translations}
               componentOverrides={componentOverrides}
+              redirectBehavior={redirectBehavior}
             />
           )}
         </div>

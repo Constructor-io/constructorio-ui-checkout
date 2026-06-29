@@ -23,7 +23,7 @@ export const argTypes = {
     options: ['elements', 'form'],
     table: {
       type: { summary: "'elements' | 'form'" },
-      defaultValue: { summary: 'elements' },
+      defaultValue: { summary: 'form' },
     },
   },
   layout: {

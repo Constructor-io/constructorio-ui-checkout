@@ -16,6 +16,8 @@ export type {
   CheckoutConfig,
   CheckoutFulfillmentEvent,
   CheckoutItem,
+  CheckoutLayout,
+  CheckoutRedirectBehavior,
   CheckoutSession,
   CheckoutSessionResponse,
   CheckoutStatusRenderProps,

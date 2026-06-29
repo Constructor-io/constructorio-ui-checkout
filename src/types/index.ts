@@ -62,6 +62,21 @@ export type CheckoutSession =
  */
 export type CheckoutUiMode = 'elements' | 'form';
 
+/**
+ * Controls whether Stripe redirects to `return_url` after payment confirmation:
+ * - `'if_required'` — only redirects for payment methods that require it
+ * (e.g. iDEAL, Bancontact); card payments complete in-place
+ * - `'always'` — always redirects to `return_url`
+ */
+export type CheckoutRedirectBehavior = 'always' | 'if_required';
+
+/**
+ * Payment method layout (form mode only):
+ * - `'expanded'` — shows all payment methods open
+ * - `'compact'` — uses the new form compact mode
+ */
+export type CheckoutLayout = 'expanded' | 'compact';
+
 /** Stripe provider styling and behavior options passed through to the Stripe SDK. */
 export interface CheckoutStripeOptions {
   /** Stripe Appearance API theme and variables for styling the payment form */
@@ -70,8 +85,8 @@ export interface CheckoutStripeOptions {
   loader?: 'auto' | 'always' | 'never';
   /** Custom web fonts for the Stripe payment form */
   fonts?: Array<CssFontSource | CustomFontSource>;
-  /** Payment method layout: 'expanded' shows all methods open, 'compact' uses an accordion (form mode only) */
-  layout?: 'expanded' | 'compact';
+  /** Payment method layout (form mode only). See {@link CheckoutLayout}. Defaults to `'expanded'`. */
+  layout?: CheckoutLayout;
   /** Pre-fill customer details in the payment form */
   defaultValues?: {
     billingAddress?: StripeCheckoutContact;
@@ -100,6 +115,8 @@ export interface CheckoutConfig extends CheckoutStripeOptions {
   session?: CheckoutSession;
   /** Which Stripe checkout surface to render */
   uiMode?: CheckoutUiMode;
+  /** Controls Stripe's post-payment redirect behavior. Defaults to `'if_required'`. */
+  redirectBehavior?: CheckoutRedirectBehavior;
 }
 
 /** Payload delivered to `onComplete` and `onFulfill` after successful payment. */

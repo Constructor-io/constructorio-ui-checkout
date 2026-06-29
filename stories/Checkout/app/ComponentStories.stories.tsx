@@ -25,7 +25,7 @@ type Story = StoryObj;
 const demoSession = () =>
   Promise.resolve({
     clientSecret:
-      'cs_test_a1clZ7YGuMhgRkHaFOTOuOnnrxijZGjd6WGOSZMoDqLFhcXVX51i24RG7k_secret_fidnandhYHdWcXxpYCc%2FJ2FgY2RwaXEnKSdwbEhqYWAnPydjandoJ3gl',
+      'cs_test_a1fLaWmkjLbyM0uu5WwCmT29O4Xp2DLhgaKghDaLT1DKZJr89Ehe3rc9h2_secret_fidnandhYHdWcXxpYCc%2FJ2FgY2RwaXEnKSdwbEhqYWAnPydjandoJ3gl',
     publishableKey:
       'pk_test_51S822pI85K729ZM3RxrYHoYNJMHnMzpIleasLpIDA0xvsKrBjhD4c5Q65t4Iza1C2Qmx2vIVtRBHdMzp0Y4yfqST00nZq12JMe',
   });
@@ -53,8 +53,8 @@ export const Playground: StoryObj<PlaygroundArgs> = {
   args: {
     triggerLabel: 'Pay $49.99',
     displayMode: 'modal',
-    uiMode: 'elements',
-    layout: 'expanded',
+    uiMode: 'form',
+    layout: 'compact',
     loader: 'auto',
     theme: 'stripe',
     colorPrimary: '#0f172a',
@@ -142,7 +142,7 @@ export const Inline: Story = {
 // ===================== UI Modes (Elements vs Form) =====================
 
 export const ElementsMode: Story = {
-  name: 'UI Mode: Elements (Default)',
+  name: 'UI Mode: Elements',
   render: () => (
     <CioCheckout
       session={demoSession}
@@ -156,12 +156,28 @@ export const ElementsMode: Story = {
 };
 
 export const FormMode: Story = {
-  name: 'UI Mode: Form (Beta)',
+  name: 'UI Mode: Form (Beta, Default)',
   render: () => (
     <CioCheckout
       session={demoSession}
       uiMode="form"
       triggerLabel="Pay with Checkout Form"
+      callbacks={{
+        onComplete: (event) => console.log('Complete', event),
+      }}
+    />
+  ),
+};
+
+// `layout` applies to form mode only and defaults to 'expanded'.
+export const LayoutCompact: Story = {
+  name: 'Layout: Compact (Form mode)',
+  render: () => (
+    <CioCheckout
+      session={demoSession}
+      uiMode="form"
+      layout="compact"
+      triggerLabel="Pay (Compact Layout)"
       callbacks={{
         onComplete: (event) => console.log('Complete', event),
       }}

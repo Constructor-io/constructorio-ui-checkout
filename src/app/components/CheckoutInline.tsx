@@ -1,6 +1,8 @@
 import { Button } from '@constructor-io/constructorio-ui-components';
 
 import type {
+  CheckoutLayout,
+  CheckoutRedirectBehavior,
   CheckoutUiMode,
   CioCheckoutComponentOverrides,
   Translations,
@@ -16,7 +18,8 @@ interface CheckoutInlineProps {
   onError?: (error: Error) => void;
   onSessionExpired?: () => void;
   uiMode?: CheckoutUiMode;
-  layout?: 'expanded' | 'compact';
+  layout?: CheckoutLayout;
+  redirectBehavior?: CheckoutRedirectBehavior;
   translations?: Translations;
   componentOverrides?: CioCheckoutComponentOverrides;
 }
@@ -26,8 +29,9 @@ export default function CheckoutInline({
   onComplete,
   onError,
   onSessionExpired,
-  uiMode = 'elements',
+  uiMode = 'form',
   layout,
+  redirectBehavior,
   translations,
   componentOverrides,
 }: CheckoutInlineProps) {
@@ -48,6 +52,7 @@ export default function CheckoutInline({
             onError={onError}
             onSessionExpired={onSessionExpired}
             layout={layout}
+            redirectBehavior={redirectBehavior}
           />
         ) : (
           <CheckoutFormElements
@@ -56,6 +61,7 @@ export default function CheckoutInline({
             onSessionExpired={onSessionExpired}
             translations={translations}
             componentOverrides={componentOverrides}
+            redirectBehavior={redirectBehavior}
           />
         )}
       </div>

@@ -4,11 +4,14 @@ import {
 } from '@stripe/react-stripe-js/checkout';
 import type { StripeCheckoutFormConfirmEvent } from '@stripe/stripe-js';
 
+import type { CheckoutLayout, CheckoutRedirectBehavior } from '@src/types';
+
 interface CheckoutFormProps {
   onComplete: () => void;
   onError?: (error: Error) => void;
   onSessionExpired?: () => void;
-  layout?: 'expanded' | 'compact';
+  layout?: CheckoutLayout;
+  redirectBehavior?: CheckoutRedirectBehavior;
 }
 
 export default function CheckoutForm({
@@ -16,6 +19,7 @@ export default function CheckoutForm({
   onError,
   onSessionExpired,
   layout,
+  redirectBehavior = 'if_required',
 }: CheckoutFormProps) {
   const checkoutState = useCheckoutForm();
 
@@ -46,7 +50,10 @@ export default function CheckoutForm({
 
   const handleConfirm = async (event: StripeCheckoutFormConfirmEvent) => {
     try {
-      const result = await checkout.confirm({ formConfirmEvent: event });
+      const result = await checkout.confirm({
+        formConfirmEvent: event,
+        redirect: redirectBehavior,
+      });
       if (result.type === 'success') {
         onComplete();
       } else if (result.type === 'error') {

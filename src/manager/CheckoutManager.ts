@@ -10,7 +10,7 @@ class CheckoutManager {
 
   getStripe(
     publishableKey: string,
-    uiMode: CheckoutUiMode = 'elements'
+    uiMode: CheckoutUiMode = 'form'
   ): Promise<Stripe | null> {
     const cacheKey = `${publishableKey}:${uiMode}`;
     const existing = this.stripeInstances.get(cacheKey);
@@ -25,10 +25,7 @@ class CheckoutManager {
     return stripePromise;
   }
 
-  clearStripe(
-    publishableKey: string,
-    uiMode: CheckoutUiMode = 'elements'
-  ): void {
+  clearStripe(publishableKey: string, uiMode: CheckoutUiMode = 'form'): void {
     this.stripeInstances.delete(`${publishableKey}:${uiMode}`);
   }
 

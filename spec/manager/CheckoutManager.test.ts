@@ -10,7 +10,7 @@ describe('CheckoutManager: client', () => {
   });
 
   it('calls loadStripe for a new key without beta flag in elements mode', async () => {
-    const result = checkoutManager.getStripe(DEMO_PUBLISHABLE_KEY);
+    const result = checkoutManager.getStripe(DEMO_PUBLISHABLE_KEY, 'elements');
     expect(loadStripe).toHaveBeenCalledWith(DEMO_PUBLISHABLE_KEY, undefined);
     expect(result).toBeInstanceOf(Promise);
     await expect(result).resolves.toEqual({

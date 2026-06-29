@@ -32,6 +32,9 @@ function App() {
         return res.json(); // must return { clientSecret, publishableKey }
       }}
       triggerLabel="Buy Now"
+      uiMode="form" // 'form' (default) or 'elements'
+      layout="expanded" // 'expanded' (default) or 'compact' — form mode only
+      redirectBehavior="if_required" // 'if_required' (default) or 'always'
       callbacks={{
         onComplete: (event) =>
           console.log('Payment complete!', event.sessionId),
@@ -109,14 +112,14 @@ npm run build-storybook # build Storybook for deployment
 
 ## Server-Side Setup
 
-Both `uiMode` values (`'elements'` and `'form'`) require creating a Checkout Session with `ui_mode: 'custom'` on the server:
+The server `ui_mode` depends on which `uiMode` the client uses: `'elements'` mode requires `ui_mode: 'elements'`, and `'form'` mode requires `ui_mode: 'form'` (beta). The example below shows form mode:
 
 ```js
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 app.post('/api/checkout-session', async (req, res) => {
   const session = await stripe.checkout.sessions.create({
-    ui_mode: 'custom',
+    ui_mode: 'form', // use 'elements' for the elements uiMode
     mode: 'payment',
     line_items: [
       {
@@ -128,7 +131,8 @@ app.post('/api/checkout-session', async (req, res) => {
         quantity: 1,
       },
     ],
-    return_url: 'https://example.com/order-confirm?session_id={CHECKOUT_SESSION_ID}',
+    return_url:
+      'https://example.com/order-confirm?session_id={CHECKOUT_SESSION_ID}',
   });
 
   res.json({
@@ -138,7 +142,7 @@ app.post('/api/checkout-session', async (req, res) => {
 });
 ```
 
-> **Note:** Requires `stripe` SDK v18+ for `ui_mode: 'custom'` support.
+> **Note:** Requires `stripe` SDK v18+. `ui_mode: 'form'` is in beta and requires Stripe to enable it on the account.
 
 ## Requirements
 

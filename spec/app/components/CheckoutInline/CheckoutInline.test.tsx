@@ -14,7 +14,13 @@ describe(`${CheckoutInline.name}: client`, () => {
   });
 
   it('renders the Stripe payment element in elements mode', () => {
-    render(<CheckoutInline onCancel={onCancel} onComplete={onComplete} />);
+    render(
+      <CheckoutInline
+        onCancel={onCancel}
+        onComplete={onComplete}
+        uiMode="elements"
+      />
+    );
     expect(screen.getByTestId('stripe-payment-element')).toBeInTheDocument();
   });
 

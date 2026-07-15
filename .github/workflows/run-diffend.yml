@@ -18,6 +18,6 @@ jobs:
         with:
           node-version-file: '.nvmrc'
       - name: Install Diffend (Mend)
-        run: npm install -g https://my.diffend.io/releases/npm/stable.tgz
+        run: npm install -g https://my.diffend.io/releases/npm/stable.tgz && sh ./bin/patch-diffend
       - name: Install dependencies with Diffend
         run: diffend npm install

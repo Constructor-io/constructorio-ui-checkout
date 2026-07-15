@@ -8,7 +8,7 @@ import prettierPlugin from 'eslint-plugin-prettier';
 import storybookPlugin from 'eslint-plugin-storybook';
 import cspellPlugin from '@cspell/eslint-plugin';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
-import vitestPlugin from 'eslint-plugin-vitest';
+import vitestPlugin from '@vitest/eslint-plugin';
 import testingLibraryPlugin from 'eslint-plugin-testing-library';
 import noSnapshotPlugin from 'eslint-plugin-no-snapshot-testing';
 import globals from 'globals';

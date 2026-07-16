@@ -1,5 +1,5 @@
 import { ProductCard } from '@constructor-io/constructorio-ui-components';
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 
 import CioCheckout from '@src/app';
 import checkoutRegistry from '@src/registry/CheckoutRegistry';

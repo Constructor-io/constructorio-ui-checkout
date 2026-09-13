@@ -95,6 +95,8 @@ checkoutRegistry.register(async () => {
 
 ## Local Development
 
+> **Note:** Local development requires Node.js >= 20. The consuming library supports Node.js >= 18, but the Storybook 9 toolchain used for development (`@storybook/react-vite`, `@storybook/test-runner`, `@chromatic-com/storybook`) requires Node.js >= 20.
+
 ### Development scripts
 
 ```bash

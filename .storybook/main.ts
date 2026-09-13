@@ -8,11 +8,9 @@ const config: StorybookConfig = {
     '../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)',
   ],
   addons: [
-    '@storybook/addon-essentials',
-    '@storybook/addon-interactions',
     '@storybook/addon-a11y',
-    '@storybook/addon-onboarding',
     '@chromatic-com/storybook',
+    '@storybook/addon-docs',
   ],
   framework: '@storybook/react-vite',
   viteFinal: (config) => {

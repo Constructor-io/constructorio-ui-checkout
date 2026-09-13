@@ -1,52 +1,49 @@
-import type { CheckoutSession } from '@src/types';
+import { createSessionStorageAdapter } from '@src/core/storage/sessionStorageAdapter';
+import type { CheckoutFlowConfig } from '@src/core/types';
+import { CheckoutFlow } from '@src/manager/CheckoutFlow';
 
-/**
- * CheckoutRegistry — non-React singleton for sharing checkout session
- * across multiple CIO libraries on the same page.
- *
- * Use this for the bundled/standalone use case where there's no React tree
- * to provide context. The merchant registers their session creator once:
- *
- *   CioCheckout.register(() => fetch('/api/checkout').then(r => r.json()));
- *
- * Any CIO library on the page can then look up the session via
- * CheckoutRegistry.getSession().
- *
- * For React apps, you can also pass `session` directly as a prop to CioCheckout.
- */
+// Non-React singleton so any CIO library on the page (e.g. pia dispatching an
+// add-to-cart mid-flow) can reach the active CheckoutFlow instance. resume()
+// is the typical entry point for the standalone-bundle case — it creates a
+// flow with the default sessionStorage adapter, registers it, and returns it.
+// Stored as `CheckoutFlow<unknown>` for type erasure — the merchant asserts
+// TState on read via getFlow/resume generics.
 class CheckoutRegistry {
-  private session: CheckoutSession | null = null;
+  private flow: CheckoutFlow<unknown> | null = null;
 
-  /**
-   * Register a checkout session globally.
-   * Overwrites any previously registered session.
-   */
-  register(session: CheckoutSession): void {
-    this.session = session;
+  register<TState>(flow: CheckoutFlow<TState>): void {
+    const erased = flow as CheckoutFlow<unknown>;
+    if (this.flow && this.flow !== erased) {
+      this.flow.destroy();
+    }
+    this.flow = erased;
   }
 
-  /**
-   * Get the registered session, or null if none has been registered.
-   */
-  getSession(): CheckoutSession | null {
-    return this.session;
+  getFlow<TState = unknown>(): CheckoutFlow<TState> | null {
+    return this.flow as CheckoutFlow<TState> | null;
   }
 
-  /**
-   * Check whether a session has been registered.
-   */
-  isRegistered(): boolean {
-    return this.session !== null;
+  hasFlow(): boolean {
+    return this.flow !== null;
   }
 
-  /**
-   * Clear the registered session.
-   */
   clear(): void {
-    this.session = null;
+    if (this.flow) {
+      this.flow.destroy();
+      this.flow = null;
+    }
+  }
+
+  resume<TState = unknown>(
+    config: CheckoutFlowConfig<TState>
+  ): CheckoutFlow<TState> {
+    const storage = config.storage ?? createSessionStorageAdapter();
+    const flow = new CheckoutFlow<TState>({ ...config, storage });
+    this.register(flow);
+    return flow;
   }
 }
 
-/** Global singleton */
 const checkoutRegistry = new CheckoutRegistry();
 export default checkoutRegistry;
+export { CheckoutRegistry };

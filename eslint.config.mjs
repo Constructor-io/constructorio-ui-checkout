@@ -33,7 +33,13 @@ export default tseslint.config(
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: 'tsconfig.json',
+        // projectService: TS-ESLint's project-service mode. More reliable than
+        // `project: 'tsconfig.json'` (a relative path) — VSCode's ESLint
+        // extension resolves per-file consistently, avoiding the false-positive
+        // no-unsafe-* errors that appear when a file is processed without its
+        // tsconfig context.
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
         ecmaFeatures: { jsx: true },
       },
     },

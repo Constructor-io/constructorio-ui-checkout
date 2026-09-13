@@ -1,3 +1,4 @@
+import { CheckoutFlow } from '@src/manager/CheckoutFlow';
 import checkoutRegistry from '@src/registry/CheckoutRegistry';
 
 describe('CheckoutRegistry: server', () => {
@@ -9,26 +10,21 @@ describe('CheckoutRegistry: server', () => {
     expect(checkoutRegistry).toBeDefined();
   });
 
-  it('registers and retrieves a static session', () => {
-    const session = { clientSecret: 'cs_test', publishableKey: 'pk_test' };
-    checkoutRegistry.register(session);
-    expect(checkoutRegistry.getSession()).toBe(session);
+  it('hasFlow returns false without any registration', () => {
+    expect(checkoutRegistry.hasFlow()).toBe(false);
+    expect(checkoutRegistry.getFlow()).toBeNull();
   });
 
-  it('registers and retrieves an async session', () => {
-    const sessionFn = () =>
-      Promise.resolve({ clientSecret: 'cs_test', publishableKey: 'pk_test' });
-    checkoutRegistry.register(sessionFn);
-    expect(checkoutRegistry.getSession()).toBe(sessionFn);
-  });
-
-  it('returns null when no session is registered', () => {
-    expect(checkoutRegistry.getSession()).toBeNull();
-  });
-
-  it('reports isRegistered correctly', () => {
-    expect(checkoutRegistry.isRegistered()).toBe(false);
-    checkoutRegistry.register({ clientSecret: 'cs', publishableKey: 'pk' });
-    expect(checkoutRegistry.isRegistered()).toBe(true);
+  it('register works without browser globals', () => {
+    const flow = new CheckoutFlow({
+      steps: [{ id: 'a' }],
+      onCreateSession: () =>
+        Promise.resolve({
+          clientSecret: 'cs_test_a_secret_x',
+          publishableKey: 'pk_test',
+        }),
+    });
+    checkoutRegistry.register(flow);
+    expect(checkoutRegistry.getFlow()).toBe(flow);
   });
 });

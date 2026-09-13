@@ -1,10 +1,6 @@
 import { Factory } from 'fishery';
 
-import type {
-  CheckoutItem,
-  CheckoutSessionResponse,
-  CioCheckoutProps,
-} from '@src/types';
+import type { CheckoutItem, CheckoutSessionResponse } from '@src/types';
 
 import {
   DEMO_CLIENT_SECRET,
@@ -22,9 +18,4 @@ export const checkoutItem = Factory.define<CheckoutItem>(() => ({
   name: 'Test Product',
   amount: 49.99,
   quantity: 1,
-}));
-
-export const checkoutProps = Factory.define<CioCheckoutProps>(() => ({
-  session: checkoutSessionResponse.build(),
-  items: checkoutItem.build(),
 }));

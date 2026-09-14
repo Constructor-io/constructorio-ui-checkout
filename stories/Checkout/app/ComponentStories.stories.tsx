@@ -22,12 +22,13 @@ export default meta;
 
 type Story = StoryObj;
 
+// NOTE: These are placeholder credentials for Storybook rendering. To try the
+// checkout end-to-end locally, swap in a session fetched from your own Stripe
+// test-mode backend — do not commit real client secrets or publishable keys.
 const demoSession = () =>
   Promise.resolve({
-    clientSecret:
-      'cs_test_REDACTED_secret_REDACTED',
-    publishableKey:
-      'pk_test_REDACTED',
+    clientSecret: 'cs_test_DEMO_PLACEHOLDER_secret_DEMO_PLACEHOLDER',
+    publishableKey: 'pk_test_DEMO_PLACEHOLDER',
   });
 
 // ===================== Playground =====================

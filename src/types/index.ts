@@ -1,16 +1,22 @@
 import type { ComponentOverrideProps } from '@constructor-io/constructorio-ui-components';
 import type {
-  ResultAction,
-  StripeEmbeddedCheckoutLineItemsChangeEvent,
-  StripeEmbeddedCheckoutShippingDetailsChangeEvent,
+  Appearance,
+  CssFontSource,
+  CustomFontSource,
+  SavedPaymentMethodOption,
+  StripeCheckoutContact,
+  StripeCheckoutElementsSdkOptions,
 } from '@stripe/stripe-js';
 
+/** i18n keys for customizing text displayed in the checkout UI. */
 export interface Translations {
   'CioCheckout.checkout.title'?: string;
   'CioCheckout.checkout.cancelLabel'?: string;
   'CioCheckout.checkout.closeLabel'?: string;
   'CioCheckout.checkout.buttonLabel'?: string;
   'CioCheckout.checkout.buttonLoadingLabel'?: string;
+  'CioCheckout.checkout.payButtonLabel'?: string;
+  'CioCheckout.checkout.payButtonLoadingLabel'?: string;
   'CioCheckout.fulfillment.pending'?: string;
   'CioCheckout.fulfillment.success'?: string;
   'CioCheckout.fulfillment.failure'?: string;
@@ -19,121 +25,136 @@ export interface Translations {
   'CioCheckout.fulfillment.retryLabel'?: string;
 }
 
-/**
- * Represents an item for checkout.
- */
+/** A line item displayed in the checkout trigger and passed to lifecycle callbacks. */
 export interface CheckoutItem {
-  /** Product name displayed in checkout */
+  /** Display name of the product */
   name: string;
-  /** Price as a float (e.g., 49.99) */
+  /** Unit price as a float (e.g. 49.99) */
   amount: number;
-  /** Currency sign (e.g., '$', '€', '£') */
+  /** Currency symbol shown alongside the price (e.g. '$', '€') */
   currencySign?: string;
-  /** Quantity (defaults to 1) */
+  /** Number of units (defaults to 1) */
   quantity?: number;
-  /** Optional Stripe Price ID. When provided, used instead of amount/name */
+  /** Stripe Price ID — when set, takes precedence over `amount` and `name` */
   priceId?: string;
-  /** Optional image URL for display in the trigger */
+  /** Product image URL shown in the trigger */
   imageUrl?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Session
-// ---------------------------------------------------------------------------
-
-/**
- * The data needed to mount Stripe Embedded Checkout.
- */
+/** Credentials returned by the server to initialize the Stripe checkout session. */
 export interface CheckoutSessionResponse {
   clientSecret: string;
   publishableKey: string;
 }
 
 /**
- * How the checkout session is obtained:
- * - The session response directly: `{ clientSecret, publishableKey }`
- * - A function that returns it: `() => Promise<{ clientSecret, publishableKey }>`
+ * A session object or an async function that fetches one.
+ * The function form is called lazily when the user opens the checkout.
  */
 export type CheckoutSession =
   | CheckoutSessionResponse
   | (() => Promise<CheckoutSessionResponse>);
 
-// ---------------------------------------------------------------------------
-// Checkout config
-// ---------------------------------------------------------------------------
+/**
+ * Which Stripe surface to render:
+ * - `'elements'` — GA Custom Checkout with PaymentElement (server: `ui_mode: 'elements'`)
+ * - `'form'` — Beta Checkout Form (server: `ui_mode: 'form'`, requires beta access)
+ */
+export type CheckoutUiMode = 'elements' | 'form';
 
 /**
- * Core checkout data — items + session + Stripe UI options.
- * CioCheckoutProps extends this with UI-specific fields.
+ * Controls whether Stripe redirects to `return_url` after payment confirmation:
+ * - `'if_required'` — only redirects for payment methods that require it
+ * (e.g. iDEAL, Bancontact); card payments complete in-place
+ * - `'always'` — always redirects to `return_url`
  */
-export interface CheckoutConfig {
-  /** Items that the customer is purchasing — can be a single item, an array,
-   * or a function that returns either.
-   * */
+export type CheckoutRedirectBehavior = 'always' | 'if_required';
+
+/**
+ * Payment method layout (form mode only):
+ * - `'expanded'` — shows all payment methods open
+ * - `'compact'` — uses the new form compact mode
+ */
+export type CheckoutLayout = 'expanded' | 'compact';
+
+/** Stripe provider styling and behavior options passed through to the Stripe SDK. */
+export interface CheckoutStripeOptions {
+  /** Stripe Appearance API theme and variables for styling the payment form */
+  appearance?: Omit<Appearance, 'rules'>;
+  /** Controls the skeleton loading UI shown while elements mount */
+  loader?: 'auto' | 'always' | 'never';
+  /** Custom web fonts for the Stripe payment form */
+  fonts?: Array<CssFontSource | CustomFontSource>;
+  /** Payment method layout (form mode only). See {@link CheckoutLayout}. Defaults to `'expanded'`. */
+  layout?: CheckoutLayout;
+  /** Pre-fill customer details in the payment form */
+  defaultValues?: {
+    billingAddress?: StripeCheckoutContact;
+    shippingAddress?: StripeCheckoutContact;
+    email?: string;
+    phoneNumber?: string;
+  };
+  /** Controls saved payment method save/redisplay behavior */
+  savedPaymentMethod?: SavedPaymentMethodOption;
+  /** Show prices in the customer's local currency (elements mode only) */
+  adaptivePricing?: StripeCheckoutElementsSdkOptions['adaptivePricing'];
+  /** Sync billing/shipping address checkbox behavior (elements mode only) */
+  syncAddressCheckbox?: NonNullable<
+    StripeCheckoutElementsSdkOptions['elementsOptions']
+  >['syncAddressCheckbox'];
+}
+
+/** Core checkout configuration — items, session, Stripe surface mode, and provider options. */
+export interface CheckoutConfig extends CheckoutStripeOptions {
+  /** Products the customer is purchasing */
   items?:
     | CheckoutItem
     | CheckoutItem[]
     | (() => Promise<CheckoutItem | CheckoutItem[]>);
-  /** How to get the checkout session — response object or function. Optional when using the registry. */
+  /** Stripe session credentials or a function that fetches them */
   session?: CheckoutSession;
-  /**
-   * Called when the customer completes the shipping details form.
-   * Required when `permissions.update.shipping_details` is set to `server_only` in the Checkout Session.
-   * @see https://docs.stripe.com/payments/checkout/custom-shipping-options
-   */
-  onShippingDetailsChange?: (
-    event: StripeEmbeddedCheckoutShippingDetailsChangeEvent
-  ) => Promise<ResultAction>;
-  /**
-   * Called when the customer adds, removes, or modifies a line item.
-   * Required when `permissions.update.line_items` is set to `server_only` in the Checkout Session.
-   * @see https://docs.stripe.com/api/checkout/sessions/create#create_checkout_session-permissions-update-line_items
-   */
-  onLineItemsChange?: (
-    event: StripeEmbeddedCheckoutLineItemsChangeEvent
-  ) => Promise<ResultAction>;
+  /** Which Stripe checkout surface to render */
+  uiMode?: CheckoutUiMode;
+  /** Controls Stripe's post-payment redirect behavior. Defaults to `'if_required'`. */
+  redirectBehavior?: CheckoutRedirectBehavior;
 }
 
-// ---------------------------------------------------------------------------
-// Completion
-// ---------------------------------------------------------------------------
-
+/** Payload delivered to `onComplete` and `onFulfill` after successful payment. */
 export interface CheckoutCompleteEvent {
-  /** Stripe Checkout Session ID — use this to retrieve transaction details from your backend */
+  /** Stripe Checkout Session ID for server-side retrieval */
   sessionId: string;
-  /** The items passed to the checkout, resolved to an array (undefined if no items were provided) */
+  /** Resolved items array (undefined if none were provided) */
   items: CheckoutItem[] | undefined;
 }
 
-// ---------------------------------------------------------------------------
-// Fulfillment
-// ---------------------------------------------------------------------------
-
 export type FulfillmentStatus = 'idle' | 'pending' | 'fulfilled' | 'failed';
 
-/**
- * The result returned by the consumer's fulfillment verification function.
- * At minimum indicates success/failure; optionally carries a message.
- */
+/** Result returned from the consumer's fulfillment verification function. */
 export interface FulfillmentResult {
   /** Whether fulfillment succeeded */
   success: boolean;
-  /** Optional message to display (e.g. "Order #1234 confirmed", or an error reason) */
+  /** Message shown to the user (e.g. "Order #1234 confirmed") */
   message?: string;
 }
 
-/**
- * Event passed to the onFulfill callback.
- */
+/** Payload delivered to `onFulfillComplete` after verification finishes. */
 export interface CheckoutFulfillmentEvent extends CheckoutCompleteEvent {
-  /** The fulfillment result returned by the verify function */
   result: FulfillmentResult;
 }
 
-// ---------------------------------------------------------------------------
-// Component overrides
-// ---------------------------------------------------------------------------
+/** Props received by a custom `payButton` component override. */
+export interface PayButtonRenderProps {
+  /** Whether the payment is currently being processed */
+  isSubmitting: boolean;
+  /** Whether the button should be non-interactive */
+  isDisabled: boolean;
+  /** Formatted amount string (e.g. "$49.99") */
+  amount: string;
+  /** Call this to trigger payment confirmation */
+  onClick: () => void;
+}
 
+/** Props received by a custom `checkoutStatus` component override. */
 export interface CheckoutStatusRenderProps {
   fulfillmentStatus: FulfillmentStatus;
   fulfillmentResult: FulfillmentResult | null;
@@ -143,73 +164,56 @@ export interface CheckoutStatusRenderProps {
 }
 
 export interface CioCheckoutComponentOverrides {
+  /** Replace the default pay/submit button in elements mode */
+  payButton?: ComponentOverrideProps<PayButtonRenderProps>;
+  /** Replace the default post-payment status UI */
   checkoutStatus?: ComponentOverrideProps<CheckoutStatusRenderProps>;
 }
 
-// ---------------------------------------------------------------------------
-// Component props
-// ---------------------------------------------------------------------------
-
+/** Lifecycle callbacks for the checkout flow. */
 export interface CioCheckoutCallbacks {
-  /** Called when payment completes successfully */
+  /** Fires when payment completes successfully */
   onComplete?: (event: CheckoutCompleteEvent) => void;
-  /** Called when the user closes/dismisses the checkout */
+  /** Fires when the user dismisses or closes the checkout */
   onClose?: () => void;
-  /** Called when an error occurs during session creation or payment */
+  /** Fires on session creation or payment errors */
   onError?: (error: Error) => void;
-  /**
-   * Async function to verify fulfillment with your backend after payment completes.
-   * Receives the session ID and items; should return a FulfillmentResult.
-   *
-   * @example
-   * ```ts
-   * onFulfill: async ({ sessionId }) => {
-   *   const res = await fetch(`/api/checkout/${sessionId}/fulfill`);
-   *   const data = await res.json();
-   *   return { success: data.fulfilled, message: data.orderNumber };
-   * }
-   * ```
-   */
+  /** Async verification function called after payment — return success/failure */
   onFulfill?: (event: CheckoutCompleteEvent) => Promise<FulfillmentResult>;
-  /** Called when fulfillment verification completes (success or failure) */
+  /** Fires after `onFulfill` resolves (success or failure) */
   onFulfillComplete?: (event: CheckoutFulfillmentEvent) => void;
+  /** Fires when the Stripe session expires while the form is open */
+  onSessionExpired?: () => void;
 }
 
-// ---------------------------------------------------------------------------
-// Imperative handle
-// ---------------------------------------------------------------------------
-
+/** Imperative methods exposed via `ref` on CioCheckout. */
 export interface CioCheckoutHandle {
+  /** Open the checkout programmatically (fetches session if needed) */
+  open: () => void;
+  /** Close the checkout without completing payment */
+  close: () => void;
+  /** Reset to initial state (closes form, clears fulfillment) */
   reset: () => void;
 }
 
+/** Props for the `<CioCheckout>` component. */
 export interface CioCheckoutProps<
   TState = Record<string, unknown>,
 > extends CheckoutConfig {
-  /** Callbacks for checkout lifecycle events */
+  /** Lifecycle callbacks */
   callbacks?: CioCheckoutCallbacks;
-  /** Custom trigger element. If not provided, a default button is rendered. */
+  /** Custom trigger element (replaces the default button) */
   trigger?: React.ReactNode;
-  /** Custom label for the default trigger button */
+  /** Label for the default trigger button */
   triggerLabel?: string;
-  /**
-   * Controls when the checkout trigger is visible.
-   * Receives state from the integrating library and returns a boolean.
-   * When omitted the trigger is always shown.
-   */
+  /** Controls trigger visibility based on external state */
   triggerWhen?: (state: TState) => boolean;
-  /** State passed to triggerWhen — provided by the integrating library (PIA, search, etc.) */
+  /** State object passed to `triggerWhen` */
   triggerState?: TState;
-  /**
-   * How the checkout UI is displayed:
-   * - `'modal'` (default): renders in a dialog overlay
-   * - `'inline'`: renders directly in the page with a cancel button
-   */
+  /** `'modal'` (default) renders in a dialog; `'inline'` renders in place */
   displayMode?: 'modal' | 'inline';
-
-  /** Custom translations for UI text. Keys correspond to i18n IDs used in the component. */
+  /** Override default UI text */
   translations?: Translations;
-
-  /** Override sub-components with custom render functions or React nodes */
+  /** Replace built-in sub-components with custom implementations */
   componentOverrides?: CioCheckoutComponentOverrides;
 }

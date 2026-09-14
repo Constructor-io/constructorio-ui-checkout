@@ -6,6 +6,8 @@ export const defaultTranslations: Required<Translations> = {
   'CioCheckout.checkout.closeLabel': 'Close checkout',
   'CioCheckout.checkout.buttonLabel': 'Checkout',
   'CioCheckout.checkout.buttonLoadingLabel': 'Loading...',
+  'CioCheckout.checkout.payButtonLabel': 'Pay',
+  'CioCheckout.checkout.payButtonLoadingLabel': 'Processing...',
   'CioCheckout.fulfillment.pending': 'Verifying your order...',
   'CioCheckout.fulfillment.success': 'Order Confirmed',
   'CioCheckout.fulfillment.failure': 'Verification Failed',

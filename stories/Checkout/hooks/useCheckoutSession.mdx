@@ -4,13 +4,13 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # useCheckoutSession
 
-A React hook that powers `CioCheckout` internally. It manages session resolution, open/close state, completion handling, and fulfillment verification. Exported for advanced consumers who need to build a custom checkout UI.
+A React hook that manages the checkout lifecycle: session resolution, open/close state, payment completion, and fulfillment verification. Used internally by `CioCheckout` and exported for building custom checkout UIs.
 
 ```ts
 import { useCheckoutSession } from '@constructor-io/constructorio-ui-checkout';
 ```
 
-### Usage
+## Usage
 
 ```tsx
 import { useCheckoutSession } from '@constructor-io/constructorio-ui-checkout';
@@ -34,28 +34,39 @@ function CustomCheckout() {
         const res = await fetch('/api/checkout-session', { method: 'POST' });
         return res.json();
       },
+      items: [{ name: 'Widget', amount: 29.99, quantity: 1 }],
     },
     {
-      onComplete: (event) => console.log('Done', event.sessionId),
+      onComplete: (event) => console.log('Paid:', event.sessionId),
       onError: (err) => console.error(err),
+      onFulfill: async (event) => {
+        const res = await fetch(`/api/verify/${event.sessionId}`);
+        return res.json();
+      },
     }
   );
+
+  if (isFulfilling) {
+    return <p>Status: {fulfillmentStatus}</p>;
+  }
 
   return (
     <div>
       <button onClick={openCheckout} disabled={isLoading}>
         {isLoading ? 'Loading...' : 'Checkout'}
       </button>
-      {error && <p>{error.message}</p>}
-      {/* Use `session` to render your own Stripe Embedded Checkout */}
+      {error && <p className="error">{error.message}</p>}
+      {isOpen && session && (
+        // Render your own Stripe provider using session.clientSecret
+        // and session.publishableKey, then call handleComplete() on success
+        <YourStripeForm session={session} onSuccess={handleComplete} />
+      )}
     </div>
   );
 }
 ```
 
----
-
-### Parameters
+## Parameters
 
 <table>
   <thead>
@@ -74,9 +85,8 @@ function CustomCheckout() {
         <code>CioCheckoutProps</code>
       </td>
       <td>
-        The same props accepted by <code>CioCheckout</code> (
-        <code>session</code>, <code>triggerWhen</code>,{' '}
-        <code>triggerState</code>, etc.)
+        Checkout configuration: <code>session</code>, <code>items</code>,
+        <code>triggerWhen</code>, <code>triggerState</code>, etc.
       </td>
     </tr>
     <tr>
@@ -87,17 +97,15 @@ function CustomCheckout() {
         <code>CioCheckoutCallbacks</code>
       </td>
       <td>
-        Optional lifecycle callbacks (<code>onComplete</code>,{' '}
-        <code>onClose</code>, <code>onError</code>, <code>onFulfill</code>,{' '}
-        <code>onFulfillComplete</code>)
+        Lifecycle callbacks: <code>onComplete</code>, <code>onClose</code>,
+        <code>onError</code>, <code>onFulfill</code>,{' '}
+        <code>onFulfillComplete</code>,<code>onSessionExpired</code>.
       </td>
     </tr>
   </tbody>
 </table>
 
----
-
-### Return value
+## Return Value
 
 <table>
   <thead>
@@ -115,7 +123,7 @@ function CustomCheckout() {
       <td>
         <code>boolean</code>
       </td>
-      <td>Whether the checkout UI should be shown</td>
+      <td>Whether the checkout UI is currently displayed.</td>
     </tr>
     <tr>
       <td>
@@ -125,7 +133,7 @@ function CustomCheckout() {
         <code>boolean</code>
       </td>
       <td>
-        <code>true</code> while the session is being resolved
+        <code>true</code> while the session is being resolved.
       </td>
     </tr>
     <tr>
@@ -136,8 +144,8 @@ function CustomCheckout() {
         <code>CheckoutSessionResponse | null</code>
       </td>
       <td>
-        Resolved session containing <code>clientSecret</code> and{' '}
-        <code>publishableKey</code>
+        Resolved session with <code>clientSecret</code> and{' '}
+        <code>publishableKey</code>.
       </td>
     </tr>
     <tr>
@@ -147,7 +155,7 @@ function CustomCheckout() {
       <td>
         <code>Error | null</code>
       </td>
-      <td>Error from session resolution or payment</td>
+      <td>Error from session resolution or payment processing.</td>
     </tr>
     <tr>
       <td>
@@ -156,7 +164,7 @@ function CustomCheckout() {
       <td>
         <code>'idle' | 'pending' | 'fulfilled' | 'failed'</code>
       </td>
-      <td>Current state of the fulfillment verification flow</td>
+      <td>Current state of the post-payment fulfillment verification.</td>
     </tr>
     <tr>
       <td>
@@ -166,8 +174,8 @@ function CustomCheckout() {
         <code>FulfillmentResult | null</code>
       </td>
       <td>
-        Result from the <code>onFulfill</code> callback (<code>success</code>{' '}
-        and optional <code>message</code>)
+        Result from <code>onFulfill</code> — contains <code>success</code> and
+        optional <code>message</code>.
       </td>
     </tr>
     <tr>
@@ -190,7 +198,7 @@ function CustomCheckout() {
         <code>() =&gt; void</code>
       </td>
       <td>
-        Closes the checkout and fires <code>onClose</code>
+        Closes the checkout UI and fires <code>onClose</code>.
       </td>
     </tr>
     <tr>
@@ -201,7 +209,7 @@ function CustomCheckout() {
         <code>() =&gt; void</code>
       </td>
       <td>
-        Call when Stripe reports payment complete. Fires <code>onComplete</code>{' '}
+        Call when Stripe reports payment success. Fires <code>onComplete</code>{' '}
         and starts fulfillment if <code>onFulfill</code> is provided.
       </td>
     </tr>
@@ -213,7 +221,7 @@ function CustomCheckout() {
         <code>() =&gt; void</code>
       </td>
       <td>
-        Re-runs the <code>onFulfill</code> callback with the last complete event
+        Re-runs <code>onFulfill</code> with the last completion event.
       </td>
     </tr>
     <tr>
@@ -223,7 +231,45 @@ function CustomCheckout() {
       <td>
         <code>() =&gt; void</code>
       </td>
-      <td>Resets all state back to initial values</td>
+      <td>
+        Resets all state (open, loading, session, error, fulfillment) back to
+        initial values.
+      </td>
     </tr>
   </tbody>
 </table>
+
+## Lifecycle Flow
+
+```
+openCheckout() → resolves session → isOpen=true
+                                      ↓
+                          Payment completes in Stripe
+                                      ↓
+                        handleComplete() → onComplete fires
+                                      ↓
+                  ┌─── onFulfill provided? ───┐
+                  │ yes                       │ no
+                  ↓                           ↓
+        fulfillmentStatus='pending'     UI closes, done
+                  ↓
+          onFulfill() resolves
+                  ↓
+        ┌── success? ──┐
+        │ yes          │ no
+        ↓              ↓
+    'fulfilled'     'failed'
+                       ↓
+              retryFulfillment() → re-runs onFulfill
+```
+
+## When to Use
+
+Use `useCheckoutSession` directly when you need:
+
+- A fully custom checkout layout that doesn't use the built-in modal/inline chrome
+- Integration with an existing dialog or drawer system
+- Custom loading/error states beyond what `CioCheckout` provides
+- Programmatic control over the checkout flow in response to external events
+
+For standard use cases, prefer the `<CioCheckout>` component which handles all of this internally.

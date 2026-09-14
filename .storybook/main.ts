@@ -9,8 +9,8 @@ const config: StorybookConfig = {
   ],
   addons: [
     '@storybook/addon-a11y',
-    '@chromatic-com/storybook',
     '@storybook/addon-docs',
+    '@storybook/addon-vitest',
   ],
   framework: '@storybook/react-vite',
   viteFinal: (config) => {

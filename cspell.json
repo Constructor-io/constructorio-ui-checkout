@@ -3,20 +3,31 @@
   "version": "0.2",
   "language": "en",
   "words": [
+    "Acheter",
     "autodocs",
     "Bancontact",
     "cio",
     "CIOCheckout",
+    "Commande",
+    "commande",
+    "confirmée",
     "constructorio",
+    "Fermer",
+    "Finaliser",
     "Klarna",
+    "minzipped",
     "prefixer",
-    "publishable"
+    "publishable",
+    "Terminé",
+    "Traitement",
+    "Vérification"
   ],
   "flagWords": [],
   "ignorePaths": [
     "node_modules",
     "dist",
     "coverage",
+    "storybook-static",
     "*.log",
     "package-lock.json"
   ],

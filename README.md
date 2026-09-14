@@ -161,6 +161,36 @@ app.post('/api/checkout-session', async (req, res) => {
 - [Stripe Checkout Form (Beta)](https://docs.stripe.com/payments/checkout/custom/checkout-form)
 - [Constructor.io](https://constructor.io)
 
+## Publishing New Versions
+
+Dispatch the [Publish](https://github.com/Constructor-io/constructorio-ui-checkout/actions/workflows/publish.yml) workflow in GitHub Actions. You're required to provide two arguments:
+
+- **Version Strategy**: `major`, `minor`, or `patch`.
+- **Title**: A title for the release.
+
+This workflow will automatically:
+
+1. Bump the library version using the provided strategy.
+2. Create a new git tag.
+3. Create a new GitHub release.
+4. Compile the library.
+5. Publish the new version to NPM.
+6. Deploy the Storybook docs to GitHub Pages.
+
+#### Note: Please don't manually increase the package.json version or create new git tags.
+
+The library version is tracked by releases and git tags. This intentionally avoids pushing version bumps to the `main` branch, sidestepping branch-protection rule exceptions.
+
+## Contributing
+
+1. Fork the repo and create a new branch.
+2. Run `npm ci` to install dependencies.
+3. Make your changes.
+4. Run `npm run lint` and `npm test` to verify.
+5. Submit a PR for review.
+
+Please avoid committing anything sensitive — API keys, Stripe secret keys, customer data, or internal URLs. The default `.gitignore` excludes `.env*` files; keep it that way.
+
 ## License
 
 MIT - Constructor.io

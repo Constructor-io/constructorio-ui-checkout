@@ -51,9 +51,9 @@
     "test-storybook": "vitest run --project storybook",
     "test-storybook:watch": "vitest --project storybook",
     "test-storybook:ci": "vitest run --project storybook",
-    "test": "vitest",
+    "test": "vitest --project unit",
     "test:unit": "vitest --project unit",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --project unit --coverage",
     "storybook-docs-dev": "storybook dev --docs -p 6009"
   },
   "peerDependencies": {

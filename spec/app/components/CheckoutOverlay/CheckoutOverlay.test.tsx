@@ -5,48 +5,84 @@ import CheckoutOverlay from '@src/app/components/CheckoutOverlay';
 
 describe(`${CheckoutOverlay.name}: client`, () => {
   const onClose = vi.fn();
+  const onComplete = vi.fn();
 
   it('returns null when not open', () => {
-    render(<CheckoutOverlay isOpen={false} onClose={onClose} />);
+    render(
+      <CheckoutOverlay
+        isOpen={false}
+        onClose={onClose}
+        onComplete={onComplete}
+      />
+    );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('renders the dialog when open', () => {
-    render(<CheckoutOverlay isOpen onClose={onClose} />);
+    render(
+      <CheckoutOverlay isOpen onClose={onClose} onComplete={onComplete} />
+    );
     expect(
       screen.getByRole('dialog', { name: 'Checkout' })
     ).toBeInTheDocument();
   });
 
   it('renders a title and close button', () => {
-    render(<CheckoutOverlay isOpen onClose={onClose} />);
+    render(
+      <CheckoutOverlay isOpen onClose={onClose} onComplete={onComplete} />
+    );
     expect(screen.getByText('Checkout')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Close checkout' })
     ).toBeInTheDocument();
   });
 
-  it('renders the Stripe embedded checkout', () => {
-    render(<CheckoutOverlay isOpen onClose={onClose} />);
-    expect(screen.getByTestId('stripe-embedded-checkout')).toBeInTheDocument();
+  it('renders the Stripe payment element in elements mode', () => {
+    render(
+      <CheckoutOverlay
+        isOpen
+        onClose={onClose}
+        onComplete={onComplete}
+        uiMode="elements"
+      />
+    );
+    expect(screen.getByTestId('stripe-payment-element')).toBeInTheDocument();
+  });
+
+  it('renders the Stripe checkout form in form mode', () => {
+    render(
+      <CheckoutOverlay
+        isOpen
+        onClose={onClose}
+        onComplete={onComplete}
+        uiMode="form"
+      />
+    );
+    expect(screen.getByTestId('stripe-checkout-form')).toBeInTheDocument();
   });
 
   it('calls onClose when close button is clicked', async () => {
     const user = userEvent.setup();
-    render(<CheckoutOverlay isOpen onClose={onClose} />);
+    render(
+      <CheckoutOverlay isOpen onClose={onClose} onComplete={onComplete} />
+    );
 
     await user.click(screen.getByRole('button', { name: 'Close checkout' }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('opens the dialog via showModal', () => {
-    render(<CheckoutOverlay isOpen onClose={onClose} />);
+    render(
+      <CheckoutOverlay isOpen onClose={onClose} onComplete={onComplete} />
+    );
     const dialog = screen.getByRole('dialog', { name: 'Checkout' });
     expect(dialog).toHaveAttribute('open');
   });
 
   it('calls onClose when Escape key is pressed', () => {
-    render(<CheckoutOverlay isOpen onClose={onClose} />);
+    render(
+      <CheckoutOverlay isOpen onClose={onClose} onComplete={onComplete} />
+    );
 
     const dialog = screen.getByRole('dialog', { name: 'Checkout' });
     fireEvent.keyDown(dialog, { key: 'Escape' });
@@ -54,7 +90,9 @@ describe(`${CheckoutOverlay.name}: client`, () => {
   });
 
   it('does not call onClose for non-Escape keys', () => {
-    render(<CheckoutOverlay isOpen onClose={onClose} />);
+    render(
+      <CheckoutOverlay isOpen onClose={onClose} onComplete={onComplete} />
+    );
 
     const dialog = screen.getByRole('dialog', { name: 'Checkout' });
     fireEvent.keyDown(dialog, { key: 'Enter' });
@@ -62,7 +100,9 @@ describe(`${CheckoutOverlay.name}: client`, () => {
   });
 
   it('calls onClose when clicking the backdrop (dialog element itself)', () => {
-    render(<CheckoutOverlay isOpen onClose={onClose} />);
+    render(
+      <CheckoutOverlay isOpen onClose={onClose} onComplete={onComplete} />
+    );
 
     const dialog = screen.getByRole('dialog', { name: 'Checkout' });
     fireEvent.click(dialog, { target: dialog });
@@ -70,10 +110,54 @@ describe(`${CheckoutOverlay.name}: client`, () => {
   });
 
   it('does not call onClose when clicking inside the dialog content', () => {
-    render(<CheckoutOverlay isOpen onClose={onClose} />);
+    render(
+      <CheckoutOverlay isOpen onClose={onClose} onComplete={onComplete} />
+    );
 
     const content = screen.getByText('Checkout');
     fireEvent.click(content);
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('calls onClose on cancel event (browser native Escape)', () => {
+    render(
+      <CheckoutOverlay isOpen onClose={onClose} onComplete={onComplete} />
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Checkout' });
+    fireEvent(
+      dialog,
+      new Event('cancel', { bubbles: false, cancelable: true })
+    );
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the dialog when isOpen changes to false', () => {
+    const { rerender } = render(
+      <CheckoutOverlay isOpen onClose={onClose} onComplete={onComplete} />
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Checkout' });
+    expect(dialog).toHaveAttribute('open');
+
+    rerender(
+      <CheckoutOverlay
+        isOpen={false}
+        onClose={onClose}
+        onComplete={onComplete}
+      />
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('passes translations to the checkout form', () => {
+    render(
+      <CheckoutOverlay
+        isOpen
+        onClose={onClose}
+        onComplete={onComplete}
+        translations={{ 'CioCheckout.checkout.title': 'Payment' }}
+      />
+    );
+    expect(screen.getByText('Payment')).toBeInTheDocument();
   });
 });

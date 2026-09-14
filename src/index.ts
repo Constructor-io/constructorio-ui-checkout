@@ -1,4 +1,3 @@
-// Components
 export { default as CioCheckout } from './app';
 
 // Registry (non-React singleton for standalone/bundled)
@@ -17,14 +16,18 @@ export type {
   CheckoutConfig,
   CheckoutFulfillmentEvent,
   CheckoutItem,
+  CheckoutLayout,
+  CheckoutRedirectBehavior,
   CheckoutSession,
   CheckoutSessionResponse,
   CheckoutStatusRenderProps,
+  CheckoutUiMode,
   CioCheckoutCallbacks,
   CioCheckoutComponentOverrides,
   CioCheckoutHandle,
   CioCheckoutProps,
   FulfillmentResult,
   FulfillmentStatus,
+  PayButtonRenderProps,
   Translations,
 } from './types';

@@ -187,5 +187,64 @@ describe('CioCheckout standalone API', () => {
     it('does not throw when no instances exist', () => {
       expect(() => CioCheckout.reset()).not.toThrow();
     });
+
+    it('calls reset on active instances', () => {
+      act(() => {
+        CioCheckout.init({ selector: '#checkout', session: SESSION });
+      });
+
+      expect(() => {
+        act(() => {
+          CioCheckout.reset();
+        });
+      }).not.toThrow();
+      expect(CioCheckout.isRegistered()).toBe(false);
+    });
+  });
+
+  describe('init - includeCSS', () => {
+    it('handles includeCSS=false without throwing', () => {
+      let result: Element | undefined;
+      act(() => {
+        result = CioCheckout.init({
+          selector: '#checkout',
+          session: SESSION,
+          includeCSS: false,
+        });
+      });
+      expect(result).toBe(container);
+    });
+
+    it('handles includeCSS=true (default) without throwing', () => {
+      let result: Element | undefined;
+      act(() => {
+        result = CioCheckout.init({
+          selector: '#checkout',
+          session: SESSION,
+          includeCSS: true,
+        });
+      });
+      expect(result).toBe(container);
+    });
+  });
+
+  describe('update - no previous init', () => {
+    it('does nothing in SSR environment', () => {
+      const originalDocument = globalThis.document;
+      // @ts-expect-error simulating SSR
+      delete globalThis.document;
+      expect(() => CioCheckout.update('#checkout', {})).not.toThrow();
+      globalThis.document = originalDocument;
+    });
+  });
+
+  describe('destroy - no previous init', () => {
+    it('does nothing in SSR environment', () => {
+      const originalDocument = globalThis.document;
+      // @ts-expect-error simulating SSR
+      delete globalThis.document;
+      expect(() => CioCheckout.destroy('#checkout')).not.toThrow();
+      globalThis.document = originalDocument;
+    });
   });
 });

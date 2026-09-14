@@ -1,18 +1,39 @@
 import { Button } from '@constructor-io/constructorio-ui-components';
 
-import type { Translations } from '@src/types';
+import type {
+  CheckoutLayout,
+  CheckoutRedirectBehavior,
+  CheckoutUiMode,
+  CioCheckoutComponentOverrides,
+  Translations,
+} from '@src/types';
 import { t } from '@src/utils';
 
 import CheckoutForm from './CheckoutForm';
+import CheckoutFormElements from './CheckoutFormElements';
 
 interface CheckoutInlineProps {
   onCancel: () => void;
+  onComplete: () => void;
+  onError?: (error: Error) => void;
+  onSessionExpired?: () => void;
+  uiMode?: CheckoutUiMode;
+  layout?: CheckoutLayout;
+  redirectBehavior?: CheckoutRedirectBehavior;
   translations?: Translations;
+  componentOverrides?: CioCheckoutComponentOverrides;
 }
 
 export default function CheckoutInline({
   onCancel,
+  onComplete,
+  onError,
+  onSessionExpired,
+  uiMode = 'form',
+  layout,
+  redirectBehavior,
   translations,
+  componentOverrides,
 }: CheckoutInlineProps) {
   return (
     <div className="cio-checkout-inline">
@@ -25,7 +46,24 @@ export default function CheckoutInline({
         </Button>
       </div>
       <div className="cio-checkout-inline-body">
-        <CheckoutForm />
+        {uiMode === 'form' ? (
+          <CheckoutForm
+            onComplete={onComplete}
+            onError={onError}
+            onSessionExpired={onSessionExpired}
+            layout={layout}
+            redirectBehavior={redirectBehavior}
+          />
+        ) : (
+          <CheckoutFormElements
+            onComplete={onComplete}
+            onError={onError}
+            onSessionExpired={onSessionExpired}
+            translations={translations}
+            componentOverrides={componentOverrides}
+            redirectBehavior={redirectBehavior}
+          />
+        )}
       </div>
     </div>
   );

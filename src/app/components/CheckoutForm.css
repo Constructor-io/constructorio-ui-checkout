@@ -1,0 +1,27 @@
+.cio-checkout-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cio-checkout-form-loading {
+  min-height: 240px;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    var(--cio-checkout-color-error-bg, #f5f5f7) 0%,
+    #ffffff 50%,
+    var(--cio-checkout-color-error-bg, #f5f5f7) 100%
+  );
+  background-size: 200% 100%;
+  animation: cio-checkout-form-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes cio-checkout-form-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

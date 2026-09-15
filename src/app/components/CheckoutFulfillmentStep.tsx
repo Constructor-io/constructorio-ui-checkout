@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
 
+import './CheckoutFulfillmentStep.css';
+
 export interface FulfillmentResult {
   success: boolean;
   message?: string;
@@ -49,27 +51,28 @@ export function CheckoutFulfillmentStep({
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     setStatus('pending');
+    let outcome: FulfillmentResult;
     try {
-      const outcome = await onFulfill();
-      if (!mountedRef.current) return;
-      setResult(outcome);
-      setStatus(outcome.success ? 'fulfilled' : 'failed');
-      onFulfillComplete?.(outcome);
-      if (outcome.success && advanceOnSuccess) {
-        void flow.next();
-      }
+      outcome = await onFulfill();
     } catch (reason) {
-      if (!mountedRef.current) return;
-      const outcome: FulfillmentResult = {
+      outcome = {
         success: false,
         message:
           reason instanceof Error ? reason.message : 'Fulfillment failed',
       };
-      setResult(outcome);
-      setStatus('failed');
-      onFulfillComplete?.(outcome);
     } finally {
       inFlightRef.current = false;
+    }
+    if (!mountedRef.current) return;
+    setResult(outcome);
+    setStatus(outcome.success ? 'fulfilled' : 'failed');
+    try {
+      onFulfillComplete?.(outcome);
+    } catch {
+      /* consumer callback error must not flip outcome */
+    }
+    if (outcome.success && advanceOnSuccess) {
+      void flow.next();
     }
   }, [onFulfill, onFulfillComplete, advanceOnSuccess, flow]);
 

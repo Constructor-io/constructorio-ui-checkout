@@ -27,7 +27,7 @@ All three wrap the same framework-agnostic `createCheckoutFlow(config)` core.
 
 - Multi-step state machine (start / next / back / goTo / guards / optional steps)
 - Session lifecycle (create / update / expire / recreate) with a serialization queue for payment integrity
-- Storage adapter interface (opt-in; `createSessionStorageAdapter()` for local persistence, or merchant-provided backend adapters for B2B / multi-device pause-resume — the standalone `CioCheckout.resume()` entry injects the sessionStorage adapter automatically)
+- Storage adapter interface (opt-in — pass `storage` + `storageKey` to enable; `createSessionStorageAdapter()` gives local persistence, or supply your own backend adapter for B2B / multi-device pause-resume). The standalone `CioCheckout.resume()` entry injects the sessionStorage adapter automatically, but `CheckoutFlowProvider` / `new CheckoutFlow(config)` / `createCheckoutFlow(config)` do not — no persistence unless you opt in.
 - Router adapter interface (URL sync for routed multi-step; MPA works via full-page navigation + storage rehydrate)
 - Default Stripe surface (`<CheckoutStripeStep>`) and default fulfillment UI (`<CheckoutFulfillmentStep>`)
 - Typed events for analytics + error handling

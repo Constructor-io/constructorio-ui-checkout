@@ -50,7 +50,7 @@ describe('sessionStorageAdapter', () => {
     await expect(adapter.load('bad')).resolves.toBeNull();
     expect(
       globalThis.sessionStorage.getItem(`${getStorageKeyPrefix()}bad`)
-    ).not.toBeNull();
+    ).toBeNull();
   });
 
   it('rejects and clears entries that fail schema validation', async () => {

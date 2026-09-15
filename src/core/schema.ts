@@ -38,6 +38,24 @@ export function validateFlowState(input: unknown): FlowState | null {
   for (const item of input.cartSnapshot) {
     if (!isPlainObject(item)) return null;
     if (typeof item.name !== 'string') return null;
+    if (typeof item.amount !== 'number' || !Number.isFinite(item.amount)) {
+      return null;
+    }
+    if (item.currencySign !== undefined && typeof item.currencySign !== 'string') {
+      return null;
+    }
+    if (
+      item.quantity !== undefined &&
+      (typeof item.quantity !== 'number' || !Number.isFinite(item.quantity))
+    ) {
+      return null;
+    }
+    if (item.priceId !== undefined && typeof item.priceId !== 'string') {
+      return null;
+    }
+    if (item.imageUrl !== undefined && typeof item.imageUrl !== 'string') {
+      return null;
+    }
   }
 
   // Every field has been narrowed by the checks above; TS's structural type

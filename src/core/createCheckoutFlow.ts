@@ -109,9 +109,10 @@ export function createCheckoutFlow<TState = unknown>(
 
   let saveInFlight: Promise<void> | null = null;
   let pendingSaveState: FlowState | null = null;
+  let clearing = false;
 
   const flushSave = (): void => {
-    if (!storageEnabled || destroyed) return;
+    if (!storageEnabled || destroyed || clearing) return;
     const state = store.getState();
     const serialized = JSON.stringify(state);
     if (serialized === lastSavedSerialized) return;
@@ -142,7 +143,7 @@ export function createCheckoutFlow<TState = unknown>(
   };
 
   const scheduleSave = (): void => {
-    if (!storageEnabled || destroyed || hydrating) return;
+    if (!storageEnabled || destroyed || hydrating || clearing) return;
     if (saveTimer !== null) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       saveTimer = null;
@@ -172,20 +173,6 @@ export function createCheckoutFlow<TState = unknown>(
   if (storageEnabled) {
     store.subscribe(() => {
       scheduleSave();
-    });
-  }
-
-  if (router?.subscribe) {
-    routerUnsubscribe = router.subscribe((newPath: string) => {
-      if (destroyed) return;
-      const matched = findStepByPath(newPath);
-      const state = store.getState();
-      if (!matched) return;
-      if (matched.id === state.currentStepId) return;
-      syncingFromRouter = true;
-      void Promise.resolve(goTo(matched.id)).finally(() => {
-        syncingFromRouter = false;
-      });
     });
   }
 
@@ -237,6 +224,18 @@ export function createCheckoutFlow<TState = unknown>(
     }
   };
 
+  const findFirstFailingGuard = async (
+    fromIdx: number,
+    toIdx: number
+  ): Promise<number | null> => {
+    for (let i = fromIdx; i <= toIdx; i += 1) {
+      const ok = await runGuard(steps[i]);
+      if (destroyed) return i;
+      if (!ok) return i;
+    }
+    return null;
+  };
+
   const enterStep = (stepId: StepId, from: StepId | null) => {
     store.setState((prev) => ({ ...prev, currentStepId: stepId }));
     events.emit({ type: 'step.entered', stepId, from });
@@ -260,6 +259,24 @@ export function createCheckoutFlow<TState = unknown>(
     const state = store.getState();
     if (state.currentStepId !== null) return;
 
+    if (config.authenticate) {
+      try {
+        const result = await config.authenticate();
+        if (destroyed) return;
+        if (result === null) {
+          emitError(
+            'authenticate',
+            new Error('authenticate: rejected — flow not started')
+          );
+          return;
+        }
+      } catch (reason) {
+        if (destroyed) return;
+        emitError('authenticate', toError(reason));
+        return;
+      }
+    }
+
     const resumed = await maybeAutoResume();
     if (resumed) return;
 
@@ -272,12 +289,24 @@ export function createCheckoutFlow<TState = unknown>(
       }
       const matched = findStepByPath(currentPath);
       if (matched) {
-        const guardOk = await runGuard(matched);
-        if (guardOk) {
+        const matchedIdx = findStepIndex(steps, matched.id);
+        const failIdx = await findFirstFailingGuard(0, matchedIdx);
+        if (destroyed) return;
+        if (failIdx === null) {
           events.emit({ type: 'flow.started' });
           enterStep(matched.id, null);
           return;
         }
+        const failedStep = steps[failIdx];
+        emitError(
+          'guard',
+          new Error(
+            failIdx === matchedIdx
+              ? `start: guard for "${matched.id}" rejected`
+              : `start: prerequisite step "${failedStep.id}" guard rejected before "${matched.id}"`
+          )
+        );
+        return;
       }
     }
 
@@ -357,31 +386,67 @@ export function createCheckoutFlow<TState = unknown>(
 
   const goTo = async (stepId: StepId): Promise<void> => {
     if (checkDestroyed('goTo')) return;
-    const target = steps.find((s) => s.id === stepId);
-    if (!target) {
+    const targetIdx = findStepIndex(steps, stepId);
+    if (targetIdx === -1) {
       emitError('guard', new Error(`Unknown step id "${stepId}"`));
       return;
     }
-    if (store.getState().currentStepId === stepId) return;
-    const guardOk = await runGuard(target);
-    if (!guardOk || destroyed) return;
-    const state = store.getState();
-    const from = state.currentStepId;
-    if (from !== null) {
-      const currentIdx = findStepIndex(steps, from);
-      const targetIdx = findStepIndex(steps, stepId);
-      if (targetIdx > currentIdx) {
-        for (let i = currentIdx; i < targetIdx; i += 1) {
+    const from = store.getState().currentStepId;
+    if (from === stepId) return;
+    const fromIdx = from === null ? -1 : findStepIndex(steps, from);
+
+    const guardStart = fromIdx < targetIdx ? fromIdx + 1 : targetIdx;
+    const failIdx = await findFirstFailingGuard(guardStart, targetIdx);
+    if (destroyed) return;
+    if (failIdx !== null) {
+      const failedStep = steps[failIdx];
+      emitError(
+        'guard',
+        new Error(
+          failIdx === targetIdx
+            ? `goTo("${stepId}"): guard rejected`
+            : `goTo("${stepId}"): prerequisite step "${failedStep.id}" guard rejected`
+        )
+      );
+      return;
+    }
+
+    const currentFrom = store.getState().currentStepId;
+    const currentFromIdx =
+      currentFrom === null ? -1 : findStepIndex(steps, currentFrom);
+    if (currentFrom !== null) {
+      if (targetIdx > currentFromIdx) {
+        for (let i = currentFromIdx; i < targetIdx; i += 1) {
           exitStep(steps[i].id, steps[i + 1].id);
         }
       } else {
-        events.emit({ type: 'step.exited', stepId: from, to: stepId });
+        events.emit({ type: 'step.exited', stepId: currentFrom, to: stepId });
+        store.setState((prev) => ({
+          ...prev,
+          completedStepIds: prev.completedStepIds.filter(
+            (id) => id !== stepId
+          ),
+        }));
       }
     } else {
       events.emit({ type: 'flow.started' });
     }
-    enterStep(stepId, from);
+    enterStep(stepId, currentFrom);
   };
+
+  if (router?.subscribe) {
+    routerUnsubscribe = router.subscribe((newPath: string) => {
+      if (destroyed) return;
+      const matched = findStepByPath(newPath);
+      const state = store.getState();
+      if (!matched) return;
+      if (matched.id === state.currentStepId) return;
+      syncingFromRouter = true;
+      void Promise.resolve(goTo(matched.id)).finally(() => {
+        syncingFromRouter = false;
+      });
+    });
+  }
 
   const hydrate = (input: FlowState): void => {
     if (checkDestroyed('hydrate')) return;
@@ -411,7 +476,14 @@ export function createCheckoutFlow<TState = unknown>(
         return;
       }
     }
-    store.setState(() => validated);
+    const needsRecovery =
+      session === null &&
+      (validated.sessionStatus === 'active' ||
+        validated.sessionStatus === 'creating');
+    const next = needsRecovery
+      ? { ...validated, sessionStatus: 'idle' as const, sessionId: null }
+      : validated;
+    store.setState(() => next);
   };
 
   const drainSessionQueue = (): void => {
@@ -432,6 +504,8 @@ export function createCheckoutFlow<TState = unknown>(
   const reset = (): void => {
     if (checkDestroyed('reset')) return;
     session = null;
+    sessionRequestGen += 1;
+    createSessionInFlight = null;
     drainSessionQueue();
     clearCartDebounce();
     store.setState(() => makeInitialState());
@@ -439,17 +513,19 @@ export function createCheckoutFlow<TState = unknown>(
 
   let createSessionInFlight: Promise<CheckoutSessionResponse | null> | null =
     null;
+  let sessionRequestGen = 0;
 
   const createSession = (): Promise<CheckoutSessionResponse | null> => {
     if (checkDestroyed('createSession')) return Promise.resolve(null);
     if (session !== null) return Promise.resolve(session);
     if (createSessionInFlight !== null) return createSessionInFlight;
 
+    const gen = ++sessionRequestGen;
     const run = async (): Promise<CheckoutSessionResponse | null> => {
       store.setState((prev) => ({ ...prev, sessionStatus: 'creating' }));
       try {
         const response = await config.onCreateSession(store.getState());
-        if (destroyed) return null;
+        if (destroyed || gen !== sessionRequestGen) return null;
         if (
           !response ||
           typeof response.clientSecret !== 'string' ||
@@ -471,12 +547,12 @@ export function createCheckoutFlow<TState = unknown>(
         }
         return response;
       } catch (reason) {
-        if (destroyed) return null;
+        if (destroyed || gen !== sessionRequestGen) return null;
         store.setState((prev) => ({ ...prev, sessionStatus: 'error' }));
         emitError('session.create', toError(reason));
         return null;
       } finally {
-        createSessionInFlight = null;
+        if (gen === sessionRequestGen) createSessionInFlight = null;
       }
     };
 
@@ -502,9 +578,10 @@ export function createCheckoutFlow<TState = unknown>(
       return null;
     }
     const before = store.getState().cartSnapshot;
+    const gen = sessionRequestGen;
     try {
       const response = await config.onUpdateSession(patch);
-      if (destroyed) return null;
+      if (destroyed || gen !== sessionRequestGen) return null;
       if (
         !response ||
         typeof response.clientSecret !== 'string' ||
@@ -532,7 +609,7 @@ export function createCheckoutFlow<TState = unknown>(
       }
       return response;
     } catch (reason) {
-      if (destroyed) return null;
+      if (destroyed || gen !== sessionRequestGen) return null;
       emitError('session.update', toError(reason));
       return null;
     }
@@ -618,6 +695,8 @@ export function createCheckoutFlow<TState = unknown>(
     if (!session) return;
     const sessionId = extractSessionId(session.clientSecret);
     session = null;
+    sessionRequestGen += 1;
+    createSessionInFlight = null;
     drainSessionQueue();
     store.setState((prev) => ({ ...prev, sessionStatus: 'expired' }));
     if (sessionId) events.emit({ type: 'session.expired', sessionId });
@@ -629,6 +708,8 @@ export function createCheckoutFlow<TState = unknown>(
       ? extractSessionId(session.clientSecret)
       : store.getState().sessionId;
     session = null;
+    sessionRequestGen += 1;
+    createSessionInFlight = null;
     drainSessionQueue();
     store.setState((prev) => ({
       ...prev,
@@ -652,19 +733,31 @@ export function createCheckoutFlow<TState = unknown>(
 
   const clearState = async (): Promise<void> => {
     if (checkDestroyed('clearState')) return;
-    reset();
-    if (!storageEnabled) return;
-    if (saveTimer !== null) {
-      clearTimeout(saveTimer);
-      saveTimer = null;
-    }
-    pendingSaveState = null;
-    lastSavedSerialized = null;
+    clearing = true;
     try {
-      await storage.clear(storageKey);
-    } catch (reason) {
-      if (destroyed) return;
-      emitError('storage', toError(reason));
+      reset();
+      if (!storageEnabled) return;
+      if (saveTimer !== null) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+      }
+      pendingSaveState = null;
+      if (saveInFlight !== null) {
+        try {
+          await saveInFlight;
+        } catch {
+          // ignore — save already emitted its own storage error
+        }
+      }
+      lastSavedSerialized = null;
+      try {
+        await storage.clear(storageKey);
+      } catch (reason) {
+        if (destroyed) return;
+        emitError('storage', toError(reason));
+      }
+    } finally {
+      clearing = false;
     }
   };
 
@@ -692,6 +785,13 @@ export function createCheckoutFlow<TState = unknown>(
     events.clear();
   };
 
+  if (config.autoStart) {
+    void Promise.resolve().then(() => {
+      if (destroyed) return;
+      void start();
+    });
+  }
+
   return {
     getState: () => store.getState(),
     subscribe: (listener) => store.subscribe(listener),
@@ -713,6 +813,7 @@ export function createCheckoutFlow<TState = unknown>(
     getIntegratorState: () => integratorState,
     setIntegratorState: (updater) => {
       integratorState = updater(integratorState);
+      store.setState((prev) => ({ ...prev }));
     },
     destroy,
   };

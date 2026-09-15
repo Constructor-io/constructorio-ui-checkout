@@ -1,4 +1,6 @@
-import { useCallback, useContext, useSyncExternalStore } from 'react';
+import { useCallback, useContext } from 'react';
+
+import { useSyncExternalStore } from 'use-sync-external-store/shim';
 
 import { CheckoutFlowContext } from '@src/app/providers/CheckoutFlowContext';
 import type { CheckoutFlowCore, FlowState } from '@src/core/types';

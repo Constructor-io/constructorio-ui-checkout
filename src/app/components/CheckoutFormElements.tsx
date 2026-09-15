@@ -110,19 +110,7 @@ export default function CheckoutFormElements({
   return (
     <div className="cio-checkout-form">
       {showCurrencySelector && <CurrencySelectorElement />}
-      <PaymentElement
-        onChange={handlePaymentChange}
-        options={{
-          fields: {
-            billingDetails: {
-              name: 'never',
-              email: 'never',
-              phone: 'never',
-              address: 'never',
-            },
-          },
-        }}
-      />
+      <PaymentElement onChange={handlePaymentChange} />
       <RenderPropsWrapper
         props={payButtonProps}
         override={componentOverrides?.payButton?.reactNode}

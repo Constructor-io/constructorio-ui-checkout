@@ -133,10 +133,7 @@ export function CheckoutStripeStep({
 
   if (sessionStatus === 'error') {
     return (
-      <div
-        className="cio-checkout-session-error"
-        role="alert"
-      >
+      <div className="cio-checkout-session-error" role="alert">
         <p>Failed to prepare checkout. Please try again.</p>
         <button type="button" onClick={handleRetrySession}>
           Retry

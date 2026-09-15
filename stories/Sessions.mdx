@@ -223,7 +223,9 @@ onEvent: (event) => {
       source: event.source,
       message: event.error.message,
     });
-    if (event.retry) event.retry();  // some errors are retryable
+    // For `session.create` errors, `CheckoutStripeStep` shows a Retry
+    // button that calls `flow.recreate()`. For other sources, you can
+    // wire your own retry (e.g. `flow.recreate()`, `flow.syncCart(...)`).
   }
 }
 ```
@@ -239,7 +241,7 @@ Practically: if your server takes 5 seconds to return a session and the user clo
 Merchants sometimes worry about double-charging if `onCreateSession` runs twice. Two protections:
 
 1. **The flow coalesces concurrent creates.** Multiple simultaneous `createSession()` calls return the same in-flight promise. Only one HTTP request goes out.
-2. **You should also send an idempotency key server-side.** Stripe supports this natively. Use the `sessionId` as the idempotency key — repeated requests for the same session return the same session, not a duplicate.
+2. **You should also send an idempotency key server-side.** Stripe supports this natively. Use a stable **pre-existing** identifier — cart id, order id, or a checkout-attempt id you generate on the client. Do *not* use the session id: it's returned *by* the create call, so it doesn't exist at request time. The [full example above](#full-example) uses `getCartId()` as the `Idempotency-Key` header for exactly this reason.
 
 ## Sessions and persistence
 

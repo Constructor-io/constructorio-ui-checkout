@@ -39,8 +39,13 @@ function toError(reason: unknown): Error {
   return new Error('Unknown error');
 }
 
+export interface CreateCheckoutFlowOptions {
+  deferMount?: boolean;
+}
+
 export function createCheckoutFlow<TState = unknown>(
-  config: CheckoutFlowConfig<TState>
+  config: CheckoutFlowConfig<TState>,
+  options?: CreateCheckoutFlowOptions
 ): CheckoutFlowCore<TState> {
   if (!Array.isArray(config.steps) || config.steps.length === 0) {
     throw new Error('createCheckoutFlow: `steps` must be a non-empty array');
@@ -209,6 +214,11 @@ export function createCheckoutFlow<TState = unknown>(
     try {
       const current = router.getCurrentPath();
       if (current === path) return;
+      if (storageEnabled && saveTimer !== null) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        flushSave();
+      }
       router.push(path);
     } catch (reason) {
       emitError('router', toError(reason));
@@ -255,7 +265,48 @@ export function createCheckoutFlow<TState = unknown>(
     });
   };
 
-  const start = async (): Promise<void> => {
+  let startInFlight: Promise<void> | null = null;
+  const start = (): Promise<void> => {
+    if (isDead()) return Promise.resolve();
+    if (startInFlight) return startInFlight;
+    if (store.getState().currentStepId !== null) return Promise.resolve();
+    startInFlight = runStart().finally(() => {
+      startInFlight = null;
+    });
+    return startInFlight;
+  };
+
+  const validateAndEnterResumedStep = async (): Promise<void> => {
+    const resumedStepId = store.getState().currentStepId;
+    if (resumedStepId === null) return;
+    const resumedIdx = findStepIndex(steps, resumedStepId);
+    const failIdx = await findFirstFailingGuard(0, resumedIdx);
+    if (destroyed) return;
+    if (failIdx === null) {
+      const resumedStep = steps[resumedIdx];
+      if (resumedStep) pushRouterPath(resumedStep.path);
+      return;
+    }
+    const failedStep = steps[failIdx];
+    emitError(
+      'guard',
+      new Error(
+        failIdx === resumedIdx
+          ? `resume: guard for "${failedStep.id}" rejected`
+          : `resume: prerequisite step "${failedStep.id}" guard rejected before "${resumedStepId}"`
+      )
+    );
+    store.setState((prev) => ({
+      ...prev,
+      currentStepId: failedStep.id,
+      completedStepIds: prev.completedStepIds.filter(
+        (id) => findStepIndex(steps, id) < failIdx
+      ),
+    }));
+    pushRouterPath(failedStep.path);
+  };
+
+  const runStart = async (): Promise<void> => {
     if (isDead()) return;
     const state = store.getState();
     if (state.currentStepId !== null) return;
@@ -280,11 +331,7 @@ export function createCheckoutFlow<TState = unknown>(
 
     const resumed = await maybeAutoResume();
     if (resumed) {
-      const resumedStepId = store.getState().currentStepId;
-      if (resumedStepId !== null) {
-        const resumedStep = steps[findStepIndex(steps, resumedStepId)];
-        if (resumedStep) pushRouterPath(resumedStep.path);
-      }
+      await validateAndEnterResumedStep();
       return;
     }
 
@@ -440,19 +487,30 @@ export function createCheckoutFlow<TState = unknown>(
     enterStep(stepId, currentFrom);
   };
 
-  if (router?.subscribe) {
-    routerUnsubscribe = router.subscribe((newPath: string) => {
-      if (destroyed) return;
-      const matched = findStepByPath(newPath);
-      const state = store.getState();
-      if (!matched) return;
-      if (matched.id === state.currentStepId) return;
-      syncingFromRouter = true;
-      void Promise.resolve(goTo(matched.id)).finally(() => {
-        syncingFromRouter = false;
+  let mounted = false;
+  const mount = (): void => {
+    if (destroyed || mounted) return;
+    mounted = true;
+    if (router?.subscribe) {
+      routerUnsubscribe = router.subscribe((newPath: string) => {
+        if (destroyed) return;
+        const matched = findStepByPath(newPath);
+        const state = store.getState();
+        if (!matched) return;
+        if (matched.id === state.currentStepId) return;
+        syncingFromRouter = true;
+        void Promise.resolve(goTo(matched.id)).finally(() => {
+          syncingFromRouter = false;
+        });
       });
-    });
-  }
+    }
+    if (config.autoStart) {
+      void Promise.resolve().then(() => {
+        if (destroyed) return;
+        void start();
+      });
+    }
+  };
 
   const hydrate = (input: FlowState): void => {
     if (isDead()) return;
@@ -795,16 +853,12 @@ export function createCheckoutFlow<TState = unknown>(
     events.clear();
   };
 
-  if (config.autoStart) {
-    void Promise.resolve().then(() => {
-      if (destroyed) return;
-      void start();
-    });
-  }
+  if (!options?.deferMount) mount();
 
   return {
     getState: () => store.getState(),
     subscribe: (listener) => store.subscribe(listener),
+    mount,
     start,
     next,
     back,

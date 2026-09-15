@@ -22,7 +22,6 @@ import {
   CheckoutFlowStep,
   CheckoutStripeStep,
   CheckoutFulfillmentStep,
-  CREATE_SESSION_STEP,
   STRIPE_STEP,
   useCheckoutFlow,
 } from '@constructor-io/constructorio-ui-checkout';
@@ -33,7 +32,6 @@ function App() {
       steps={[
         { id: 'cart' },
         { id: 'address' },
-        { id: CREATE_SESSION_STEP },
         { id: STRIPE_STEP },
         { id: 'fulfill' },
         { id: 'done' },

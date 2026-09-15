@@ -1,0 +1,248 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="General/Sessions" />
+
+# Sessions
+
+A Stripe session is what the flow creates to render the payment surface. It has a `clientSecret` (identifies the session), a `publishableKey` (drives `loadStripe`), and a status the flow tracks in `state.sessionStatus`.
+
+Most merchant bugs in checkout come from misunderstanding the interaction between flow state, session state, and network state. This page walks through all three.
+
+## Full example
+
+End-to-end wiring with create, update, expiry, error handling, and analytics — the shape most production integrations end up with:
+
+```tsx
+import {
+  CheckoutFlowProvider,
+  CheckoutFlowStep,
+  CheckoutStripeStep,
+  STRIPE_STEP,
+  useCheckoutFlow,
+} from '@constructor-io/constructorio-ui-checkout';
+import { getCart, getCartId } from './lib/cart';
+import { getAuthToken } from './lib/auth';
+
+function CheckoutApp() {
+  const onCreateSession = async () => {
+    const res = await fetch('/api/checkout/session', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${getAuthToken()}`,
+        'Idempotency-Key': getCartId(),
+      },
+      body: JSON.stringify({ cart_id: getCartId() }),
+    });
+    if (!res.ok) throw new Error(`Session create failed: ${res.status}`);
+    return res.json(); // { clientSecret, publishableKey }
+  };
+
+  const onUpdateSession = async (patch) => {
+    const res = await fetch('/api/checkout/session', {
+      method: 'PATCH',
+      body: JSON.stringify(patch), // { items?, metadata?, reason? }
+    });
+    if (!res.ok) throw new Error(`Session update failed: ${res.status}`);
+    return res.json();
+  };
+
+  return (
+    <CheckoutFlowProvider
+      steps={[
+        { id: 'cart', path: '/cart' },
+        { id: STRIPE_STEP, path: '/checkout/payment' },
+        { id: 'done', path: '/order/confirmed' },
+      ]}
+      onCreateSession={onCreateSession}
+      onUpdateSession={onUpdateSession}
+      cart={getCart()}
+      onEvent={(event) => {
+        switch (event.type) {
+          case 'session.created':
+            analytics.track('checkout.session.created', {
+              sessionId: event.sessionId,
+            });
+            break;
+          case 'session.updated':
+            analytics.track('checkout.session.updated', {
+              reason: event.reason,
+              diff: event.diff,
+            });
+            break;
+          case 'session.expired':
+            analytics.track('checkout.session.expired');
+            break;
+          case 'session.recreated':
+            analytics.track('checkout.session.recreated', {
+              oldSessionId: event.oldSessionId,
+              newSessionId: event.newSessionId,
+            });
+            break;
+          case 'error':
+            analytics.track('checkout.error', {
+              source: event.source,
+              message: event.error.message,
+            });
+            break;
+        }
+      }}
+    >
+      <CheckoutFlowStep id={STRIPE_STEP}>
+        <CheckoutStripeStep
+          onError={(err) => reportToSentry(err)}
+        />
+      </CheckoutFlowStep>
+    </CheckoutFlowProvider>
+  );
+}
+```
+
+That's a complete wiring. The sections below unpack each piece.
+
+## Session status
+
+`state.sessionStatus` is a discriminated string:
+
+- **`idle`** — no session yet. Set on init and after `reset()` / `clearState()` / `recreate()`.
+- **`creating`** — `onCreateSession` is in flight.
+- **`active`** — a session exists and is usable for payment.
+- **`expired`** — the session was live but is no longer valid (Stripe reported expiry, or you called `markExpired()`).
+- **`error`** — `onCreateSession` rejected or returned an invalid shape. Retry via `recreate()`.
+
+The transitions are always driven by the library, not by merchant code:
+
+```
+idle ─(createSession)→ creating ──(success)→ active
+                            │
+                            └──(reject)→ error ──(recreate)→ creating → ...
+
+active ──(Stripe reports expired / markExpired())→ expired ──(recreate)→ creating → ...
+```
+
+You never write to `sessionStatus` directly. You call the methods; the status updates.
+
+## `onCreateSession` contract
+
+The library will call `onCreateSession(state)` with the current `FlowState` (cart, metadata, whatever). You return a `Promise` that resolves with:
+
+```ts
+{
+  clientSecret: string,      // Stripe checkout session client secret
+  publishableKey: string,    // your Stripe publishable key
+}
+```
+
+Reject the promise on failure. The library validates the shape — if `clientSecret` or `publishableKey` isn't a string, it treats that as a rejection.
+
+```tsx
+const onCreateSession = async () => {
+  const res = await fetch('/api/checkout/session', {
+    method: 'POST',
+    body: JSON.stringify({ items: getCart() }),
+  });
+  if (!res.ok) throw new Error(`Session create failed: ${res.status}`);
+  return res.json();  // must be { clientSecret, publishableKey }
+};
+```
+
+## `onUpdateSession` contract
+
+Optional. Called whenever `updateSession()` or `syncCart()` fires. Same shape in / out — merchants typically use it to push updated cart items back to Stripe.
+
+```tsx
+const onUpdateSession = async (patch) => {
+  const res = await fetch('/api/checkout/session', {
+    method: 'PATCH',
+    body: JSON.stringify(patch),  // { items?, metadata?, reason? }
+  });
+  return res.json();  // must return { clientSecret, publishableKey }
+};
+```
+
+If you don't provide `onUpdateSession`, calls to `updateSession()` / `syncCart()` after session creation will emit an error event.
+
+## Handling expiry
+
+Two ways a session can expire:
+
+**Stripe reports it.** `CheckoutStripeStep` catches this and calls `flow.markExpired()` automatically — you don't need to wire anything. Merchant code just watches `sessionStatus === 'expired'` if it wants to render its own recovery UI.
+
+**You detect it externally** (e.g., server pushed an event over a WebSocket). Call `flow.markExpired()` yourself. It clears the in-memory session, sets status to `expired`, and emits `session.expired`.
+
+Either way, recovery is one call:
+
+```tsx
+await flow.recreate();
+```
+
+`recreate()` invalidates the old session, runs `onCreateSession` again with the *current* state (so any cart mutations since expiry are included), and emits `session.recreated` with both the old and new session IDs — useful if you attach analytics to session IDs.
+
+## Handling creation errors
+
+`CheckoutStripeStep` handles this out of the box:
+
+- When `sessionStatus === 'error'`, it renders an error state with a Retry button that calls `flow.recreate()`.
+- It fires `onError(err)` once when transitioning into `error` (subsequent renders don't refire — tracked via a ref).
+
+If you want your own recovery UI, render conditionally on `sessionStatus`:
+
+```tsx
+function MyCustomStripePane() {
+  const flow = useCheckoutFlow();
+  if (flow.state.sessionStatus === 'error') {
+    return (
+      <MyErrorBanner
+        onRetry={() => void flow.recreate()}
+        message="Couldn't prepare checkout"
+      />
+    );
+  }
+  if (flow.state.sessionStatus === 'creating' || !flow.getSession()) {
+    return <MySkeleton />;
+  }
+  return <CheckoutStripeStep />;
+}
+```
+
+## Error events
+
+All errors emit via `onEvent` (and via `CheckoutFlowProvider`'s error listener). The event has a `source` you can switch on:
+
+- **`session.create`** — `onCreateSession` rejected or returned invalid data.
+- **`session.update`** — `onUpdateSession` rejected or returned invalid data.
+- **`session.recover`** — recovery attempt during hydration failed.
+- **`storage`** — storage adapter's save/load/clear threw or rejected.
+- **`router`** — `router.push` / `router.getCurrentPath` threw, or a `path` was refused as unsafe.
+- **`guard`** — a step guard threw (rejections count as "guard failed", not error).
+- **`authenticate`** — `authenticate` callback rejected or returned `null`.
+
+```tsx
+onEvent: (event) => {
+  if (event.type === 'error') {
+    analytics.track('checkout.error', {
+      source: event.source,
+      message: event.error.message,
+    });
+    if (event.retry) event.retry();  // some errors are retryable
+  }
+}
+```
+
+## Late-response protection
+
+`onCreateSession` and `onUpdateSession` are network calls. If the user calls `reset()`, `markExpired()`, `recreate()`, or `destroy()` while a request is in flight, the library discards the stale response — it won't resurrect an invalidated session.
+
+Practically: if your server takes 5 seconds to return a session and the user closes the modal after 2 seconds, the eventual response is dropped. You don't have to write cancellation logic yourself.
+
+## Idempotency
+
+Merchants sometimes worry about double-charging if `onCreateSession` runs twice. Two protections:
+
+1. **The flow coalesces concurrent creates.** Multiple simultaneous `createSession()` calls return the same in-flight promise. Only one HTTP request goes out.
+2. **You should also send an idempotency key server-side.** Stripe supports this natively. Use the `sessionId` as the idempotency key — repeated requests for the same session return the same session, not a duplicate.
+
+## Sessions and persistence
+
+When storage is enabled and state is rehydrated with `sessionStatus === 'active'` or `'creating'`, the in-memory session (`clientSecret`) is gone — only the flow state was persisted. The library detects this and downgrades to `sessionStatus: 'idle'` on hydrate, so the next `CheckoutStripeStep` mount will call `onCreateSession` again to recover.
+
+If you need multi-tab session sharing (both tabs use the same clientSecret), that's outside the checkout library's scope — you'd persist the session via your own channel (BroadcastChannel, server-pushed WebSocket, etc.) and pass it back in.

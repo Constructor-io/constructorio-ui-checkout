@@ -14,7 +14,15 @@ const preview: Preview = {
       storySort: {
         order: [
           'General',
-          ['Introduction', 'Integration Guide', 'Routing', 'Auth'],
+          [
+            'Introduction',
+            'Integration Guide',
+            'Routing',
+            'Auth',
+            'Sessions',
+            'Cart',
+            'Persistence',
+          ],
           'Components',
           'Hooks',
         ],

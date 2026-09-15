@@ -1,0 +1,220 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="General/Auth" />
+
+# Authentication
+
+The checkout flow doesn't own auth — your app does. But two auth scenarios overlap with checkout:
+
+1. **App-level auth** — user clicks "Sign in" from the nav, or hits a protected route.
+2. **Checkout-driven auth** — the checkout flow enters an `auth` step because the user isn't signed in yet.
+
+Both should point at the same `/login` route and the same `<LoginPage>` component. The page decides at sign-in time which flow it's serving.
+
+## One page, two entry paths
+
+```tsx
+// App root — CheckoutFlowProvider above the router outlet
+<CheckoutFlowProvider
+  steps={[
+    { id: 'cart', path: '/cart' },
+    { id: 'auth', path: '/login' },              // routed auth step
+    { id: STRIPE_STEP, path: '/checkout/payment' },
+    { id: 'done', path: '/order/confirmed' },
+  ]}
+  onCreateSession={createSession}
+  router={router}
+>
+  <Routes>
+    <Route path="/login" element={<LoginPage />} />
+    <Route path="/cart" element={<CartPage />} />
+    <Route path="/checkout/payment" element={<PaymentPage />} />
+    <Route path="/order/confirmed" element={<OrderConfirmed />} />
+  </Routes>
+</CheckoutFlowProvider>
+```
+
+## LoginPage — checkout-aware, but works standalone
+
+```tsx
+import { useCheckoutFlow } from '@constructor-io/constructorio-ui-checkout';
+import { useNavigate, useLocation } from 'react-router-dom';
+
+function LoginPage() {
+  const flow = useCheckoutFlow();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const onSignedIn = () => {
+    // Case A: we're here because the checkout flow entered its auth step.
+    if (flow.state.currentStepId === 'auth') {
+      void flow.next();  // continues checkout to /checkout/payment
+      return;
+    }
+
+    // Case B: normal login flow — return the user to where they came from.
+    const state = location.state as { returnTo?: string } | null;
+    const returnTo = sanitizeReturnTo(state?.returnTo);
+    navigate(returnTo, { replace: true });
+  };
+
+  return <SignInForm onSignedIn={onSignedIn} />;
+}
+```
+
+## Sending users to /login with a returnTo
+
+React Router's `state` (survives a route transition, not a reload):
+
+```tsx
+<button
+  onClick={() =>
+    navigate('/login', { state: { returnTo: location.pathname + location.search } })
+  }
+>
+  Sign in
+</button>
+```
+
+Or with a query string (survives reloads, works with a plain `<a>`):
+
+```tsx
+<a href={`/login?returnTo=${encodeURIComponent(location.pathname)}`}>Sign in</a>
+```
+
+Then in `LoginPage`:
+
+```tsx
+const [params] = useSearchParams();
+const returnTo = sanitizeReturnTo(params.get('returnTo'));
+```
+
+## Sanitizing `returnTo`
+
+Never trust `returnTo` — an unvalidated redirect is an open-redirect vulnerability. Allow only same-origin paths:
+
+```tsx
+function sanitizeReturnTo(value: string | null | undefined): string {
+  if (!value) return '/account';
+  if (!value.startsWith('/')) return '/account';   // reject absolute URLs
+  if (value.startsWith('//')) return '/account';   // reject protocol-relative
+  return value;
+}
+```
+
+## Decision matrix
+
+**User clicks "Sign in" from the nav.**
+- `flow.state.currentStepId` — `null`
+- After sign-in — `navigate(returnTo)`
+
+**User hits a protected route while logged out.**
+- `flow.state.currentStepId` — `null`
+- After sign-in — `navigate(returnTo)` (pointed at that route)
+
+**User starts checkout without being signed in.**
+- `flow.state.currentStepId` — `'auth'` (flow pushed `/login`)
+- After sign-in — `flow.next()` continues to `/checkout/payment`
+
+**Signed-in user starts checkout.**
+- `flow.state.currentStepId` — never enters auth (guard passes)
+- After sign-in — n/a; flow goes straight from cart to payment
+
+**Deep link to `/checkout/payment` while logged out.**
+- `flow.state.currentStepId` — flow hydrates toward stripe, guard blocks, pushes `/login` (`currentStepId` becomes `'auth'`)
+- After sign-in — `flow.next()` continues to `/checkout/payment`
+
+## Guarding the auth step
+
+The auth step's guard is what routes unauthenticated users to `/login` mid-checkout:
+
+```tsx
+{ id: 'auth', path: '/login', guard: () => Promise.resolve(isSignedIn()) }
+```
+
+`isSignedIn()` is a plain function reading your auth store / cookie / token — no context needed. If it returns `true`, the flow skips the auth step entirely. If `false`, the flow enters `auth`, pushes `/login`, and waits for `flow.next()` after sign-in.
+
+## Modal instead of routed page
+
+If you'd rather sign-in be a modal over whatever page the user was on (no URL change), give the auth step no `path`:
+
+```tsx
+{ id: 'auth', guard: () => Promise.resolve(isSignedIn()) }
+```
+
+Now render a `<SignInModal>` inside `<CheckoutFlowStep id="auth">`. The modal only appears during checkout — the `<LoginPage>` at `/login` still handles the nav-triggered case. The tradeoffs: no deep link to auth, no browser-back into auth, but no route change either.
+
+## Multi-step auth (OTP, 2FA, passkey, MFA)
+
+The checkout flow doesn't care about your auth *strategy* — only about the answer to "is the user signed in yet?" A credentials → OTP → verified sequence happens entirely inside `LoginPage`. Only the final success handler calls `flow.next()`.
+
+```tsx
+function LoginPage() {
+  const flow = useCheckoutFlow();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const onFullySignedIn = () => {
+    if (flow.state.currentStepId === 'auth') {
+      void flow.next();  // one call, at the very end of the auth wizard
+      return;
+    }
+    const returnTo = sanitizeReturnTo(
+      (location.state as { returnTo?: string } | null)?.returnTo
+    );
+    navigate(returnTo, { replace: true });
+  };
+
+  return <AuthWizard onSuccess={onFullySignedIn} />;
+}
+
+function AuthWizard({ onSuccess }: { onSuccess: () => void }) {
+  const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
+  const [challenge, setChallenge] = useState<OtpChallenge | null>(null);
+
+  if (step === 'credentials') {
+    return (
+      <CredentialsForm
+        onChallenge={(c) => {
+          setChallenge(c);
+          setStep('otp');
+        }}
+      />
+    );
+  }
+  return <OtpForm challenge={challenge!} onVerified={onSuccess} />;
+}
+```
+
+`isSignedIn()` (the value the checkout guard reads) only returns `true` once the *final* verification succeeds — not when the user submits credentials and receives an OTP challenge.
+
+### Do the OTP substeps need URLs of their own?
+
+**No** — keep OTP as internal component state (the code above). Simplest. Users can't refresh the OTP screen and land on it, but you also can't deep-link into a half-completed auth flow, which is usually what you want for security anyway.
+
+**Yes** — nest routes *inside* the auth entry route. The checkout `auth` step still owns `/login` as its entry; sub-URLs like `/login/verify` still live "under" the same checkout step:
+
+```tsx
+<Route path="/login" element={<LoginPage />}>
+  <Route index element={<CredentialsForm />} />
+  <Route path="verify" element={<OtpForm />} />
+</Route>
+```
+
+`LoginPage` renders `<Outlet />` and handles the final `onSuccess`. From the checkout flow's perspective, `currentStepId` stays `'auth'` throughout — no reconfiguration needed.
+
+### Don't split auth into multiple checkout steps
+
+Tempting anti-pattern:
+
+```tsx
+// DON'T
+steps={[
+  { id: 'cart', path: '/cart' },
+  { id: 'auth-credentials', path: '/login' },
+  { id: 'auth-otp', path: '/login/verify' },
+  { id: STRIPE_STEP, path: '/checkout/payment' },
+]}
+```
+
+This bakes your auth strategy into the checkout state machine. Add SSO / passkey / step-up MFA later and you have to churn the checkout config every time. Keep the checkout flow at a single `auth` gate — auth owns its own internals.

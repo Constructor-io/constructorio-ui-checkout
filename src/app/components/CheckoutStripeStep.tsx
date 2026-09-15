@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import {
   CheckoutElementsProvider,
@@ -48,6 +48,14 @@ export function CheckoutStripeStep({
 }: CheckoutStripeStepProps) {
   const flow = useCheckoutFlow();
   const session = flow.getSession();
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (session) return;
@@ -56,6 +64,7 @@ export function CheckoutStripeStep({
   }, [flow, session]);
 
   const handleComplete = useCallback(() => {
+    if (!mountedRef.current) return;
     void flow.next();
   }, [flow]);
 

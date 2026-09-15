@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 import {
   CheckoutForm as StripeCheckoutForm,
   useCheckoutForm,
@@ -25,15 +27,33 @@ export default function CheckoutForm({
 }: CheckoutFormProps) {
   const checkoutState = useCheckoutForm();
 
-  if (checkoutState.type === 'error') {
-    const message = checkoutState.error.message;
-    if (message.toLowerCase().includes('expired')) {
-      onSessionExpired?.();
-    } else {
-      onError?.(new Error(message));
+  const errorMessage =
+    checkoutState.type === 'error' ? checkoutState.error.message : null;
+  const stripeExpired =
+    checkoutState.type === 'success' &&
+    checkoutState.checkout.status.type === 'expired';
+  const messageExpired = errorMessage
+    ? errorMessage.toLowerCase().includes('expired')
+    : false;
+
+  const onErrorRef = useRef(onError);
+  const onSessionExpiredRef = useRef(onSessionExpired);
+  onErrorRef.current = onError;
+  onSessionExpiredRef.current = onSessionExpired;
+  const notifiedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const key = stripeExpired || messageExpired ? 'expired' : errorMessage;
+    if (key === notifiedRef.current) return;
+    notifiedRef.current = key;
+    if (key === 'expired') {
+      onSessionExpiredRef.current?.();
+    } else if (key) {
+      onErrorRef.current?.(new Error(key));
     }
-    return null;
-  }
+  }, [stripeExpired, messageExpired, errorMessage]);
+
+  if (checkoutState.type === 'error') return null;
 
   if (checkoutState.type === 'loading') {
     return (
@@ -45,10 +65,7 @@ export default function CheckoutForm({
 
   const { checkout } = checkoutState;
 
-  if (checkout.status.type === 'expired') {
-    onSessionExpired?.();
-    return null;
-  }
+  if (stripeExpired) return null;
 
   const handleConfirm = async (event: StripeCheckoutFormConfirmEvent) => {
     try {

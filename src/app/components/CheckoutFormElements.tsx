@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   Button,
@@ -49,24 +49,34 @@ export default function CheckoutFormElements({
     []
   );
 
-  if (checkoutState.type === 'error') {
-    const message = checkoutState.error.message;
-    if (message.toLowerCase().includes('expired')) {
-      onSessionExpired?.();
-    } else {
-      onError?.(new Error(message));
-    }
-    return null;
-  }
-
+  const errorMessage =
+    checkoutState.type === 'error' ? checkoutState.error.message : null;
   const isLoading = checkoutState.type === 'loading';
   const checkout =
     checkoutState.type === 'success' ? checkoutState.checkout : null;
+  const stripeExpired = checkout?.status.type === 'expired';
+  const messageExpired = errorMessage
+    ? errorMessage.toLowerCase().includes('expired')
+    : false;
 
-  if (checkout?.status.type === 'expired') {
-    onSessionExpired?.();
-    return null;
-  }
+  const onErrorRef = useRef(onError);
+  const onSessionExpiredRef = useRef(onSessionExpired);
+  onErrorRef.current = onError;
+  onSessionExpiredRef.current = onSessionExpired;
+  const notifiedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const key = stripeExpired || messageExpired ? 'expired' : errorMessage;
+    if (key === notifiedRef.current) return;
+    notifiedRef.current = key;
+    if (key === 'expired') {
+      onSessionExpiredRef.current?.();
+    } else if (key) {
+      onErrorRef.current?.(new Error(key));
+    }
+  }, [stripeExpired, messageExpired, errorMessage]);
+
+  if (checkoutState.type === 'error' || stripeExpired) return null;
 
   const handleClick = async () => {
     if (isSubmitting || !checkout) return;

@@ -39,13 +39,21 @@ const backendStorage: StorageAdapter = {
   load: (key) =>
     fetch(`/api/checkout/${encodeURIComponent(key)}`, {
       headers: { Authorization: `Bearer ${getAuthToken()}` },
-    }).then((r) => (r.ok ? r.json() : null)),
+    }).then((r) => {
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error(`storage.load failed: ${r.status}`);
+      return r.json();
+    }),
 
   clear: (key) =>
     fetch(`/api/checkout/${encodeURIComponent(key)}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${getAuthToken()}` },
-    }).then(() => undefined),
+    }).then((r) => {
+      if (!r.ok && r.status !== 404) {
+        throw new Error(`storage.clear failed: ${r.status}`);
+      }
+    }),
 };
 
 function CheckoutApp() {
@@ -93,11 +101,13 @@ function CheckoutApp() {
 }
 
 function OrderConfirmed() {
-  const flow = useCheckoutFlow();
+  const { clearState } = useCheckoutFlow();
   useEffect(() => {
     // Remove the stored entry so a page refresh doesn't resume a finished order.
-    void flow.clearState();
-  }, [flow]);
+    // useCheckoutFlow() returns a new wrapper each render, but the underlying
+    // clearState reference is stable — depend on it, not on the whole hook.
+    void clearState();
+  }, [clearState]);
   return <ThankYouScreen />;
 }
 ```
@@ -145,13 +155,23 @@ const backendStorage: StorageAdapter = {
     fetch(`/api/checkout/${key}`, {
       method: 'PUT',
       body: JSON.stringify(state),
-    }).then(() => undefined),
+    }).then((r) => {
+      if (!r.ok) throw new Error(`storage.save failed: ${r.status}`);
+    }),
 
   load: (key) =>
-    fetch(`/api/checkout/${key}`).then((r) => (r.ok ? r.json() : null)),
+    fetch(`/api/checkout/${key}`).then((r) => {
+      if (r.status === 404) return null;         // no saved state
+      if (!r.ok) throw new Error(`storage.load failed: ${r.status}`);
+      return r.json();
+    }),
 
   clear: (key) =>
-    fetch(`/api/checkout/${key}`, { method: 'DELETE' }).then(() => undefined),
+    fetch(`/api/checkout/${key}`, { method: 'DELETE' }).then((r) => {
+      if (!r.ok && r.status !== 404) {
+        throw new Error(`storage.clear failed: ${r.status}`);
+      }
+    }),
 };
 
 <CheckoutFlowProvider
@@ -160,6 +180,8 @@ const backendStorage: StorageAdapter = {
   ...
 />
 ```
+
+Return `null` from `load` only for the "no saved state" case (e.g. 404). Throw on any other failure so the error routes through `onEvent` and doesn't silently start a fresh flow over recoverable backend state.
 
 The library will call `save` on every state change (debounced by `storageSaveDebounceMs`, default 150ms) and `load` at start. It handles serialization; you handle the transport.
 
@@ -245,7 +267,12 @@ onEvent: (event) => {
 }
 ```
 
-The built-in `createSessionStorageAdapter()` re-throws quota / serialization failures so you can react to them; it silently returns null for corrupted entries (and clears them) so a bad save doesn't wedge every future load.
+The built-in `createSessionStorageAdapter()` behaves slightly differently across operations:
+
+- **Storage unavailable** (SSR, private mode with `sessionStorage` disabled, sandboxed iframe): every operation resolves silently — nothing is saved or cleared, and `load` returns `null`. You won't see a `storage` error event, because storage is a no-op.
+- **Storage available but the operation fails at write time** (quota exceeded, non-serializable state): `save` rejects and the error routes through `onEvent`. `load` returns `null` for corrupted entries and clears the bad entry so it doesn't wedge future loads.
+
+If you need to distinguish "storage disabled" from "storage failed", wrap the adapter and probe explicitly, or write your own adapter that throws on unavailable storage.
 
 ## Schema versioning
 

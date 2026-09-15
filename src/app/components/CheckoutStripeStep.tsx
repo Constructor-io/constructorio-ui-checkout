@@ -63,8 +63,11 @@ export function CheckoutStripeStep({
 
   useEffect(() => {
     if (session) return;
-    if (sessionStatus !== 'idle') return;
-    void flow.createSession();
+    if (sessionStatus === 'idle') {
+      void flow.createSession();
+    } else if (sessionStatus === 'expired') {
+      void flow.recreate();
+    }
   }, [flow, session, sessionStatus]);
 
   useEffect(() => {

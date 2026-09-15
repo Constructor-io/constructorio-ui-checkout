@@ -98,6 +98,7 @@ function sanitizeReturnTo(value: string | null | undefined): string {
   if (!value) return '/account';
   if (!value.startsWith('/')) return '/account';   // reject absolute URLs
   if (value.startsWith('//')) return '/account';   // reject protocol-relative
+  if (value.includes('\\')) return '/account';     // reject backslash — browsers treat \\evil as //evil
   return value;
 }
 ```
@@ -124,25 +125,67 @@ function sanitizeReturnTo(value: string | null | undefined): string {
 - `flow.state.currentStepId` — flow hydrates toward stripe, guard blocks, pushes `/login` (`currentStepId` becomes `'auth'`)
 - After sign-in — `flow.next()` continues to `/checkout/payment`
 
-## Guarding the auth step
+## Auth-gating with guards
 
-The auth step's guard is what routes unauthenticated users to `/login` mid-checkout:
+Guard semantics: `true` allows entry into the step; `false` blocks the transition and the flow stays on the previous step. Guards do **not** auto-skip a step when they pass.
+
+That means the guard goes on the **step after auth** (the one that requires being signed in), not on the auth step itself:
 
 ```tsx
-{ id: 'auth', path: '/login', guard: () => Promise.resolve(isSignedIn()) }
+{ id: 'cart' },
+{ id: 'auth', path: '/login' },
+{
+  id: STRIPE_STEP,
+  path: '/checkout/payment',
+  guard: () => Promise.resolve(isSignedIn()),  // gates entry to payment
+},
 ```
 
-`isSignedIn()` is a plain function reading your auth store / cookie / token — no context needed. If it returns `true`, the flow skips the auth step entirely. If `false`, the flow enters `auth`, pushes `/login`, and waits for `flow.next()` after sign-in.
+Behavior:
+- User advances from `cart` → flow enters `auth` (routed to `/login`).
+- User signs in, `LoginPage` calls `flow.next()`.
+- Guard on `stripe` runs — `isSignedIn()` returns `true` → payment step entered.
+
+For a signed-in user who starts checkout, you don't want them to land on `/login` at all. Two ways to skip the auth step:
+
+**1. Auto-advance from within the auth step.** Render a small effect that calls `flow.next()` if already signed in:
+
+```tsx
+function AuthStepBody() {
+  const flow = useCheckoutFlow();
+  useEffect(() => {
+    if (isSignedIn()) void flow.next();
+  }, [flow.next]);
+  return isSignedIn() ? null : <SignInForm />;
+}
+
+<CheckoutFlowStep id="auth"><AuthStepBody /></CheckoutFlowStep>
+```
+
+**2. Skip via `next({ skip: true })` from the previous step.** Requires marking `auth` as `optional`:
+
+```tsx
+{ id: 'auth', path: '/login', optional: true },
+
+// From the cart step's Next button:
+if (isSignedIn()) {
+  void flow.next({ skip: true });   // jumps past auth
+} else {
+  void flow.next();                 // enters auth
+}
+```
+
+`isSignedIn()` is a plain function reading your auth store / cookie / token — no context needed.
 
 ## Modal instead of routed page
 
-If you'd rather sign-in be a modal over whatever page the user was on (no URL change), give the auth step no `path`:
+If you'd rather sign-in be a modal over whatever page the user was on (no URL change), give the auth step no `path` and apply the same auto-advance / skip pattern:
 
 ```tsx
-{ id: 'auth', guard: () => Promise.resolve(isSignedIn()) }
+{ id: 'auth' }
 ```
 
-Now render a `<SignInModal>` inside `<CheckoutFlowStep id="auth">`. The modal only appears during checkout — the `<LoginPage>` at `/login` still handles the nav-triggered case. The tradeoffs: no deep link to auth, no browser-back into auth, but no route change either.
+Render a `<SignInModal>` inside `<CheckoutFlowStep id="auth">`. The modal only appears during checkout — the `<LoginPage>` at `/login` still handles the nav-triggered case. The tradeoffs: no deep link to auth, no browser-back into auth, but no route change either.
 
 ## Multi-step auth (OTP, 2FA, passkey, MFA)
 

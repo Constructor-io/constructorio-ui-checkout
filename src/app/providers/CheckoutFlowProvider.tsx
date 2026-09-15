@@ -52,26 +52,30 @@ export function CheckoutFlowProvider<TState = unknown>(
         }
       : undefined;
 
-    flowRef.current = createCheckoutFlow<TState>({
-      ...props,
-      steps: wrappedSteps,
-      cart,
-      router: wrappedRouter,
-      onCreateSession: (state) => propsRef.current.onCreateSession(state),
-      onUpdateSession: props.onUpdateSession
-        ? (patch) => propsRef.current.onUpdateSession!(patch)
-        : undefined,
-      onEvent: props.onEvent
-        ? (event) => propsRef.current.onEvent!(event)
-        : undefined,
-      authenticate: props.authenticate
-        ? () => propsRef.current.authenticate!()
-        : undefined,
-    });
+    flowRef.current = createCheckoutFlow<TState>(
+      {
+        ...props,
+        steps: wrappedSteps,
+        cart,
+        router: wrappedRouter,
+        onCreateSession: (state) => propsRef.current.onCreateSession(state),
+        onUpdateSession: props.onUpdateSession
+          ? (patch) => propsRef.current.onUpdateSession!(patch)
+          : undefined,
+        onEvent: props.onEvent
+          ? (event) => propsRef.current.onEvent!(event)
+          : undefined,
+        authenticate: props.authenticate
+          ? () => propsRef.current.authenticate!()
+          : undefined,
+      },
+      { deferMount: true }
+    );
   }
   const flow = flowRef.current;
 
   useEffect(() => {
+    flow.mount();
     return () => {
       flow.destroy();
       flowRef.current = null;

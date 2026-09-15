@@ -277,7 +277,14 @@ export function createCheckoutFlow<TState = unknown>(
     }
 
     const resumed = await maybeAutoResume();
-    if (resumed) return;
+    if (resumed) {
+      const resumedStepId = store.getState().currentStepId;
+      if (resumedStepId !== null) {
+        const resumedStep = steps[findStepIndex(steps, resumedStepId)];
+        if (resumedStep) pushRouterPath(resumedStep.path);
+      }
+      return;
+    }
 
     if (router) {
       let currentPath = '';
@@ -353,6 +360,8 @@ export function createCheckoutFlow<TState = unknown>(
     const nextStep = steps[nextIdx];
     const guardOk = await runGuard(nextStep);
     if (!guardOk) return;
+    if (destroyed) return;
+    if (store.getState().currentStepId !== current.id) return;
 
     exitStep(current.id, nextStep.id);
     enterStep(nextStep.id, current.id);
@@ -406,6 +415,7 @@ export function createCheckoutFlow<TState = unknown>(
     }
 
     const currentFrom = store.getState().currentStepId;
+    if (currentFrom === stepId) return;
     const currentFromIdx =
       currentFrom === null ? -1 : findStepIndex(steps, currentFrom);
     if (currentFrom !== null) {
@@ -640,6 +650,13 @@ export function createCheckoutFlow<TState = unknown>(
     clearCartDebounce();
     if (!session) {
       store.setState((prev) => ({ ...prev, cartSnapshot: items.slice() }));
+      const pendingCreate = createSessionInFlight;
+      if (pendingCreate !== null) {
+        return pendingCreate.then((response) => {
+          if (destroyed || !response) return null;
+          return updateSession({ items, reason: 'items' });
+        });
+      }
       return Promise.resolve(null);
     }
     return updateSession({ items, reason: 'items' });

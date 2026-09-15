@@ -36,6 +36,14 @@ export function CheckoutFulfillmentStep({
   const [status, setStatus] = useState<FulfillmentStatus>('idle');
   const [result, setResult] = useState<FulfillmentResult | null>(null);
   const inFlightRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const run = useCallback(async () => {
     if (inFlightRef.current) return;
@@ -43,6 +51,7 @@ export function CheckoutFulfillmentStep({
     setStatus('pending');
     try {
       const outcome = await onFulfill();
+      if (!mountedRef.current) return;
       setResult(outcome);
       setStatus(outcome.success ? 'fulfilled' : 'failed');
       onFulfillComplete?.(outcome);
@@ -50,6 +59,7 @@ export function CheckoutFulfillmentStep({
         void flow.next();
       }
     } catch (reason) {
+      if (!mountedRef.current) return;
       const outcome: FulfillmentResult = {
         success: false,
         message:
@@ -82,7 +92,11 @@ export function CheckoutFulfillmentStep({
 
   if (status === 'pending') {
     return (
-      <div className="cio-checkout-fulfillment cio-checkout-fulfillment--pending">
+      <div
+        className="cio-checkout-fulfillment cio-checkout-fulfillment--pending"
+        role="status"
+        aria-live="polite"
+      >
         Verifying your order...
       </div>
     );
@@ -90,7 +104,11 @@ export function CheckoutFulfillmentStep({
 
   if (status === 'fulfilled') {
     return (
-      <div className="cio-checkout-fulfillment cio-checkout-fulfillment--success">
+      <div
+        className="cio-checkout-fulfillment cio-checkout-fulfillment--success"
+        role="status"
+        aria-live="polite"
+      >
         {result?.message ?? 'Order confirmed'}
       </div>
     );
@@ -98,7 +116,10 @@ export function CheckoutFulfillmentStep({
 
   if (status === 'failed') {
     return (
-      <div className="cio-checkout-fulfillment cio-checkout-fulfillment--failed">
+      <div
+        className="cio-checkout-fulfillment cio-checkout-fulfillment--failed"
+        role="alert"
+      >
         <p>{result?.message ?? 'Verification failed'}</p>
         <button type="button" onClick={retry}>
           Retry

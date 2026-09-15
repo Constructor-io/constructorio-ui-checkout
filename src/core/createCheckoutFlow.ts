@@ -84,6 +84,8 @@ export function createCheckoutFlow<TState = unknown>(
   let cartTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingCart: CheckoutItem[] | null = null;
 
+  let navVersion = 0;
+
   interface QueuedUpdate {
     patch: SessionUpdatePatch;
     resolve: (value: CheckoutSessionResponse | null) => void;
@@ -337,9 +339,6 @@ export function createCheckoutFlow<TState = unknown>(
       return;
     }
 
-    // currentStepId is guaranteed to be in steps: it's set only via enterStep
-    // (which passes a step from `steps`) or via hydrate (which rejects unknown
-    // ids), and `steps` is captured immutably at construction.
     const idx = findStepIndex(steps, state.currentStepId);
     const current = steps[idx];
     if (opts?.skip && !current.optional) {
@@ -352,15 +351,18 @@ export function createCheckoutFlow<TState = unknown>(
 
     const nextIdx = idx + 1;
     if (nextIdx >= steps.length) {
+      navVersion += 1;
       exitStep(current.id, null);
       complete();
       return;
     }
 
     const nextStep = steps[nextIdx];
+    const myVersion = ++navVersion;
     const guardOk = await runGuard(nextStep);
     if (!guardOk) return;
     if (destroyed) return;
+    if (myVersion !== navVersion) return;
     if (store.getState().currentStepId !== current.id) return;
 
     exitStep(current.id, nextStep.id);
@@ -375,7 +377,7 @@ export function createCheckoutFlow<TState = unknown>(
     if (idx <= 0) return Promise.resolve();
     const prevStep = steps[idx - 1];
     const current = steps[idx];
-    // Back re-enters prevStep, so it is no longer complete; current stays uncompleted.
+    navVersion += 1;
     events.emit({ type: 'step.exited', stepId: current.id, to: prevStep.id });
     store.setState((prev) => ({
       ...prev,
@@ -399,8 +401,10 @@ export function createCheckoutFlow<TState = unknown>(
     const fromIdx = from === null ? -1 : findStepIndex(steps, from);
 
     const guardStart = fromIdx < targetIdx ? fromIdx + 1 : targetIdx;
+    const myVersion = ++navVersion;
     const failIdx = await findFirstFailingGuard(guardStart, targetIdx);
     if (destroyed) return;
+    if (myVersion !== navVersion) return;
     if (failIdx !== null) {
       const failedStep = steps[failIdx];
       emitError(
@@ -548,6 +552,15 @@ export function createCheckoutFlow<TState = unknown>(
         }));
         if (sessionId) {
           events.emit({ type: 'session.created', sessionId });
+        }
+        if (pendingCart !== null) {
+          const cartToFlush = pendingCart;
+          pendingCart = null;
+          if (cartTimer !== null) {
+            clearTimeout(cartTimer);
+            cartTimer = null;
+          }
+          void syncCart(cartToFlush);
         }
         return response;
       } catch (reason) {

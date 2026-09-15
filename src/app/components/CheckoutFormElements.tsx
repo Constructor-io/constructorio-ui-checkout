@@ -19,6 +19,8 @@ import type {
 } from '@src/types';
 import { t } from '@src/utils';
 
+import './CheckoutFormElements.css';
+
 interface CheckoutFormElementsProps {
   onComplete: () => void;
   onError?: (error: Error) => void;

@@ -6,8 +6,11 @@ import type {
   CheckoutFlowConfig,
   CheckoutFlowCore,
   FlowState,
+  RouterAdapter,
   Step,
 } from '@src/core/types';
+
+import '@src/styles.css';
 
 export interface CheckoutFlowProviderProps<
   TState = unknown,
@@ -38,10 +41,22 @@ export function CheckoutFlowProvider<TState = unknown>(
         : undefined,
     }));
 
+    const wrappedRouter: RouterAdapter | undefined = props.router
+      ? {
+          getCurrentPath: () => propsRef.current.router!.getCurrentPath(),
+          push: (path: string) => propsRef.current.router!.push(path),
+          subscribe: props.router.subscribe
+            ? (cb: (path: string) => void) =>
+                propsRef.current.router!.subscribe!(cb)
+            : undefined,
+        }
+      : undefined;
+
     flowRef.current = createCheckoutFlow<TState>({
       ...props,
       steps: wrappedSteps,
       cart,
+      router: wrappedRouter,
       onCreateSession: (state) => propsRef.current.onCreateSession(state),
       onUpdateSession: props.onUpdateSession
         ? (patch) => propsRef.current.onUpdateSession!(patch)

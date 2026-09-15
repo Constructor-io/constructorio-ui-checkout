@@ -2,6 +2,7 @@ import { validateFlowState } from '@src/core/schema';
 import type { FlowState, StorageAdapter } from '@src/core/types';
 
 const STORAGE_KEY_PREFIX = 'cio-checkout-flow:';
+const PROBE_KEY = `${STORAGE_KEY_PREFIX}__probe__`;
 
 // SSR-safe: no window/sessionStorage access at module scope.
 const hasSessionStorage = (): boolean => {
@@ -9,9 +10,8 @@ const hasSessionStorage = (): boolean => {
   try {
     const storage = (globalThis as { sessionStorage?: Storage }).sessionStorage;
     if (!storage) return false;
-    const probe = '__cio_checkout_probe__';
-    storage.setItem(probe, '1');
-    storage.removeItem(probe);
+    storage.setItem(PROBE_KEY, '1');
+    storage.removeItem(PROBE_KEY);
     return true;
   } catch {
     return false;

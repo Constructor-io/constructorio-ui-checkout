@@ -80,7 +80,15 @@ function BuyButton() {
 
 ## Modal vs. inline
 
-There's no `displayMode` prop — you wrap the `stripe` step in your own modal or render it inline. See the `ExpressBuyNow` story for a minimal modal example.
+There's no `displayMode` prop — you wrap the `stripe` step in your own modal or render it inline:
+
+```tsx
+<CheckoutFlowStep id={STRIPE_STEP}>
+  <MyModal open>
+    <CheckoutStripeStep />
+  </MyModal>
+</CheckoutFlowStep>
+```
 
 ## Routed multi-step
 

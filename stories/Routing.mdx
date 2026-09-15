@@ -6,10 +6,6 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 The `router` prop is an adapter — you plug in your app's router so the checkout flow can push URLs on step transitions and react to browser back / refresh / deep links.
 
-## Storybook caveat
-
-Storybook doesn't have real routes, so the `Components / CheckoutFlow / Multi-step (routes only, URL-synced)` story uses a **mock router backed by React state** that displays the current path above the flow. In your real app, you'd swap it for one of the adapters below.
-
 ## Router adapter shape
 
 ```ts
@@ -149,6 +145,7 @@ flow.start();
 
 - **Refresh** on a routed step: the flow reads `getCurrentPath()` on mount and enters that step (skipping the default first step).
 - **Deep link** from an email to `/checkout/payment`: same as refresh — flow lands on `payment`. Combine with a `storage` adapter so completed prior steps (`cart`, `address`) are marked done and the payment step has the correct cart snapshot.
+- **Storage precedence when both are configured**: if a persisted flow state exists, `start()` restores it and pushes the stored step's path — the stored step wins over the current URL. An emailed deep link to `/checkout/payment` for a session where the persisted state points at `cart` will resume at `cart`. Call `clearState()` (or omit `storage`) if you want deep links to override storage.
 - **Browser back**: `subscribe(cb)` fires with the new path; the flow syncs its `currentStepId` to match. Steps without a `path` don't participate (modals aren't deep-linkable by design).
 
 ## Mixed routed + non-routed steps

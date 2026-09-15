@@ -25,34 +25,31 @@ export function CheckoutFlowProvider<TState = unknown>(
   const flowRef = useRef<CheckoutFlowCore<TState> | null>(null);
 
   if (flowRef.current === null) {
+    // Wrap step guards and callbacks so merchants can change them across
+    // rerenders without recreating the flow. Each shim reads the current prop
+    // through propsRef at call time; presence at mount decides shape.
     const wrappedSteps: Step[] = props.steps.map((step) => ({
       ...step,
       guard: step.guard
         ? (state: FlowState) => {
-            const latest = propsRef.current.steps.find(
-              (s) => s.id === step.id
-            );
+            const latest = propsRef.current.steps.find((s) => s.id === step.id);
             return latest?.guard ? latest.guard(state) : true;
           }
         : undefined,
     }));
-
-    const hasOnUpdateSession = props.onUpdateSession !== undefined;
-    const hasOnEvent = props.onEvent !== undefined;
-    const hasAuthenticate = props.authenticate !== undefined;
 
     flowRef.current = createCheckoutFlow<TState>({
       ...props,
       steps: wrappedSteps,
       cart,
       onCreateSession: (state) => propsRef.current.onCreateSession(state),
-      onUpdateSession: hasOnUpdateSession
+      onUpdateSession: props.onUpdateSession
         ? (patch) => propsRef.current.onUpdateSession!(patch)
         : undefined,
-      onEvent: hasOnEvent
+      onEvent: props.onEvent
         ? (event) => propsRef.current.onEvent!(event)
         : undefined,
-      authenticate: hasAuthenticate
+      authenticate: props.authenticate
         ? () => propsRef.current.authenticate!()
         : undefined,
     });

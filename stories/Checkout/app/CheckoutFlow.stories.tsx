@@ -3,45 +3,17 @@ import { useMemo, useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 
 import { CheckoutFlowStep } from '@src/app/components/CheckoutFlowStep';
-import {
-  CheckoutFulfillmentStep,
-  type FulfillmentResult,
-} from '@src/app/components/CheckoutFulfillmentStep';
 import { CheckoutStripeStep } from '@src/app/components/CheckoutStripeStep';
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
 import { CheckoutFlowProvider } from '@src/app/providers/CheckoutFlowProvider';
-import { createSessionStorageAdapter } from '@src/core/storage/sessionStorageAdapter';
-import type { CheckoutFlowConfig, RouterAdapter } from '@src/core/types';
-import { CREATE_SESSION_STEP, STRIPE_STEP } from '@src/core/types';
-
-const DEMO_PUBLISHABLE_KEY = 'pk_test_DEMO';
-const DEMO_CLIENT_SECRET = 'cs_test_abc123_secret_xyz789';
+import type { RouterAdapter } from '@src/core/types';
+import { STRIPE_STEP } from '@src/core/types';
 
 const stubSession = () =>
   Promise.resolve({
-    clientSecret: DEMO_CLIENT_SECRET,
-    publishableKey: DEMO_PUBLISHABLE_KEY,
+    clientSecret: 'cs_test_DEMO_secret_xyz',
+    publishableKey: 'pk_test_DEMO',
   });
-
-const stubFulfill = (): Promise<FulfillmentResult> =>
-  new Promise((resolve) => {
-    setTimeout(
-      () => resolve({ success: true, message: 'Order confirmed' }),
-      500
-    );
-  });
-
-const baseConfig: CheckoutFlowConfig = {
-  steps: [
-    { id: 'cart' },
-    { id: 'address' },
-    { id: CREATE_SESSION_STEP },
-    { id: STRIPE_STEP },
-    { id: 'fulfill' },
-    { id: 'done' },
-  ],
-  onCreateSession: stubSession,
-};
 
 const meta: Meta<typeof CheckoutFlowProvider> = {
   title: 'Components/CheckoutFlow',
@@ -52,199 +24,141 @@ const meta: Meta<typeof CheckoutFlowProvider> = {
 export default meta;
 type Story = StoryObj<typeof CheckoutFlowProvider>;
 
-function StepNav() {
+function DemoStatus() {
   const flow = useCheckoutFlow();
   return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-      <button
-        type="button"
-        onClick={() => {
-          void flow.back();
-        }}
-      >
-        Back
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          void flow.next();
-        }}
-      >
-        Next
-      </button>
-      <span style={{ marginLeft: 12 }}>
-        Step: <strong>{flow.state.currentStepId ?? '(not started)'}</strong>
-      </span>
+    <div style={{ padding: 16, background: '#f6f6f6', borderRadius: 6 }}>
+      <p style={{ margin: 0, fontSize: 13, opacity: 0.7 }}>
+        Live Stripe rendering needs a real backend session — see the code sample
+        in the <strong>Docs</strong> tab.
+      </p>
+      <p style={{ margin: '8px 0 0', fontSize: 13 }}>
+        Current step: <strong>{flow.state.currentStepId ?? 'idle'}</strong>
+        {' · '}
+        Session: <strong>{flow.state.sessionStatus}</strong>
+      </p>
+      {flow.state.currentStepId === null && (
+        <button
+          type="button"
+          onClick={() => void flow.start()}
+          style={{ marginTop: 8 }}
+        >
+          Start
+        </button>
+      )}
     </div>
   );
 }
+
+export const Basic: Story = {
+  name: 'Basic (single-step Stripe)',
+  parameters: {
+    docs: {
+      source: {
+        language: 'tsx',
+        code: `import {
+  CheckoutFlowProvider,
+  CheckoutFlowStep,
+  CheckoutStripeStep,
+  STRIPE_STEP,
+} from '@constructor-io/constructorio-ui-checkout';
+
+<CheckoutFlowProvider
+  steps={[{ id: STRIPE_STEP }]}
+  onCreateSession={() =>
+    fetch('/api/checkout-session', { method: 'POST' }).then((r) => r.json())
+  }
+  autoStart
+>
+  <CheckoutFlowStep id={STRIPE_STEP}>
+    <CheckoutStripeStep />
+  </CheckoutFlowStep>
+</CheckoutFlowProvider>`,
+      },
+    },
+  },
+  render: () => (
+    <CheckoutFlowProvider
+      steps={[{ id: STRIPE_STEP }]}
+      onCreateSession={stubSession}
+      autoStart
+    >
+      <DemoStatus />
+      <CheckoutFlowStep id={STRIPE_STEP}>
+        <CheckoutStripeStep />
+      </CheckoutFlowStep>
+    </CheckoutFlowProvider>
+  ),
+};
+
+export const MultiStep: Story = {
+  name: 'Multi-step wizard',
+  parameters: {
+    docs: {
+      source: {
+        language: 'tsx',
+        code: `import {
+  CheckoutFlowProvider,
+  CheckoutFlowStep,
+  CheckoutStripeStep,
+  CheckoutFulfillmentStep,
+  STRIPE_STEP,
+  useCheckoutFlow,
+} from '@constructor-io/constructorio-ui-checkout';
+
+<CheckoutFlowProvider
+  steps={[
+    { id: 'cart' },
+    { id: 'address' },
+    { id: STRIPE_STEP },
+    { id: 'fulfill' },
+    { id: 'done' },
+  ]}
+  onCreateSession={createSession}
+>
+  <StartButton />
+  <CheckoutFlowStep id="cart"><YourCartView /></CheckoutFlowStep>
+  <CheckoutFlowStep id="address"><YourAddressForm /></CheckoutFlowStep>
+  <CheckoutFlowStep id={STRIPE_STEP}>
+    <CheckoutStripeStep />
+  </CheckoutFlowStep>
+  <CheckoutFlowStep id="fulfill">
+    <CheckoutFulfillmentStep onFulfill={verifyOrder} />
+  </CheckoutFlowStep>
+  <CheckoutFlowStep id="done"><YourConfirmation /></CheckoutFlowStep>
+</CheckoutFlowProvider>
 
 function StartButton() {
   const flow = useCheckoutFlow();
   if (flow.state.currentStepId !== null) return null;
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        void flow.start();
-      }}
-    >
-      Start checkout
-    </button>
-  );
-}
-
-function ModalCheckout({ children }: { children: React.ReactNode }) {
-  const flow = useCheckoutFlow();
-  if (flow.state.currentStepId === null) return null;
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.4)',
-        display: 'grid',
-        placeItems: 'center',
-        zIndex: 100,
-      }}
-    >
-      <div
-        style={{
-          background: 'white',
-          padding: 24,
-          minWidth: 400,
-          borderRadius: 8,
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-export const MultiStepWizard: Story = {
-  name: 'Multi-step (components only, no routing)',
+  return <button onClick={() => flow.start()}>Checkout</button>;
+}`,
+      },
+    },
+  },
   render: () => (
-    <CheckoutFlowProvider {...baseConfig}>
-      <StartButton />
-      <StepNav />
-      <CheckoutFlowStep id="cart">
-        <p>Cart contents shown here (integrator-owned view).</p>
-      </CheckoutFlowStep>
-      <CheckoutFlowStep id="address">
-        <p>Address form shown here (integrator-owned view).</p>
-      </CheckoutFlowStep>
-      <CheckoutFlowStep id={CREATE_SESSION_STEP}>
-        <p>Preparing your session…</p>
-      </CheckoutFlowStep>
-      <CheckoutFlowStep id={STRIPE_STEP}>
-        <CheckoutStripeStep />
-      </CheckoutFlowStep>
-      <CheckoutFlowStep id="fulfill">
-        <CheckoutFulfillmentStep onFulfill={stubFulfill} />
-      </CheckoutFlowStep>
-      <CheckoutFlowStep id="done">
-        <p>All done! Order confirmed.</p>
-      </CheckoutFlowStep>
-    </CheckoutFlowProvider>
-  ),
-};
-
-export const ExpressBuyNow: Story = {
-  name: 'Express Buy Now (modal, no routing)',
-  render: () => (
-    <CheckoutFlowProvider
-      steps={[{ id: CREATE_SESSION_STEP }, { id: STRIPE_STEP }, { id: 'done' }]}
-      onCreateSession={stubSession}
-    >
-      <StartButton />
-      <ModalCheckout>
-        <StepNav />
-        <CheckoutFlowStep id={STRIPE_STEP}>
-          <CheckoutStripeStep />
-        </CheckoutFlowStep>
-        <CheckoutFlowStep id="done">
-          <p>Purchase complete!</p>
-        </CheckoutFlowStep>
-      </ModalCheckout>
-    </CheckoutFlowProvider>
-  ),
-};
-
-export const GuestCheckout: Story = {
-  name: 'Guest checkout (no login)',
-  render: () => (
-    <CheckoutFlowProvider
-      steps={[{ id: 'cart' }, { id: STRIPE_STEP }]}
-      onCreateSession={stubSession}
-    >
-      <StartButton />
-      <StepNav />
-      <CheckoutFlowStep id="cart">
-        <p>No login step — customers proceed straight from cart to payment.</p>
-      </CheckoutFlowStep>
-      <CheckoutFlowStep id={STRIPE_STEP}>
-        <CheckoutStripeStep />
-      </CheckoutFlowStep>
-    </CheckoutFlowProvider>
-  ),
-};
-
-function WithLoginHarness() {
-  const [signedIn, setSignedIn] = useState(false);
-  return (
     <CheckoutFlowProvider
       steps={[
         { id: 'cart' },
-        { id: 'auth' },
-        {
-          id: STRIPE_STEP,
-          guard: () => Promise.resolve(signedIn),
-        },
+        { id: 'address' },
+        { id: STRIPE_STEP },
+        { id: 'fulfill' },
+        { id: 'done' },
       ]}
       onCreateSession={stubSession}
     >
-      <StartButton />
-      <StepNav />
-      <CheckoutFlowStep id="cart">Cart view</CheckoutFlowStep>
-      <CheckoutFlowStep id="auth">
-        <div style={{ padding: 12, border: '1px solid #ccc' }}>
-          <p>Sign in to continue</p>
-          <input placeholder="email" defaultValue="you@example.com" />
-          <input
-            placeholder="password"
-            type="password"
-            defaultValue="hunter2"
-          />
-          <button
-            type="button"
-            style={{ marginLeft: 8 }}
-            onClick={() => setSignedIn(true)}
-            disabled={signedIn}
-          >
-            {signedIn ? '✓ Signed in' : 'Sign in'}
-          </button>
-        </div>
-      </CheckoutFlowStep>
+      <DemoStatus />
       <CheckoutFlowStep id={STRIPE_STEP}>
         <CheckoutStripeStep />
       </CheckoutFlowStep>
     </CheckoutFlowProvider>
-  );
-}
-
-export const WithLogin: Story = {
-  name: 'Multi-step with login step (guard blocks advance)',
-  render: () => <WithLoginHarness />,
+  ),
 };
 
-function MockRouter({ children }: { children: React.ReactNode }) {
+function RoutedDemo() {
   const [path, setPath] = useState('/cart');
   const router: RouterAdapter = useMemo(
-    () => ({
-      push: (p) => setPath(p),
-      getCurrentPath: () => path,
-    }),
+    () => ({ push: setPath, getCurrentPath: () => path }),
     [path]
   );
   return (
@@ -259,63 +173,254 @@ function MockRouter({ children }: { children: React.ReactNode }) {
       router={router}
       autoStart
     >
-      <div style={{ marginBottom: 16, opacity: 0.6 }}>
+      <div style={{ marginBottom: 8, opacity: 0.6 }}>
         URL: <code>{path}</code>
       </div>
-      {children}
+      <DemoStatus />
+      <CheckoutFlowStep id={STRIPE_STEP}>
+        <CheckoutStripeStep />
+      </CheckoutFlowStep>
     </CheckoutFlowProvider>
   );
 }
 
 export const RoutedMultiStep: Story = {
-  name: 'Multi-step (routes only, URL-synced)',
-  render: () => (
-    <MockRouter>
-      <StepNav />
-      <CheckoutFlowStep id="cart">Cart at /cart</CheckoutFlowStep>
-      <CheckoutFlowStep id="address">
-        Address form at /checkout/address
-      </CheckoutFlowStep>
-      <CheckoutFlowStep id={STRIPE_STEP}>
-        <CheckoutStripeStep />
-      </CheckoutFlowStep>
-      <CheckoutFlowStep id="done">
-        Confirmation at /order/confirmed
-      </CheckoutFlowStep>
-    </MockRouter>
-  ),
+  name: 'Routed multi-step (URL-synced)',
+  parameters: {
+    docs: {
+      source: {
+        language: 'tsx',
+        code: `import {
+  CheckoutFlowProvider,
+  CheckoutFlowStep,
+  CheckoutStripeStep,
+  STRIPE_STEP,
+} from '@constructor-io/constructorio-ui-checkout';
+import type { RouterAdapter } from '@constructor-io/constructorio-ui-checkout';
+
+// Adapt your router (react-router, next/router, etc.) to RouterAdapter.
+const router: RouterAdapter = {
+  push: (path) => navigate(path),
+  getCurrentPath: () => location.pathname,
+  subscribe: (cb) => subscribeToLocationChanges(cb),
 };
 
-function PersistenceHarness() {
-  const storage = useMemo(() => createSessionStorageAdapter(), []);
+<CheckoutFlowProvider
+  steps={[
+    { id: 'cart', path: '/cart' },
+    { id: 'address', path: '/checkout/address' },
+    { id: STRIPE_STEP, path: '/checkout/payment' },
+    { id: 'done', path: '/order/confirmed' },
+  ]}
+  onCreateSession={createSession}
+  router={router}
+  autoStart
+>
+  <CheckoutFlowStep id="cart"><YourCartView /></CheckoutFlowStep>
+  <CheckoutFlowStep id="address"><YourAddressForm /></CheckoutFlowStep>
+  <CheckoutFlowStep id={STRIPE_STEP}>
+    <CheckoutStripeStep />
+  </CheckoutFlowStep>
+  <CheckoutFlowStep id="done"><YourConfirmation /></CheckoutFlowStep>
+</CheckoutFlowProvider>`,
+      },
+    },
+  },
+  render: () => <RoutedDemo />,
+};
+
+const demoCart = [{ name: 'Widget', amount: 20, quantity: 1 }];
+const getCart = () => demoCart;
+const getAuthToken = () => 'demo-token';
+
+function RealisticFlowDemo() {
+  const [path, setPath] = useState('/cart');
+  const [signedIn, setSignedIn] = useState(false);
+  const router: RouterAdapter = useMemo(
+    () => ({ push: setPath, getCurrentPath: () => path }),
+    [path]
+  );
+
+  const createSession = () => {
+    void getAuthToken();
+    void getCart();
+    return Promise.resolve({
+      clientSecret: 'cs_test_DEMO_secret_xyz',
+      publishableKey: 'pk_test_DEMO',
+    });
+  };
+
   return (
     <CheckoutFlowProvider
-      {...baseConfig}
-      storage={storage}
-      storageKey="story-persistence-demo"
+      steps={[
+        { id: 'cart', path: '/cart' },
+        { id: 'auth', guard: () => Promise.resolve(signedIn) },
+        { id: 'shipping', path: '/checkout/shipping' },
+        { id: STRIPE_STEP, path: '/checkout/payment' },
+        { id: 'done', path: '/order/confirmed' },
+      ]}
+      onCreateSession={createSession}
+      router={router}
+      autoStart
     >
-      <p style={{ opacity: 0.7 }}>
-        Reload the page — the flow resumes at the last step from sessionStorage.
-      </p>
-      <StartButton />
-      <StepNav />
-      <CheckoutFlowStep id="cart">Cart view</CheckoutFlowStep>
-      <CheckoutFlowStep id="address">Address form</CheckoutFlowStep>
-      <CheckoutFlowStep id={CREATE_SESSION_STEP}>
-        Creating session…
+      <div style={{ marginBottom: 8, opacity: 0.6 }}>
+        URL: <code>{path}</code>
+      </div>
+      <DemoStatus />
+
+      <CheckoutFlowStep id="cart">
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            border: '1px solid #ddd',
+            borderRadius: 6,
+          }}
+        >
+          <strong>Cart</strong> (routed at /cart)
+          <p>Widget × 1 — $20</p>
+          <NextButton label="Continue to sign in" />
+        </div>
       </CheckoutFlowStep>
+
+      <CheckoutFlowStep id="auth">
+        <div
+          style={{
+            marginTop: 12,
+            padding: 16,
+            background: '#fff8dc',
+            border: '1px solid #d4a017',
+            borderRadius: 6,
+          }}
+        >
+          <strong>Sign in</strong> (modal, no route)
+          <p style={{ fontSize: 13, opacity: 0.7 }}>
+            No path — stays on {path}. Advances only when the guard passes.
+          </p>
+          {!signedIn ? (
+            <button type="button" onClick={() => setSignedIn(true)}>
+              Sign in
+            </button>
+          ) : (
+            <NextButton label="Continue to shipping" />
+          )}
+        </div>
+      </CheckoutFlowStep>
+
+      <CheckoutFlowStep id="shipping">
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            border: '1px solid #ddd',
+            borderRadius: 6,
+          }}
+        >
+          <strong>Shipping</strong> (routed at /checkout/shipping)
+          <NextButton label="Continue to payment" />
+        </div>
+      </CheckoutFlowStep>
+
       <CheckoutFlowStep id={STRIPE_STEP}>
-        <CheckoutStripeStep />
+        <div style={{ marginTop: 12 }}>
+          <strong>Payment</strong> (routed at /checkout/payment)
+          <CheckoutStripeStep />
+        </div>
       </CheckoutFlowStep>
-      <CheckoutFlowStep id="fulfill">
-        <CheckoutFulfillmentStep onFulfill={stubFulfill} />
+
+      <CheckoutFlowStep id="done">
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            background: '#e8f6ee',
+            borderRadius: 6,
+          }}
+        >
+          <strong>Confirmed</strong> (routed at /order/confirmed)
+        </div>
       </CheckoutFlowStep>
-      <CheckoutFlowStep id="done">All done!</CheckoutFlowStep>
     </CheckoutFlowProvider>
   );
 }
 
-export const PersistenceAndResume: Story = {
-  name: 'Persistence + resume on reload',
-  render: () => <PersistenceHarness />,
+function NextButton({ label }: { label: string }) {
+  const flow = useCheckoutFlow();
+  return (
+    <button
+      type="button"
+      style={{ marginTop: 8 }}
+      onClick={() => void flow.next()}
+    >
+      {label}
+    </button>
+  );
+}
+
+export const RealisticMixedFlow: Story = {
+  name: 'Realistic flow (routed + modal, with cart/auth)',
+  parameters: {
+    docs: {
+      source: {
+        language: 'tsx',
+        code: `import {
+  CheckoutFlowProvider,
+  CheckoutFlowStep,
+  CheckoutStripeStep,
+  STRIPE_STEP,
+  useCheckoutFlow,
+} from '@constructor-io/constructorio-ui-checkout';
+import type { RouterAdapter } from '@constructor-io/constructorio-ui-checkout';
+
+import { getCart } from './lib/cart';        // plain function, module-scoped
+import { getAuthToken } from './lib/auth';   // plain function, module-scoped
+import { useAppRouter } from './hooks/useAppRouter';
+
+function CheckoutApp() {
+  const router: RouterAdapter = useAppRouter();
+  const [signedIn, setSignedIn] = useState(false);
+
+  // Reads cart + auth via plain functions at call time.
+  // Provider is at the app root; callbacks proxy through propsRef,
+  // so a fresh reference each render is fine.
+  const createSession = () =>
+    fetch('/api/checkout/session', {
+      method: 'POST',
+      headers: { Authorization: \`Bearer \${getAuthToken()}\` },
+      body: JSON.stringify({ items: getCart() }),
+    }).then((r) => r.json());
+
+  return (
+    <CheckoutFlowProvider
+      steps={[
+        { id: 'cart', path: '/cart' },                       // routed
+        { id: 'auth', guard: () => Promise.resolve(signedIn) }, // modal
+        { id: 'shipping', path: '/checkout/shipping' },      // routed
+        { id: STRIPE_STEP, path: '/checkout/payment' },      // routed
+        { id: 'done', path: '/order/confirmed' },            // routed
+      ]}
+      onCreateSession={createSession}
+      router={router}
+      autoStart
+    >
+      <CheckoutFlowStep id="cart"><CartView /></CheckoutFlowStep>
+
+      {/* No path — this step stays over whatever route is current
+          (typically /cart). Guard blocks advance until signedIn. */}
+      <CheckoutFlowStep id="auth">
+        <SignInModal onSignedIn={() => setSignedIn(true)} />
+      </CheckoutFlowStep>
+
+      <CheckoutFlowStep id="shipping"><ShippingForm /></CheckoutFlowStep>
+      <CheckoutFlowStep id={STRIPE_STEP}>
+        <CheckoutStripeStep />
+      </CheckoutFlowStep>
+      <CheckoutFlowStep id="done"><OrderConfirmation /></CheckoutFlowStep>
+    </CheckoutFlowProvider>
+  );
+}`,
+      },
+    },
+  },
+  render: () => <RealisticFlowDemo />,
 };

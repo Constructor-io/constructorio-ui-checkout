@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
 
+import './CheckoutFulfillmentStep.css';
+
 export interface FulfillmentResult {
   success: boolean;
   message?: string;
@@ -36,30 +38,41 @@ export function CheckoutFulfillmentStep({
   const [status, setStatus] = useState<FulfillmentStatus>('idle');
   const [result, setResult] = useState<FulfillmentResult | null>(null);
   const inFlightRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const run = useCallback(async () => {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     setStatus('pending');
+    let outcome: FulfillmentResult;
     try {
-      const outcome = await onFulfill();
-      setResult(outcome);
-      setStatus(outcome.success ? 'fulfilled' : 'failed');
-      onFulfillComplete?.(outcome);
-      if (outcome.success && advanceOnSuccess) {
-        void flow.next();
-      }
+      outcome = await onFulfill();
     } catch (reason) {
-      const outcome: FulfillmentResult = {
+      outcome = {
         success: false,
         message:
           reason instanceof Error ? reason.message : 'Fulfillment failed',
       };
-      setResult(outcome);
-      setStatus('failed');
-      onFulfillComplete?.(outcome);
     } finally {
       inFlightRef.current = false;
+    }
+    if (!mountedRef.current) return;
+    setResult(outcome);
+    setStatus(outcome.success ? 'fulfilled' : 'failed');
+    try {
+      onFulfillComplete?.(outcome);
+    } catch {
+      /* consumer callback error must not flip outcome */
+    }
+    if (outcome.success && advanceOnSuccess) {
+      void flow.next();
     }
   }, [onFulfill, onFulfillComplete, advanceOnSuccess, flow]);
 
@@ -82,7 +95,11 @@ export function CheckoutFulfillmentStep({
 
   if (status === 'pending') {
     return (
-      <div className="cio-checkout-fulfillment cio-checkout-fulfillment--pending">
+      <div
+        className="cio-checkout-fulfillment cio-checkout-fulfillment--pending"
+        role="status"
+        aria-live="polite"
+      >
         Verifying your order...
       </div>
     );
@@ -90,7 +107,11 @@ export function CheckoutFulfillmentStep({
 
   if (status === 'fulfilled') {
     return (
-      <div className="cio-checkout-fulfillment cio-checkout-fulfillment--success">
+      <div
+        className="cio-checkout-fulfillment cio-checkout-fulfillment--success"
+        role="status"
+        aria-live="polite"
+      >
         {result?.message ?? 'Order confirmed'}
       </div>
     );
@@ -98,7 +119,10 @@ export function CheckoutFulfillmentStep({
 
   if (status === 'failed') {
     return (
-      <div className="cio-checkout-fulfillment cio-checkout-fulfillment--failed">
+      <div
+        className="cio-checkout-fulfillment cio-checkout-fulfillment--failed"
+        role="alert"
+      >
         <p>{result?.message ?? 'Verification failed'}</p>
         <button type="button" onClick={retry}>
           Retry

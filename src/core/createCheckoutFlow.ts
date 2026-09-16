@@ -39,8 +39,13 @@ function toError(reason: unknown): Error {
   return new Error('Unknown error');
 }
 
+export interface CreateCheckoutFlowOptions {
+  deferMount?: boolean;
+}
+
 export function createCheckoutFlow<TState = unknown>(
-  config: CheckoutFlowConfig<TState>
+  config: CheckoutFlowConfig<TState>,
+  options?: CreateCheckoutFlowOptions
 ): CheckoutFlowCore<TState> {
   if (!Array.isArray(config.steps) || config.steps.length === 0) {
     throw new Error('createCheckoutFlow: `steps` must be a non-empty array');
@@ -84,12 +89,17 @@ export function createCheckoutFlow<TState = unknown>(
   let cartTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingCart: CheckoutItem[] | null = null;
 
+  let navVersion = 0;
+
   interface QueuedUpdate {
     patch: SessionUpdatePatch;
     resolve: (value: CheckoutSessionResponse | null) => void;
   }
   const sessionQueue: QueuedUpdate[] = [];
   let sessionQueueRunning = false;
+  let createSessionInFlight: Promise<CheckoutSessionResponse | null> | null =
+    null;
+  let sessionRequestGen = 0;
 
   if (config.onEvent) {
     events.on(config.onEvent);
@@ -108,18 +118,19 @@ export function createCheckoutFlow<TState = unknown>(
   };
 
   let saveInFlight: Promise<void> | null = null;
-  let pendingSaveState: FlowState | null = null;
+  let hasPendingSave = false;
+  let clearing = false;
 
   const flushSave = (): void => {
-    if (!storageEnabled || destroyed) return;
+    if (!storageEnabled || destroyed || clearing) return;
     const state = store.getState();
     const serialized = JSON.stringify(state);
     if (serialized === lastSavedSerialized) return;
 
-    // Serialize writes: if a save is in flight, mark the latest state as
-    // pending — the in-flight save's finally block will re-flush.
+    // Serialize writes: if a save is in flight, defer — the in-flight save's
+    // finally block will re-flush and pick up the latest state.
     if (saveInFlight !== null) {
-      pendingSaveState = state;
+      hasPendingSave = true;
       return;
     }
 
@@ -134,15 +145,15 @@ export function createCheckoutFlow<TState = unknown>(
       })
       .finally(() => {
         saveInFlight = null;
-        if (pendingSaveState !== null && !destroyed) {
-          pendingSaveState = null;
+        if (hasPendingSave && !destroyed) {
+          hasPendingSave = false;
           flushSave();
         }
       });
   };
 
   const scheduleSave = (): void => {
-    if (!storageEnabled || destroyed || hydrating) return;
+    if (!storageEnabled || destroyed || hydrating || clearing) return;
     if (saveTimer !== null) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       saveTimer = null;
@@ -175,27 +186,9 @@ export function createCheckoutFlow<TState = unknown>(
     });
   }
 
-  if (router?.subscribe) {
-    routerUnsubscribe = router.subscribe((newPath: string) => {
-      if (destroyed) return;
-      const matched = findStepByPath(newPath);
-      const state = store.getState();
-      if (!matched) return;
-      if (matched.id === state.currentStepId) return;
-      syncingFromRouter = true;
-      void Promise.resolve(goTo(matched.id)).finally(() => {
-        syncingFromRouter = false;
-      });
-    });
-  }
-
-  const checkDestroyed = (op: string): boolean => {
-    if (destroyed) {
-      emitError('guard', new Error(`Flow destroyed; cannot ${op}`));
-      return true;
-    }
-    return false;
-  };
+  // Operations after destroy() are silent no-ops. events.clear() runs in
+  // destroy(), so any error emission here would go to zero listeners anyway.
+  const isDead = (): boolean => destroyed;
 
   const findStepByPath = (path: string): Step | null => {
     for (const step of steps) {
@@ -221,6 +214,11 @@ export function createCheckoutFlow<TState = unknown>(
     try {
       const current = router.getCurrentPath();
       if (current === path) return;
+      if (storageEnabled && saveTimer !== null) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        flushSave();
+      }
       router.push(path);
     } catch (reason) {
       emitError('router', toError(reason));
@@ -235,6 +233,18 @@ export function createCheckoutFlow<TState = unknown>(
       emitError('guard', toError(reason));
       return false;
     }
+  };
+
+  const findFirstFailingGuard = async (
+    fromIdx: number,
+    toIdx: number
+  ): Promise<number | null> => {
+    for (let i = fromIdx; i <= toIdx; i += 1) {
+      const ok = await runGuard(steps[i]);
+      if (destroyed) return i;
+      if (!ok) return i;
+    }
+    return null;
   };
 
   const enterStep = (stepId: StepId, from: StepId | null) => {
@@ -255,13 +265,75 @@ export function createCheckoutFlow<TState = unknown>(
     });
   };
 
-  const start = async (): Promise<void> => {
-    if (checkDestroyed('start')) return;
+  let startInFlight: Promise<void> | null = null;
+  const start = (): Promise<void> => {
+    if (isDead()) return Promise.resolve();
+    if (startInFlight) return startInFlight;
+    if (store.getState().currentStepId !== null) return Promise.resolve();
+    startInFlight = runStart().finally(() => {
+      startInFlight = null;
+    });
+    return startInFlight;
+  };
+
+  const validateAndEnterResumedStep = async (): Promise<void> => {
+    const resumedStepId = store.getState().currentStepId;
+    if (resumedStepId === null) return;
+    const resumedIdx = findStepIndex(steps, resumedStepId);
+    const failIdx = await findFirstFailingGuard(0, resumedIdx);
+    if (destroyed) return;
+    if (failIdx === null) {
+      const resumedStep = steps[resumedIdx];
+      if (resumedStep) pushRouterPath(resumedStep.path);
+      return;
+    }
+    const failedStep = steps[failIdx];
+    emitError(
+      'guard',
+      new Error(
+        failIdx === resumedIdx
+          ? `resume: guard for "${failedStep.id}" rejected`
+          : `resume: prerequisite step "${failedStep.id}" guard rejected before "${resumedStepId}"`
+      )
+    );
+    store.setState((prev) => ({
+      ...prev,
+      currentStepId: failedStep.id,
+      completedStepIds: prev.completedStepIds.filter(
+        (id) => findStepIndex(steps, id) < failIdx
+      ),
+    }));
+    pushRouterPath(failedStep.path);
+  };
+
+  const runStart = async (): Promise<void> => {
+    if (isDead()) return;
     const state = store.getState();
     if (state.currentStepId !== null) return;
 
+    if (config.authenticate) {
+      try {
+        const result = await config.authenticate();
+        if (destroyed) return;
+        if (result === null) {
+          emitError(
+            'authenticate',
+            new Error('authenticate: rejected — flow not started')
+          );
+          return;
+        }
+      } catch (reason) {
+        if (destroyed) return;
+        emitError('authenticate', toError(reason));
+        return;
+      }
+    }
+
     const resumed = await maybeAutoResume();
-    if (resumed) return;
+    if (resumed) {
+      await validateAndEnterResumedStep();
+      return;
+    }
 
     if (router) {
       let currentPath = '';
@@ -272,12 +344,24 @@ export function createCheckoutFlow<TState = unknown>(
       }
       const matched = findStepByPath(currentPath);
       if (matched) {
-        const guardOk = await runGuard(matched);
-        if (guardOk) {
+        const matchedIdx = findStepIndex(steps, matched.id);
+        const failIdx = await findFirstFailingGuard(0, matchedIdx);
+        if (destroyed) return;
+        if (failIdx === null) {
           events.emit({ type: 'flow.started' });
           enterStep(matched.id, null);
           return;
         }
+        const failedStep = steps[failIdx];
+        emitError(
+          'guard',
+          new Error(
+            failIdx === matchedIdx
+              ? `start: guard for "${matched.id}" rejected`
+              : `start: prerequisite step "${failedStep.id}" guard rejected before "${matched.id}"`
+          )
+        );
+        return;
       }
     }
 
@@ -290,12 +374,12 @@ export function createCheckoutFlow<TState = unknown>(
   };
 
   const complete = (): void => {
-    if (checkDestroyed('complete')) return;
+    if (isDead()) return;
     events.emit({ type: 'flow.completed' });
   };
 
   const next = async (opts?: { skip?: boolean }): Promise<void> => {
-    if (checkDestroyed('next')) return;
+    if (isDead()) return;
     const state = store.getState();
     if (state.currentStepId === null) {
       await start();
@@ -303,14 +387,6 @@ export function createCheckoutFlow<TState = unknown>(
     }
 
     const idx = findStepIndex(steps, state.currentStepId);
-    if (idx === -1) {
-      emitError(
-        'guard',
-        new Error(`Current step "${state.currentStepId}" not in steps array`)
-      );
-      return;
-    }
-
     const current = steps[idx];
     if (opts?.skip && !current.optional) {
       emitError(
@@ -322,28 +398,33 @@ export function createCheckoutFlow<TState = unknown>(
 
     const nextIdx = idx + 1;
     if (nextIdx >= steps.length) {
+      navVersion += 1;
       exitStep(current.id, null);
       complete();
       return;
     }
 
     const nextStep = steps[nextIdx];
+    const myVersion = ++navVersion;
     const guardOk = await runGuard(nextStep);
     if (!guardOk) return;
+    if (destroyed) return;
+    if (myVersion !== navVersion) return;
+    if (store.getState().currentStepId !== current.id) return;
 
     exitStep(current.id, nextStep.id);
     enterStep(nextStep.id, current.id);
   };
 
   const back = (): Promise<void> => {
-    if (checkDestroyed('back')) return Promise.resolve();
+    if (isDead()) return Promise.resolve();
     const state = store.getState();
     if (state.currentStepId === null) return Promise.resolve();
     const idx = findStepIndex(steps, state.currentStepId);
     if (idx <= 0) return Promise.resolve();
     const prevStep = steps[idx - 1];
     const current = steps[idx];
-    // Back re-enters prevStep, so it is no longer complete; current stays uncompleted.
+    navVersion += 1;
     events.emit({ type: 'step.exited', stepId: current.id, to: prevStep.id });
     store.setState((prev) => ({
       ...prev,
@@ -356,35 +437,83 @@ export function createCheckoutFlow<TState = unknown>(
   };
 
   const goTo = async (stepId: StepId): Promise<void> => {
-    if (checkDestroyed('goTo')) return;
-    const target = steps.find((s) => s.id === stepId);
-    if (!target) {
+    if (isDead()) return;
+    const targetIdx = findStepIndex(steps, stepId);
+    if (targetIdx === -1) {
       emitError('guard', new Error(`Unknown step id "${stepId}"`));
       return;
     }
-    if (store.getState().currentStepId === stepId) return;
-    const guardOk = await runGuard(target);
-    if (!guardOk || destroyed) return;
-    const state = store.getState();
-    const from = state.currentStepId;
-    if (from !== null) {
-      const currentIdx = findStepIndex(steps, from);
-      const targetIdx = findStepIndex(steps, stepId);
-      if (targetIdx > currentIdx) {
-        for (let i = currentIdx; i < targetIdx; i += 1) {
+    const from = store.getState().currentStepId;
+    if (from === stepId) return;
+    const fromIdx = from === null ? -1 : findStepIndex(steps, from);
+
+    const guardStart = fromIdx < targetIdx ? fromIdx + 1 : targetIdx;
+    const myVersion = ++navVersion;
+    const failIdx = await findFirstFailingGuard(guardStart, targetIdx);
+    if (destroyed) return;
+    if (myVersion !== navVersion) return;
+    if (failIdx !== null) {
+      const failedStep = steps[failIdx];
+      emitError(
+        'guard',
+        new Error(
+          failIdx === targetIdx
+            ? `goTo("${stepId}"): guard rejected`
+            : `goTo("${stepId}"): prerequisite step "${failedStep.id}" guard rejected`
+        )
+      );
+      return;
+    }
+
+    const currentFrom = store.getState().currentStepId;
+    if (currentFrom === stepId) return;
+    const currentFromIdx =
+      currentFrom === null ? -1 : findStepIndex(steps, currentFrom);
+    if (currentFrom !== null) {
+      if (targetIdx > currentFromIdx) {
+        for (let i = currentFromIdx; i < targetIdx; i += 1) {
           exitStep(steps[i].id, steps[i + 1].id);
         }
       } else {
-        events.emit({ type: 'step.exited', stepId: from, to: stepId });
+        events.emit({ type: 'step.exited', stepId: currentFrom, to: stepId });
+        store.setState((prev) => ({
+          ...prev,
+          completedStepIds: prev.completedStepIds.filter((id) => id !== stepId),
+        }));
       }
     } else {
       events.emit({ type: 'flow.started' });
     }
-    enterStep(stepId, from);
+    enterStep(stepId, currentFrom);
+  };
+
+  let mounted = false;
+  const mount = (): void => {
+    if (destroyed || mounted) return;
+    mounted = true;
+    if (router?.subscribe) {
+      routerUnsubscribe = router.subscribe((newPath: string) => {
+        if (destroyed) return;
+        const matched = findStepByPath(newPath);
+        const state = store.getState();
+        if (!matched) return;
+        if (matched.id === state.currentStepId) return;
+        syncingFromRouter = true;
+        void Promise.resolve(goTo(matched.id)).finally(() => {
+          syncingFromRouter = false;
+        });
+      });
+    }
+    if (config.autoStart) {
+      void Promise.resolve().then(() => {
+        if (destroyed) return;
+        void start();
+      });
+    }
   };
 
   const hydrate = (input: FlowState): void => {
-    if (checkDestroyed('hydrate')) return;
+    if (isDead()) return;
     const validated = validateFlowState(input);
     if (!validated) {
       emitError('storage', new Error('hydrate: invalid FlowState shape'));
@@ -411,7 +540,14 @@ export function createCheckoutFlow<TState = unknown>(
         return;
       }
     }
-    store.setState(() => validated);
+    const needsRecovery =
+      session === null &&
+      (validated.sessionStatus === 'active' ||
+        validated.sessionStatus === 'creating');
+    const next = needsRecovery
+      ? { ...validated, sessionStatus: 'idle' as const, sessionId: null }
+      : validated;
+    store.setState(() => next);
   };
 
   const drainSessionQueue = (): void => {
@@ -429,27 +565,33 @@ export function createCheckoutFlow<TState = unknown>(
     pendingCart = null;
   };
 
-  const reset = (): void => {
-    if (checkDestroyed('reset')) return;
+  // Bump the generation so any in-flight session request or queued update
+  // aborts on completion, clear the resident session, and drain waiters.
+  const invalidateSession = (): void => {
     session = null;
+    sessionRequestGen += 1;
+    createSessionInFlight = null;
     drainSessionQueue();
+  };
+
+  const reset = (): void => {
+    if (isDead()) return;
+    invalidateSession();
     clearCartDebounce();
     store.setState(() => makeInitialState());
   };
 
-  let createSessionInFlight: Promise<CheckoutSessionResponse | null> | null =
-    null;
-
   const createSession = (): Promise<CheckoutSessionResponse | null> => {
-    if (checkDestroyed('createSession')) return Promise.resolve(null);
+    if (isDead()) return Promise.resolve(null);
     if (session !== null) return Promise.resolve(session);
     if (createSessionInFlight !== null) return createSessionInFlight;
 
+    const gen = ++sessionRequestGen;
     const run = async (): Promise<CheckoutSessionResponse | null> => {
       store.setState((prev) => ({ ...prev, sessionStatus: 'creating' }));
       try {
         const response = await config.onCreateSession(store.getState());
-        if (destroyed) return null;
+        if (destroyed || gen !== sessionRequestGen) return null;
         if (
           !response ||
           typeof response.clientSecret !== 'string' ||
@@ -469,14 +611,23 @@ export function createCheckoutFlow<TState = unknown>(
         if (sessionId) {
           events.emit({ type: 'session.created', sessionId });
         }
+        if (pendingCart !== null) {
+          const cartToFlush = pendingCart;
+          pendingCart = null;
+          if (cartTimer !== null) {
+            clearTimeout(cartTimer);
+            cartTimer = null;
+          }
+          void syncCart(cartToFlush);
+        }
         return response;
       } catch (reason) {
-        if (destroyed) return null;
+        if (destroyed || gen !== sessionRequestGen) return null;
         store.setState((prev) => ({ ...prev, sessionStatus: 'error' }));
         emitError('session.create', toError(reason));
         return null;
       } finally {
-        createSessionInFlight = null;
+        if (gen === sessionRequestGen) createSessionInFlight = null;
       }
     };
 
@@ -502,9 +653,10 @@ export function createCheckoutFlow<TState = unknown>(
       return null;
     }
     const before = store.getState().cartSnapshot;
+    const gen = sessionRequestGen;
     try {
       const response = await config.onUpdateSession(patch);
-      if (destroyed) return null;
+      if (destroyed || gen !== sessionRequestGen) return null;
       if (
         !response ||
         typeof response.clientSecret !== 'string' ||
@@ -516,7 +668,6 @@ export function createCheckoutFlow<TState = unknown>(
       }
       session = response;
       const sessionId = extractSessionId(response.clientSecret);
-      const nextItems = patch.items ?? before;
       store.setState((prev) => ({
         ...prev,
         sessionId,
@@ -527,12 +678,12 @@ export function createCheckoutFlow<TState = unknown>(
           type: 'session.updated',
           sessionId,
           reason: patch.reason ?? 'manual',
-          diff: patch.items ? computeCartDiff(before, nextItems) : {},
+          diff: patch.items ? computeCartDiff(before, patch.items) : {},
         });
       }
       return response;
     } catch (reason) {
-      if (destroyed) return null;
+      if (destroyed || gen !== sessionRequestGen) return null;
       emitError('session.update', toError(reason));
       return null;
     }
@@ -556,7 +707,7 @@ export function createCheckoutFlow<TState = unknown>(
   const updateSession = (
     patch: SessionUpdatePatch
   ): Promise<CheckoutSessionResponse | null> => {
-    if (checkDestroyed('updateSession')) return Promise.resolve(null);
+    if (isDead()) return Promise.resolve(null);
     return new Promise((resolve) => {
       sessionQueue.push({ patch, resolve });
       void flushQueue();
@@ -566,17 +717,17 @@ export function createCheckoutFlow<TState = unknown>(
   const syncCart = (
     items: CheckoutItem[]
   ): Promise<CheckoutSessionResponse | null> => {
-    if (checkDestroyed('syncCart')) return Promise.resolve(null);
-    if (cartTimer !== null) {
-      clearTimeout(cartTimer);
-      cartTimer = null;
-    }
-    pendingCart = null;
+    if (isDead()) return Promise.resolve(null);
+    clearCartDebounce();
     if (!session) {
-      store.setState((prev) => ({
-        ...prev,
-        cartSnapshot: items.slice(),
-      }));
+      store.setState((prev) => ({ ...prev, cartSnapshot: items.slice() }));
+      const pendingCreate = createSessionInFlight;
+      if (pendingCreate !== null) {
+        return pendingCreate.then((response) => {
+          if (destroyed || !response) return null;
+          return updateSession({ items, reason: 'items' });
+        });
+      }
       return Promise.resolve(null);
     }
     return updateSession({ items, reason: 'items' });
@@ -591,7 +742,7 @@ export function createCheckoutFlow<TState = unknown>(
   };
 
   const setCart = (items: CheckoutItem[]): void => {
-    if (checkDestroyed('setCart')) return;
+    if (isDead()) return;
     const nextSerialized = JSON.stringify(items);
     // Content-equality check prevents debounce-reset death when merchants pass
     // a new-reference-same-content array on every rerender (common in React).
@@ -614,22 +765,20 @@ export function createCheckoutFlow<TState = unknown>(
   }
 
   const markExpired = (): void => {
-    if (checkDestroyed('markExpired')) return;
+    if (isDead()) return;
     if (!session) return;
     const sessionId = extractSessionId(session.clientSecret);
-    session = null;
-    drainSessionQueue();
+    invalidateSession();
     store.setState((prev) => ({ ...prev, sessionStatus: 'expired' }));
     if (sessionId) events.emit({ type: 'session.expired', sessionId });
   };
 
   const recreate = async (): Promise<CheckoutSessionResponse | null> => {
-    if (checkDestroyed('recreate')) return null;
+    if (isDead()) return null;
     const oldSessionId = session
       ? extractSessionId(session.clientSecret)
       : store.getState().sessionId;
-    session = null;
-    drainSessionQueue();
+    invalidateSession();
     store.setState((prev) => ({
       ...prev,
       sessionId: null,
@@ -637,9 +786,9 @@ export function createCheckoutFlow<TState = unknown>(
     }));
     const response = await createSession();
     if (destroyed) return null;
-    if (response) {
+    if (response && oldSessionId) {
       const newSessionId = extractSessionId(response.clientSecret);
-      if (oldSessionId && newSessionId) {
+      if (newSessionId) {
         events.emit({
           type: 'session.recreated',
           oldSessionId,
@@ -651,20 +800,32 @@ export function createCheckoutFlow<TState = unknown>(
   };
 
   const clearState = async (): Promise<void> => {
-    if (checkDestroyed('clearState')) return;
-    reset();
-    if (!storageEnabled) return;
-    if (saveTimer !== null) {
-      clearTimeout(saveTimer);
-      saveTimer = null;
-    }
-    pendingSaveState = null;
-    lastSavedSerialized = null;
+    if (isDead()) return;
+    clearing = true;
     try {
-      await storage.clear(storageKey);
-    } catch (reason) {
-      if (destroyed) return;
-      emitError('storage', toError(reason));
+      reset();
+      if (!storageEnabled) return;
+      if (saveTimer !== null) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+      }
+      hasPendingSave = false;
+      if (saveInFlight !== null) {
+        try {
+          await saveInFlight;
+        } catch {
+          // ignore — save already emitted its own storage error
+        }
+      }
+      lastSavedSerialized = null;
+      try {
+        await storage.clear(storageKey);
+      } catch (reason) {
+        if (destroyed) return;
+        emitError('storage', toError(reason));
+      }
+    } finally {
+      clearing = false;
     }
   };
 
@@ -679,7 +840,7 @@ export function createCheckoutFlow<TState = unknown>(
       cartTimer = null;
     }
     pendingCart = null;
-    pendingSaveState = null;
+    hasPendingSave = false;
     drainSessionQueue();
     if (routerUnsubscribe) {
       try {
@@ -692,9 +853,12 @@ export function createCheckoutFlow<TState = unknown>(
     events.clear();
   };
 
+  if (!options?.deferMount) mount();
+
   return {
     getState: () => store.getState(),
     subscribe: (listener) => store.subscribe(listener),
+    mount,
     start,
     next,
     back,
@@ -713,6 +877,7 @@ export function createCheckoutFlow<TState = unknown>(
     getIntegratorState: () => integratorState,
     setIntegratorState: (updater) => {
       integratorState = updater(integratorState);
+      store.setState((prev) => ({ ...prev }));
     },
     destroy,
   };

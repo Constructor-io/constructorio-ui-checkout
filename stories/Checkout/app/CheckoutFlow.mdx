@@ -1,4 +1,4 @@
-import { Meta } from '@storybook/blocks';
+import { Meta } from '@storybook/addon-docs/blocks';
 
 <Meta title="General/Integration Guide" />
 
@@ -22,7 +22,6 @@ import {
   CheckoutFlowStep,
   CheckoutStripeStep,
   CheckoutFulfillmentStep,
-  CREATE_SESSION_STEP,
   STRIPE_STEP,
   useCheckoutFlow,
 } from '@constructor-io/constructorio-ui-checkout';
@@ -33,7 +32,6 @@ function App() {
       steps={[
         { id: 'cart' },
         { id: 'address' },
-        { id: CREATE_SESSION_STEP },
         { id: STRIPE_STEP },
         { id: 'fulfill' },
         { id: 'done' },
@@ -80,7 +78,15 @@ function BuyButton() {
 
 ## Modal vs. inline
 
-There's no `displayMode` prop — you wrap the `stripe` step in your own modal or render it inline. See the `ExpressBuyNow` story for a minimal modal example.
+There's no `displayMode` prop — you wrap the `stripe` step in your own modal or render it inline:
+
+```tsx
+<CheckoutFlowStep id={STRIPE_STEP}>
+  <MyModal open>
+    <CheckoutStripeStep />
+  </MyModal>
+</CheckoutFlowStep>
+```
 
 ## Routed multi-step
 

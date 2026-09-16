@@ -2,17 +2,16 @@ import { validateFlowState } from '@src/core/schema';
 import type { FlowState, StorageAdapter } from '@src/core/types';
 
 const STORAGE_KEY_PREFIX = 'cio-checkout-flow:';
+const PROBE_KEY = `${STORAGE_KEY_PREFIX}__probe__`;
 
 // SSR-safe: no window/sessionStorage access at module scope.
 const hasSessionStorage = (): boolean => {
   if (typeof globalThis === 'undefined') return false;
-  const g = globalThis as { sessionStorage?: Storage };
-  if (!g.sessionStorage) return false;
-  // Private-browsing and sandboxed iframes throw on any access; probe once.
   try {
-    const probe = '__cio_checkout_probe__';
-    g.sessionStorage.setItem(probe, '1');
-    g.sessionStorage.removeItem(probe);
+    const storage = (globalThis as { sessionStorage?: Storage }).sessionStorage;
+    if (!storage) return false;
+    storage.setItem(PROBE_KEY, '1');
+    storage.removeItem(PROBE_KEY);
     return true;
   } catch {
     return false;
@@ -25,17 +24,23 @@ export function createSessionStorageAdapter(): StorageAdapter {
   return {
     load: (key) => {
       if (!hasSessionStorage()) return Promise.resolve(null);
+      const namespaced = namespacedKey(key);
       try {
-        const raw = globalThis.sessionStorage.getItem(namespacedKey(key));
+        const raw = globalThis.sessionStorage.getItem(namespaced);
         if (raw === null) return Promise.resolve(null);
         const parsed: unknown = JSON.parse(raw);
         const validated = validateFlowState(parsed);
         if (!validated) {
-          globalThis.sessionStorage.removeItem(namespacedKey(key));
+          globalThis.sessionStorage.removeItem(namespaced);
           return Promise.resolve(null);
         }
         return Promise.resolve(validated);
       } catch {
+        try {
+          globalThis.sessionStorage.removeItem(namespaced);
+        } catch {
+          // ignore — storage was probably the source of the outer throw
+        }
         return Promise.resolve(null);
       }
     },
@@ -46,11 +51,12 @@ export function createSessionStorageAdapter(): StorageAdapter {
           namespacedKey(key),
           JSON.stringify(state)
         );
-      } catch {
-        // Quota exceeded or serialization failure — the flow surfaces it via
-        // onEvent('error', source: 'storage'); no need to re-throw here.
+        return Promise.resolve();
+      } catch (reason) {
+        return Promise.reject(
+          reason instanceof Error ? reason : new Error(String(reason))
+        );
       }
-      return Promise.resolve();
     },
     clear: (key) => {
       if (!hasSessionStorage()) return Promise.resolve();

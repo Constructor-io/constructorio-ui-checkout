@@ -1,0 +1,38 @@
+.cio-checkout-fulfillment {
+  margin-top: 8px;
+  padding: 24px;
+  border: 1px solid var(--cio-checkout-color-border);
+  border-radius: 12px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--cio-checkout-color-text-secondary);
+}
+
+.cio-checkout-fulfillment--pending {
+  color: var(--cio-checkout-color-text-secondary);
+}
+
+.cio-checkout-fulfillment--success {
+  color: var(--cio-checkout-color-text);
+  border-color: var(--cio-checkout-color-accent);
+}
+
+.cio-checkout-fulfillment--failed {
+  color: var(--cio-checkout-color-error);
+  background-color: var(--cio-checkout-color-error-bg);
+  border-color: var(--cio-checkout-color-error-border);
+}
+
+.cio-checkout-fulfillment--failed p {
+  margin: 0 0 12px;
+}
+
+.cio-checkout-fulfillment--failed button {
+  padding: 8px 16px;
+  border: 1px solid var(--cio-checkout-color-error-border);
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: var(--cio-checkout-color-error);
+  font-size: 13px;
+  cursor: pointer;
+}

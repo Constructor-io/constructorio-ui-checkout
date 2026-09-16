@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import {
   CheckoutElementsProvider,
@@ -17,6 +17,8 @@ import type {
   CioCheckoutComponentOverrides,
   Translations,
 } from '@src/types';
+
+import './CheckoutStripeStep.css';
 
 export interface CheckoutStripeStepProps extends CheckoutStripeOptions {
   uiMode?: CheckoutUiMode;
@@ -48,19 +50,47 @@ export function CheckoutStripeStep({
 }: CheckoutStripeStepProps) {
   const flow = useCheckoutFlow();
   const session = flow.getSession();
+  const sessionStatus = flow.state.sessionStatus;
+  const mountedRef = useRef(true);
+  const notifiedErrorRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (session) return;
-    if (flow.state.sessionStatus !== 'idle') return;
-    void flow.createSession();
-  }, [flow, session]);
+    if (sessionStatus === 'idle') {
+      void flow.createSession();
+    } else if (sessionStatus === 'expired') {
+      void flow.recreate();
+    }
+  }, [flow, session, sessionStatus]);
+
+  useEffect(() => {
+    if (sessionStatus === 'error' && !notifiedErrorRef.current) {
+      notifiedErrorRef.current = true;
+      onError?.(new Error('Failed to create checkout session'));
+    }
+    if (sessionStatus === 'idle' || sessionStatus === 'active') {
+      notifiedErrorRef.current = false;
+    }
+  }, [sessionStatus, onError]);
 
   const handleComplete = useCallback(() => {
+    if (!mountedRef.current) return;
     void flow.next();
   }, [flow]);
 
   const handleExpired = useCallback(() => {
     flow.markExpired();
+  }, [flow]);
+
+  const handleRetrySession = useCallback(() => {
+    void flow.recreate();
   }, [flow]);
 
   const stripePromise = useMemo(() => {
@@ -103,6 +133,17 @@ export function CheckoutStripeStep({
     adaptivePricing,
     defaultValues,
   ]);
+
+  if (sessionStatus === 'error') {
+    return (
+      <div className="cio-checkout-session-error" role="alert">
+        <p>Failed to prepare checkout. Please try again.</p>
+        <button type="button" onClick={handleRetrySession}>
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   if (!session || !stripePromise || !providerOptions) {
     return null;

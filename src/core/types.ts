@@ -121,6 +121,7 @@ export interface CheckoutFlowConfig<TState = unknown> {
 export interface CheckoutFlowCore<TState = unknown> {
   getState(): FlowState;
   subscribe(listener: (state: FlowState) => void): () => void;
+  mount(): void;
   start(): Promise<void>;
   next(opts?: { skip?: boolean }): Promise<void>;
   back(): Promise<void>;

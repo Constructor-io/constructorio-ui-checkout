@@ -18,6 +18,28 @@ const VALID_SESSION_STATUSES = new Set([
   'error',
 ]);
 
+const isOptionalString = (v: unknown): boolean =>
+  v === undefined || typeof v === 'string';
+
+const isValidCartItem = (item: unknown): boolean => {
+  if (!isPlainObject(item)) return false;
+  if (typeof item.name !== 'string') return false;
+  if (typeof item.amount !== 'number' || !Number.isFinite(item.amount)) {
+    return false;
+  }
+  if (
+    item.quantity !== undefined &&
+    (typeof item.quantity !== 'number' || !Number.isFinite(item.quantity))
+  ) {
+    return false;
+  }
+  return (
+    isOptionalString(item.currencySign) &&
+    isOptionalString(item.priceId) &&
+    isOptionalString(item.imageUrl)
+  );
+};
+
 // Rejects untrusted input on any structural mismatch — never mutates or
 // coerces — to prevent prototype pollution from a backend storage adapter.
 export function validateFlowState(input: unknown): FlowState | null {
@@ -34,11 +56,7 @@ export function validateFlowState(input: unknown): FlowState | null {
     return null;
   }
   if (!isPlainObject(input.metadata)) return null;
-
-  for (const item of input.cartSnapshot) {
-    if (!isPlainObject(item)) return null;
-    if (typeof item.name !== 'string') return null;
-  }
+  if (!input.cartSnapshot.every(isValidCartItem)) return null;
 
   // Every field has been narrowed by the checks above; TS's structural type
   // system can't propagate that across a Record<string, unknown> → FlowState

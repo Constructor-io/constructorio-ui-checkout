@@ -1,0 +1,180 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="General/Integration Guide" />
+
+# CheckoutFlow
+
+Headless primitives for building multi-step checkout on top of Stripe. The library gives you the state machine, session lifecycle, storage, and Stripe surface — your app composes the UI.
+
+## Three integration paths, one core
+
+- **React** — `<CheckoutFlowProvider>` + `useCheckoutFlow()` + `<CheckoutFlowStep>` + `<CheckoutStripeStep>` / `<CheckoutFulfillmentStep>`
+- **Vanilla JS (npm)** — `new CheckoutFlow(config)` from `@constructor-io/constructorio-ui-checkout`
+- **Standalone bundle** — `<script>` tag exposes `window.CioCheckout` with the same class
+
+All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
+
+## Quick start (React)
+
+```tsx
+import {
+  CheckoutFlowProvider,
+  CheckoutFlowStep,
+  CheckoutStripeStep,
+  CheckoutFulfillmentStep,
+  STRIPE_STEP,
+  useCheckoutFlow,
+} from '@constructor-io/constructorio-ui-checkout';
+
+function App() {
+  return (
+    <CheckoutFlowProvider
+      steps={[
+        { id: 'cart' },
+        { id: 'address' },
+        { id: STRIPE_STEP },
+        { id: 'fulfill' },
+        { id: 'done' },
+      ]}
+      onCreateSession={() => fetch('/api/checkout').then(r => r.json())}
+      onEvent={(event) => console.log(event)}
+    >
+      <StartButton />
+      <CheckoutFlowStep id="cart"><MyCart /></CheckoutFlowStep>
+      <CheckoutFlowStep id="address"><MyAddressForm /></CheckoutFlowStep>
+      <CheckoutFlowStep id={STRIPE_STEP}>
+        <CheckoutStripeStep uiMode="form" />
+      </CheckoutFlowStep>
+      <CheckoutFlowStep id="fulfill">
+        <CheckoutFulfillmentStep
+          onFulfill={() => fetch('/api/verify').then(r => r.json())}
+        />
+      </CheckoutFlowStep>
+      <CheckoutFlowStep id="done"><MyConfirmation /></CheckoutFlowStep>
+    </CheckoutFlowProvider>
+  );
+}
+
+function StartButton() {
+  const flow = useCheckoutFlow();
+  if (flow.state.currentStepId !== null) return null;
+  return <button onClick={() => flow.start()}>Checkout</button>;
+}
+```
+
+## When to show the trigger
+
+The old library shipped `<CheckoutTrigger>`, `trigger`, `triggerLabel`, `triggerWhen`. In the new design you own the button — put it wherever, style it however, and gate it on any state:
+
+```tsx
+function BuyButton() {
+  const flow = useCheckoutFlow();
+  const cart = useMyCartStore();
+  if (cart.items.length === 0) return null;
+  if (flow.state.sessionStatus === 'creating') return <Spinner />;
+  return <button onClick={() => flow.start()}>Buy now</button>;
+}
+```
+
+## Modal vs. inline
+
+There's no `displayMode` prop — you wrap the `stripe` step in your own modal or render it inline:
+
+```tsx
+<CheckoutFlowStep id={STRIPE_STEP}>
+  <MyModal open>
+    <CheckoutStripeStep />
+  </MyModal>
+</CheckoutFlowStep>
+```
+
+## Routed multi-step
+
+Pass a `router` adapter and give each step a `path`. The library keeps URL and state in sync, so browser back / refresh / deep links all work:
+
+```tsx
+<CheckoutFlowProvider
+  steps={[
+    { id: 'cart', path: '/cart' },
+    { id: 'address', path: '/checkout/address' },
+    { id: STRIPE_STEP, path: '/checkout/payment' },
+  ]}
+  router={{
+    push: (path) => navigate(path),
+    getCurrentPath: () => location.pathname,
+    subscribe: (cb) => registerNavListener(cb),
+  }}
+  onCreateSession={...}
+>
+  ...
+</CheckoutFlowProvider>
+```
+
+Steps with a `path` participate in URL sync; steps without one render inline/modal.
+
+## Persistence and resume
+
+Pass a `storage` adapter and `storageKey` to auto-save state and hydrate on the next mount. The default `createSessionStorageAdapter()` survives page reloads in the same tab. For B2B pause/resume (approver on a different device) provide a custom async adapter that hits your backend.
+
+```tsx
+<CheckoutFlowProvider
+  storage={createSessionStorageAdapter()}
+  storageKey={`user-${userId}`}
+  ...
+/>
+```
+
+## Cart sync
+
+Two options, both funnel through `onUpdateSession`:
+
+- `flow.syncCart(items)` — explicit, immediate
+- Reactive `cart={items}` prop on the Provider — debounced (default 400ms)
+
+## Vanilla JS
+
+```js
+import { CheckoutFlow } from '@constructor-io/constructorio-ui-checkout';
+
+const flow = new CheckoutFlow({
+  steps: [{ id: 'createSession' }, { id: 'stripe' }],
+  onCreateSession: () => fetch('/api/session').then(r => r.json()),
+});
+
+flow.subscribe((state) => renderMyUI(state));
+await flow.start();
+```
+
+## Standalone bundle
+
+```html
+<script src="https://cdn.../constructorio-ui-checkout.standalone.js"></script>
+<script>
+  const flow = CioCheckout.resume({
+    steps: [{ id: 'cart', path: '/cart' }, { id: 'stripe', path: '/pay' }],
+    onCreateSession: () => fetch('/api/session').then(r => r.json()),
+    router: {
+      push: (p) => (window.location.href = p),
+      getCurrentPath: () => window.location.pathname,
+    },
+    storageKey: 'user-123',
+  });
+  flow.start();
+</script>
+```
+
+`resume()` creates a flow with a sessionStorage adapter and registers it globally — the flow rehydrates on every page load automatically.
+
+## Events
+
+Subscribe via `onEvent`:
+
+- `flow.started`, `flow.completed`
+- `step.entered` / `step.exited`
+- `session.created`, `session.updated` (with `reason` and `diff`), `session.expired`, `session.recreated`
+- `state.changed`
+- `error` (discriminated by `source`: `session.create` / `session.update` / `session.recover` / `storage` / `router` / `guard` / `authenticate`)
+
+## Migration from 1.x
+
+The 2.0 rewrite removes the prescriptive UI components (`CioCheckout`, `useCheckoutSession`, `CheckoutTrigger`, `CheckoutOverlay`, `CheckoutInline`, `CheckoutStatus`) in favor of headless primitives. Every 1.x feature has an equivalent — mostly by writing normal React with the new hook.

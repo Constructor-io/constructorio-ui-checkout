@@ -10,6 +10,24 @@ const preview: Preview = {
         date: /Date$/i,
       },
     },
+    options: {
+      storySort: {
+        order: [
+          'General',
+          [
+            'Introduction',
+            'Integration Guide',
+            'Routing',
+            'Auth',
+            'Sessions',
+            'Cart',
+            'Persistence',
+          ],
+          'Components',
+          'Hooks',
+        ],
+      },
+    },
   },
 };
 

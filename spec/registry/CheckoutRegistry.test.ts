@@ -1,68 +1,108 @@
+import { CheckoutFlow } from '@src/manager/CheckoutFlow';
 import checkoutRegistry from '@src/registry/CheckoutRegistry';
-import type { CheckoutSessionResponse } from '@src/types';
 
 import {
   DEMO_CLIENT_SECRET,
   DEMO_PUBLISHABLE_KEY,
 } from '../__tests__/constants';
 
-describe('CheckoutRegistry: client', () => {
+const stubSession = () =>
+  Promise.resolve({
+    clientSecret: DEMO_CLIENT_SECRET,
+    publishableKey: DEMO_PUBLISHABLE_KEY,
+  });
+
+describe('CheckoutRegistry', () => {
+  beforeEach(() => {
+    globalThis.sessionStorage.clear();
+  });
+
   afterEach(() => {
     checkoutRegistry.clear();
+    globalThis.sessionStorage.clear();
   });
 
-  it('starts with no session registered', () => {
-    expect(checkoutRegistry.getSession()).toBeNull();
-    expect(checkoutRegistry.isRegistered()).toBe(false);
+  it('starts with no flow registered', () => {
+    expect(checkoutRegistry.hasFlow()).toBe(false);
+    expect(checkoutRegistry.getFlow()).toBeNull();
   });
 
-  it('registers a static session', () => {
-    const session: CheckoutSessionResponse = {
-      clientSecret: DEMO_CLIENT_SECRET,
-      publishableKey: DEMO_PUBLISHABLE_KEY,
-    };
-    checkoutRegistry.register(session);
-
-    expect(checkoutRegistry.isRegistered()).toBe(true);
-    expect(checkoutRegistry.getSession()).toBe(session);
-  });
-
-  it('registers a function session', () => {
-    const sessionFn = vi.fn().mockResolvedValue({
-      clientSecret: DEMO_CLIENT_SECRET,
-      publishableKey: DEMO_PUBLISHABLE_KEY,
+  it('register stores an existing flow instance', () => {
+    const flow = new CheckoutFlow({
+      steps: [{ id: 'a' }],
+      onCreateSession: stubSession,
     });
-    checkoutRegistry.register(sessionFn);
-
-    expect(checkoutRegistry.isRegistered()).toBe(true);
-    expect(checkoutRegistry.getSession()).toBe(sessionFn);
+    checkoutRegistry.register(flow);
+    expect(checkoutRegistry.hasFlow()).toBe(true);
+    expect(checkoutRegistry.getFlow()).toBe(flow);
   });
 
-  it('overwrites a previously registered session', () => {
-    const session1: CheckoutSessionResponse = {
-      clientSecret: 'cs_test_first_secret_aaa',
-      publishableKey: DEMO_PUBLISHABLE_KEY,
-    };
-    const session2: CheckoutSessionResponse = {
-      clientSecret: 'cs_test_second_secret_bbb',
-      publishableKey: DEMO_PUBLISHABLE_KEY,
-    };
-
-    checkoutRegistry.register(session1);
-    checkoutRegistry.register(session2);
-
-    expect(checkoutRegistry.getSession()).toBe(session2);
-  });
-
-  it('clears the registered session', () => {
-    checkoutRegistry.register({
-      clientSecret: DEMO_CLIENT_SECRET,
-      publishableKey: DEMO_PUBLISHABLE_KEY,
+  it('register destroys the previous flow when replacing', () => {
+    const first = new CheckoutFlow({
+      steps: [{ id: 'a' }],
+      onCreateSession: stubSession,
     });
+    const destroySpy = vi.spyOn(first, 'destroy');
+    checkoutRegistry.register(first);
 
+    const second = new CheckoutFlow({
+      steps: [{ id: 'b' }],
+      onCreateSession: stubSession,
+    });
+    checkoutRegistry.register(second);
+
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+    expect(checkoutRegistry.getFlow()).toBe(second);
+  });
+
+  it('clear destroys and unregisters the flow', () => {
+    const flow = new CheckoutFlow({
+      steps: [{ id: 'a' }],
+      onCreateSession: stubSession,
+    });
+    const destroySpy = vi.spyOn(flow, 'destroy');
+    checkoutRegistry.register(flow);
     checkoutRegistry.clear();
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+    expect(checkoutRegistry.hasFlow()).toBe(false);
+  });
 
-    expect(checkoutRegistry.getSession()).toBeNull();
-    expect(checkoutRegistry.isRegistered()).toBe(false);
+  it('resume() creates a storage-backed flow and registers it', async () => {
+    const flow = checkoutRegistry.resume({
+      steps: [{ id: 'a' }, { id: 'b' }],
+      onCreateSession: stubSession,
+      storageKey: 'user-r',
+      storageSaveDebounceMs: 0,
+    });
+    expect(flow).toBeInstanceOf(CheckoutFlow);
+    expect(checkoutRegistry.getFlow()).toBe(flow);
+
+    await flow.start();
+    await flow.next();
+    await new Promise((r) => setTimeout(r, 10));
+    flow.destroy();
+
+    const resumed = checkoutRegistry.resume({
+      steps: [{ id: 'a' }, { id: 'b' }],
+      onCreateSession: stubSession,
+      storageKey: 'user-r',
+    });
+    await resumed.start();
+    expect(resumed.getState().currentStepId).toBe('b');
+  });
+
+  it('resume() respects a caller-provided storage adapter', () => {
+    const custom = {
+      load: vi.fn(() => Promise.resolve(null)),
+      save: vi.fn(() => Promise.resolve()),
+      clear: vi.fn(() => Promise.resolve()),
+    };
+    const flow = checkoutRegistry.resume({
+      steps: [{ id: 'a' }],
+      onCreateSession: stubSession,
+      storage: custom,
+      storageKey: 'user-c',
+    });
+    expect(flow).toBeInstanceOf(CheckoutFlow);
   });
 });

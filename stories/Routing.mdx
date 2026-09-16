@@ -1,0 +1,153 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="General/Routing" />
+
+# Routing
+
+The `router` prop is an adapter — you plug in your app's router so the checkout flow can push URLs on step transitions and react to browser back / refresh / deep links.
+
+## Router adapter shape
+
+```ts
+interface RouterAdapter {
+  push(path: string): void;
+  getCurrentPath(): string;
+  subscribe?(cb: (path: string) => void): () => void;
+}
+```
+
+- `push` — called when the flow enters a step that has a `path`
+- `getCurrentPath` — called on mount to reconcile the flow to the current URL
+- `subscribe` (optional) — the flow listens for browser back / external nav and re-syncs state
+
+The library validates `path` for safety (rejects `javascript:`, `data:`, `vbscript:`, `file:` URLs).
+
+## React Router (v6+)
+
+```tsx
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+
+function useReactRouterAdapter() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [subscribers] = useState(() => new Set<(p: string) => void>());
+
+  useEffect(() => {
+    subscribers.forEach((cb) => cb(location.pathname));
+  }, [location.pathname, subscribers]);
+
+  return useMemo(
+    () => ({
+      push: (path: string) => navigate(path),
+      getCurrentPath: () => location.pathname,
+      subscribe: (cb: (p: string) => void) => {
+        subscribers.add(cb);
+        return () => subscribers.delete(cb);
+      },
+    }),
+    [navigate, location.pathname, subscribers]
+  );
+}
+
+// Usage
+function App() {
+  const router = useReactRouterAdapter();
+  return (
+    <CheckoutFlowProvider steps={[...]} router={router} onCreateSession={...}>
+      <Routes>{/* your routes */}</Routes>
+    </CheckoutFlowProvider>
+  );
+}
+```
+
+## Next.js App Router
+
+```tsx
+'use client';
+import { useRouter, usePathname } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+
+function useNextRouterAdapter() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [subscribers] = useState(() => new Set<(p: string) => void>());
+
+  useEffect(() => {
+    subscribers.forEach((cb) => cb(pathname));
+  }, [pathname, subscribers]);
+
+  return useMemo(
+    () => ({
+      push: (path: string) => router.push(path),
+      getCurrentPath: () => pathname,
+      subscribe: (cb: (p: string) => void) => {
+        subscribers.add(cb);
+        return () => subscribers.delete(cb);
+      },
+    }),
+    [router, pathname, subscribers]
+  );
+}
+```
+
+## TanStack Router
+
+```tsx
+import { useNavigate, useLocation } from '@tanstack/react-router';
+import { useEffect, useMemo, useState } from 'react';
+
+function useTanStackRouterAdapter() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [subscribers] = useState(() => new Set<(p: string) => void>());
+
+  useEffect(() => {
+    subscribers.forEach((cb) => cb(location.pathname));
+  }, [location.pathname, subscribers]);
+
+  return useMemo(
+    () => ({
+      push: (path: string) => navigate({ to: path }),
+      getCurrentPath: () => location.pathname,
+      subscribe: (cb: (p: string) => void) => {
+        subscribers.add(cb);
+        return () => subscribers.delete(cb);
+      },
+    }),
+    [navigate, location.pathname, subscribers]
+  );
+}
+```
+
+## Vanilla `window.location` (multi-page apps)
+
+Traditional server-rendered sites (Shopify Liquid, WooCommerce, Rails, plain PHP) navigate via full page loads. Combine `window.location` with a storage adapter — the flow rehydrates on the next page:
+
+```js
+const flow = CioCheckout.resume({
+  steps: [
+    { id: 'cart',   path: '/cart' },
+    { id: 'stripe', path: '/checkout/payment' },
+  ],
+  onCreateSession: () => fetch('/api/session').then(r => r.json()),
+  storageKey: 'user-123',
+  router: {
+    push: (path) => (window.location.href = path),
+    getCurrentPath: () => window.location.pathname,
+    // subscribe is optional — MPA reloads instead of subscribing
+  },
+});
+flow.start();
+```
+
+## Refresh, deep links, and browser back
+
+- **Refresh** on a routed step: the flow reads `getCurrentPath()` on mount and enters that step (skipping the default first step).
+- **Deep link** from an email to `/checkout/payment`: same as refresh — flow lands on `payment`. Combine with a `storage` adapter so completed prior steps (`cart`, `address`) are marked done and the payment step has the correct cart snapshot.
+- **Storage precedence when both are configured**: if a persisted flow state exists, `start()` restores it and pushes the stored step's path — the stored step wins over the current URL. An emailed deep link to `/checkout/payment` for a session where the persisted state points at `cart` will resume at `cart`. Call `clearState()` (or omit `storage`) if you want deep links to override storage.
+- **Browser back**: `subscribe(cb)` fires with the new path; the flow syncs its `currentStepId` to match. Steps without a `path` don't participate (modals aren't deep-linkable by design).
+
+## Mixed routed + non-routed steps
+
+Any step can omit `path` — it becomes inline/modal within whatever route the merchant is on. See the `Mixed routed + inline modal steps` story for an example (cart at `/cart`, auth as a modal over cart, payment at `/checkout/payment`).

@@ -8,13 +8,6 @@ export const defaultTranslations: Required<Translations> = {
   'CioCheckout.checkout.buttonLoadingLabel': 'Loading...',
   'CioCheckout.checkout.payButtonLabel': 'Pay',
   'CioCheckout.checkout.payButtonLoadingLabel': 'Processing...',
-  'CioCheckout.fulfillment.pending': 'Verifying your order...',
-  'CioCheckout.fulfillment.success': 'Order Confirmed',
-  'CioCheckout.fulfillment.failure': 'Verification Failed',
-  'CioCheckout.fulfillment.failureHint':
-    'Your payment was processed. Please contact support if the issue persists.',
-  'CioCheckout.fulfillment.dismissLabel': 'Done',
-  'CioCheckout.fulfillment.retryLabel': 'Retry',
 };
 
 export function t(

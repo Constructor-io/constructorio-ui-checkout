@@ -1,0 +1,287 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="General/Persistence" />
+
+# Persistence & Resume
+
+By default the flow is in-memory only. Pass a `storage` adapter + `storageKey` and the library serializes `FlowState` on every change (debounced) and hydrates on next mount. This is what powers refresh survival, deep-link resume, B2B pause/resume, and emailed abandoned-cart links.
+
+## Full example
+
+End-to-end wiring for a B2B pause/resume flow with backend storage, per-order keys, an "abandoned cart" recovery entry point, and cleanup on completion:
+
+```tsx
+import { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
+import {
+  CheckoutFlowProvider,
+  CheckoutFlowStep,
+  CheckoutStripeStep,
+  STRIPE_STEP,
+  useCheckoutFlow,
+} from '@constructor-io/constructorio-ui-checkout';
+import type { StorageAdapter } from '@constructor-io/constructorio-ui-checkout';
+import { getAuthToken, getUserId } from './lib/auth';
+
+const backendStorage: StorageAdapter = {
+  save: (key, state) =>
+    fetch(`/api/checkout/${encodeURIComponent(key)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getAuthToken()}`,
+      },
+      body: JSON.stringify(state),
+    }).then((r) => {
+      if (!r.ok) throw new Error(`storage.save failed: ${r.status}`);
+    }),
+
+  load: (key) =>
+    fetch(`/api/checkout/${encodeURIComponent(key)}`, {
+      headers: { Authorization: `Bearer ${getAuthToken()}` },
+    }).then((r) => {
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error(`storage.load failed: ${r.status}`);
+      return r.json();
+    }),
+
+  clear: (key) =>
+    fetch(`/api/checkout/${encodeURIComponent(key)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${getAuthToken()}` },
+    }).then((r) => {
+      if (!r.ok && r.status !== 404) {
+        throw new Error(`storage.clear failed: ${r.status}`);
+      }
+    }),
+};
+
+function CheckoutApp() {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const recoveryToken = params.get('recover');
+
+  // Prefer the recovery token from an emailed link; fall back to per-user key.
+  const storageKey = useMemo(
+    () => recoveryToken ?? `checkout-${getUserId()}`,
+    [recoveryToken]
+  );
+
+  return (
+    <CheckoutFlowProvider
+      steps={[
+        { id: 'cart', path: '/cart' },
+        { id: 'approval', path: '/checkout/approval' },
+        { id: STRIPE_STEP, path: '/checkout/payment' },
+        { id: 'done', path: '/order/confirmed' },
+      ]}
+      onCreateSession={onCreateSession}
+      onUpdateSession={onUpdateSession}
+      router={router}
+      storage={backendStorage}
+      storageKey={storageKey}
+      storageSaveDebounceMs={150}
+      onEvent={(event) => {
+        if (event.type === 'error' && event.source === 'storage') {
+          reportToSentry(event.error);
+        }
+      }}
+      autoStart
+    >
+      <CheckoutFlowStep id="cart"><CartView /></CheckoutFlowStep>
+      <CheckoutFlowStep id="approval"><ApprovalGate /></CheckoutFlowStep>
+      <CheckoutFlowStep id={STRIPE_STEP}>
+        <CheckoutStripeStep />
+      </CheckoutFlowStep>
+      <CheckoutFlowStep id="done">
+        <OrderConfirmed />
+      </CheckoutFlowStep>
+    </CheckoutFlowProvider>
+  );
+}
+
+function OrderConfirmed() {
+  const { clearState } = useCheckoutFlow();
+  useEffect(() => {
+    // Remove the stored entry so a page refresh doesn't resume a finished order.
+    // useCheckoutFlow() returns a new wrapper each render, but the underlying
+    // clearState reference is stable — depend on it, not on the whole hook.
+    void clearState();
+  }, [clearState]);
+  return <ThankYouScreen />;
+}
+```
+
+That covers create, resume from URL token, backend transport, auth on every call, error reporting, and cleanup. The sections below unpack each choice.
+
+## Enabling storage
+
+```tsx
+import {
+  CheckoutFlowProvider,
+  createSessionStorageAdapter,
+} from '@constructor-io/constructorio-ui-checkout';
+
+<CheckoutFlowProvider
+  storage={createSessionStorageAdapter()}
+  storageKey={`checkout-${userId}`}     // scoped per user
+  storageSaveDebounceMs={150}            // default
+  storageAutoResume={true}               // default
+  ...
+/>
+```
+
+Nothing else changes about your integration. State auto-saves on every mutation, auto-hydrates on `start()`, and clears via `flow.clearState()`.
+
+## Adapter shape
+
+```ts
+interface StorageAdapter {
+  load(key: string): Promise<FlowState | null>;
+  save(key: string, state: FlowState): Promise<void>;
+  clear(key: string): Promise<void>;
+}
+```
+
+All three methods are async. The built-in `createSessionStorageAdapter()` is a thin wrapper over `sessionStorage` that returns resolved promises; async adapters (Redis, DynamoDB, whatever) work identically.
+
+## Backend storage (B2B / multi-device)
+
+For B2B pause/resume — buyer starts on a laptop, an approver finishes on a phone — you want the state on your server, not in the browser:
+
+```ts
+const backendStorage: StorageAdapter = {
+  save: (key, state) =>
+    fetch(`/api/checkout/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify(state),
+    }).then((r) => {
+      if (!r.ok) throw new Error(`storage.save failed: ${r.status}`);
+    }),
+
+  load: (key) =>
+    fetch(`/api/checkout/${key}`).then((r) => {
+      if (r.status === 404) return null;         // no saved state
+      if (!r.ok) throw new Error(`storage.load failed: ${r.status}`);
+      return r.json();
+    }),
+
+  clear: (key) =>
+    fetch(`/api/checkout/${key}`, { method: 'DELETE' }).then((r) => {
+      if (!r.ok && r.status !== 404) {
+        throw new Error(`storage.clear failed: ${r.status}`);
+      }
+    }),
+};
+
+<CheckoutFlowProvider
+  storage={backendStorage}
+  storageKey={`b2b-order-${orderId}`}
+  ...
+/>
+```
+
+Return `null` from `load` only for the "no saved state" case (e.g. 404). Throw on any other failure so the error routes through `onEvent` and doesn't silently start a fresh flow over recoverable backend state.
+
+The library will call `save` on every state change (debounced by `storageSaveDebounceMs`, default 150ms) and `load` at start. It handles serialization; you handle the transport.
+
+## storageKey naming
+
+The key namespaces the persisted entry. Two rules:
+
+**Scope per user, not per app.** `checkout` (bare) collides across users on a shared device. `checkout-${userId}` or `checkout-${cartId}` is what you want.
+
+**Change the key to invalidate.** If you release breaking changes to your step config, bumping the key (`checkout-v2-${userId}`) makes existing users start fresh instead of hydrating into a broken state.
+
+## What gets saved
+
+Everything in `FlowState`:
+
+- `currentStepId` — where the user was
+- `completedStepIds` — which steps they finished
+- `cartSnapshot` — cart items
+- `sessionId` and `sessionStatus`
+- `metadata` — your integrator state key
+- `schemaVersion` — used to reject incompatible saves
+
+**What isn't saved: the in-memory `session` (`clientSecret`).** That lives only in RAM. On hydrate with `sessionStatus: 'active'`, the library downgrades to `sessionStatus: 'idle'` so the next `CheckoutStripeStep` mount will call `onCreateSession` again to recover. See [Sessions](./?path=/docs/general-sessions--docs#sessions-and-persistence) for the full explanation.
+
+## Storage precedence over deep links
+
+When both storage and a `router` are configured, storage wins on hydration. If a persisted state exists, `start()` restores it and pushes the stored step's path — the stored step wins over the current URL. An emailed link to `/checkout/payment` where the persisted state points at `cart` will resume at `cart`.
+
+If you want deep links to override storage, either:
+- Call `flow.clearState()` before mounting the provider, or
+- Skip `storage` on the checkout landing page and only pass it on interior pages.
+
+## Abandoned-cart recovery
+
+Common pattern: buyer partially fills the flow, closes the tab, gets an emailed link a day later, clicks it, lands back on the payment step with cart hydrated.
+
+Sequence:
+1. Flow is running; `storage.save()` writes state on every change.
+2. User closes tab. Data is in sessionStorage (survives that tab's session) or your backend (survives everything).
+3. User clicks the emailed link → same URL.
+4. `<CheckoutFlowProvider>` mounts, `start()` hydrates from storage.
+5. Flow enters the persisted step. `CheckoutStripeStep` re-runs `onCreateSession` to recover the session (since `clientSecret` didn't persist).
+6. Buyer picks up where they left off.
+
+For emailed recovery, backend storage is the right choice (sessionStorage doesn't survive cross-device). Use the recovery token from the email URL as the `storageKey`:
+
+```tsx
+const params = new URLSearchParams(location.search);
+const recoveryToken = params.get('recover');   // e.g. '?recover=abc123'
+
+<CheckoutFlowProvider
+  storage={backendStorage}
+  storageKey={recoveryToken ?? `checkout-${userId}`}
+  ...
+/>
+```
+
+## Clearing state
+
+Two APIs — pick based on intent:
+
+**`flow.reset()`** — clear in-memory state only. Doesn't touch storage.
+
+**`flow.clearState()`** — clear in-memory state *and* the stored entry. Awaits pending saves, calls `storage.clear(key)`. Use this on "start over" or after successful checkout completion.
+
+```tsx
+async function onOrderConfirmed() {
+  await flow.clearState();   // removes the stored entry
+  navigate('/');
+}
+```
+
+## Storage error handling
+
+If `save` / `load` / `clear` throws or rejects, the library emits an error event:
+
+```tsx
+onEvent: (event) => {
+  if (event.type === 'error' && event.source === 'storage') {
+    reportToSentry(event.error);
+    // The flow keeps running with in-memory state.
+  }
+}
+```
+
+The built-in `createSessionStorageAdapter()` behaves slightly differently across operations:
+
+- **Storage unavailable** (SSR, private mode with `sessionStorage` disabled, sandboxed iframe): every operation resolves silently — nothing is saved or cleared, and `load` returns `null`. You won't see a `storage` error event, because storage is a no-op.
+- **Storage available but the operation fails at write time** (quota exceeded, non-serializable state): `save` rejects and the error routes through `onEvent`. `load` returns `null` for corrupted entries and clears the bad entry so it doesn't wedge future loads.
+
+If you need to distinguish "storage disabled" from "storage failed", wrap the adapter and probe explicitly, or write your own adapter that throws on unavailable storage.
+
+## Schema versioning
+
+`FlowState.schemaVersion` is currently `1`. When the library bumps it, entries saved under the old version are treated as invalid on load and dropped — buyers start fresh instead of hydrating into a broken shape.
+
+If you extend `FlowState` via `metadata` or `integratorState` and later change your own schema, treat it the same way: bump `storageKey` to invalidate old entries.
+
+## What isn't the library's problem
+
+- **Cross-tab sync.** If a user opens two tabs on the same flow, they'll fight for storage. Use a mutex (BroadcastChannel + a locking scheme) or design your flow so only one tab is active.
+- **Encryption at rest.** Persisted state can contain PII (cart contents, addresses). If that's a concern, encrypt in your adapter's `save` and decrypt in `load`.
+- **Retention.** The library never expires stored entries. Prune them yourself if regulatory (GDPR/CCPA) or storage-cost concerns apply.

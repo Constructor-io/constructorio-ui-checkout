@@ -31,8 +31,8 @@ function StepShell({ children }: { children: React.ReactNode }) {
     return (
       <button
         type="button"
-        onClick={async () => {
-          await flow.start();
+        onClick={() => {
+          flow.start().catch(console.error);
         }}
       >
         Start

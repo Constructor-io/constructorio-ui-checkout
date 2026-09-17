@@ -40,7 +40,9 @@ function DemoStatus() {
       {flow.state.currentStepId === null && (
         <button
           type="button"
-          onClick={async () => { await flow.start(); }}
+          onClick={() => {
+            flow.start().catch(console.error);
+          }}
           style={{ marginTop: 8 }}
         >
           Start
@@ -350,8 +352,8 @@ function NextButton({ label }: { label: string }) {
     <button
       type="button"
       style={{ marginTop: 8 }}
-      onClick={async () => {
-        await flow.next();
+      onClick={() => {
+        flow.next().catch(console.error);
       }}
     >
       {label}

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
 import { CheckoutFlowStep } from '@src/app/components/CheckoutFlowStep';
@@ -15,7 +15,7 @@ const sessionResponse = (id = 'cs_test_abc'): CheckoutSessionResponse => ({
 
 const stubSession = () => Promise.resolve(sessionResponse());
 
-describe('CheckoutStripeStep', () => {
+describe(`${CheckoutStripeStep.name}: client`, () => {
   beforeEach(() => {
     (globalThis as Record<string, unknown>).__capturedProviderOptions__ =
       undefined;
@@ -115,6 +115,69 @@ describe('CheckoutStripeStep', () => {
     );
     await waitFor(() => {
       expect(screen.queryByTestId('stripe-provider')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows error UI with Retry when createSession rejects, and recovers on retry', async () => {
+    let calls = 0;
+    const onCreateSession = vi.fn(() => {
+      calls += 1;
+      if (calls === 1) return Promise.reject(new Error('boom'));
+      return Promise.resolve(sessionResponse('cs_test_retry'));
+    });
+    const onError = vi.fn();
+    render(
+      <CheckoutFlowProvider
+        steps={[{ id: STRIPE_STEP }]}
+        onCreateSession={onCreateSession}
+        autoStart
+      >
+        <CheckoutFlowStep id={STRIPE_STEP}>
+          <CheckoutStripeStep onError={onError} />
+        </CheckoutFlowStep>
+      </CheckoutFlowProvider>
+    );
+    const retryBtn = await screen.findByRole('button', { name: /retry/i });
+    expect(retryBtn).toBeInTheDocument();
+    expect(onError).toHaveBeenCalledTimes(1);
+    await userEvent.setup().click(retryBtn);
+    expect(await screen.findByTestId('stripe-provider')).toBeInTheDocument();
+    expect(onCreateSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('auto-recreates the session when status is expired', async () => {
+    let firstResolved = false;
+    const onCreateSession = vi.fn(() => {
+      const id = firstResolved ? 'cs_test_second' : 'cs_test_first';
+      firstResolved = true;
+      return Promise.resolve(sessionResponse(id));
+    });
+    let flowRef!: ReturnType<typeof useCheckoutFlow>;
+    function Grabber() {
+      const f = useCheckoutFlow();
+      flowRef = f;
+      return null;
+    }
+    render(
+      <CheckoutFlowProvider
+        steps={[{ id: STRIPE_STEP }]}
+        onCreateSession={onCreateSession}
+        autoStart
+      >
+        <Grabber />
+        <CheckoutFlowStep id={STRIPE_STEP}>
+          <CheckoutStripeStep />
+        </CheckoutFlowStep>
+      </CheckoutFlowProvider>
+    );
+    await screen.findByTestId('stripe-provider');
+    expect(onCreateSession).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      flowRef.markExpired();
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(onCreateSession).toHaveBeenCalledTimes(2);
     });
   });
 });

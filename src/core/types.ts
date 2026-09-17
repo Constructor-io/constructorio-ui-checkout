@@ -22,6 +22,11 @@ export interface FlowState {
   cartSnapshot: CheckoutItem[];
   sessionId: string | null;
   sessionStatus: SessionStatus;
+  /**
+   * Persisted verbatim by the configured `storage` adapter (sessionStorage by
+   * default). Do not put PII here unless you supply your own `storage` that
+   * encrypts or omits it.
+   */
   metadata: Record<string, unknown>;
   schemaVersion: 1;
 }
@@ -102,6 +107,12 @@ export interface AuthResult {
 export interface CheckoutFlowConfig<TState = unknown> {
   steps: Step[];
   storageKey?: string;
+  /**
+   * Where FlowState (including `metadata` and `cartSnapshot`) is persisted.
+   * Defaults to sessionStorage — per-tab, cleared on tab close. Supply your
+   * own adapter to persist elsewhere, encrypt at rest, or disable persistence
+   * entirely (e.g. `{ load: async () => null, save: async () => {}, clear: async () => {} }`).
+   */
   storage?: StorageAdapter;
   router?: RouterAdapter;
   authenticate?: () => Promise<AuthResult | null>;
@@ -116,6 +127,10 @@ export interface CheckoutFlowConfig<TState = unknown> {
   autoStart?: boolean;
   storageSaveDebounceMs?: number;
   storageAutoResume?: boolean;
+}
+
+export interface CreateCheckoutFlowOptions {
+  deferMount?: boolean;
 }
 
 export interface CheckoutFlowCore<TState = unknown> {

@@ -10,7 +10,7 @@ const sessionResponse = (id = 'cs_test_abc'): CheckoutSessionResponse => ({
 
 const stubSession = () => Promise.resolve(sessionResponse());
 
-describe('CheckoutFlow (imperative)', () => {
+describe(`${CheckoutFlow.name}: client`, () => {
   it('constructs with a valid config', () => {
     const flow = new CheckoutFlow({
       steps: [{ id: 'a' }],
@@ -159,6 +159,50 @@ describe('CheckoutFlow (imperative)', () => {
     expect(flow.getIntegratorState().tag).toBe('initial');
     flow.setIntegratorState(() => ({ tag: 'updated' }));
     expect(flow.getIntegratorState().tag).toBe('updated');
+    flow.destroy();
+  });
+
+  it('delegates goTo/complete/hydrate/reset/clearState/recreate/syncCart to the core', async () => {
+    const events: CheckoutEvent[] = [];
+    const flow = new CheckoutFlow({
+      steps: [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
+      onCreateSession: stubSession,
+      onEvent: (e) => events.push(e),
+    });
+
+    await flow.start();
+    await flow.goTo('c');
+    expect(flow.getState().currentStepId).toBe('c');
+
+    flow.hydrate({
+      currentStepId: 'b',
+      completedStepIds: ['a'],
+      cartSnapshot: [],
+      sessionId: null,
+      sessionStatus: 'idle',
+      metadata: {},
+      schemaVersion: 1,
+    });
+    expect(flow.getState().currentStepId).toBe('b');
+
+    flow.reset();
+    expect(flow.getState().currentStepId).toBeNull();
+
+    await flow.start();
+    const created = await flow.createSession();
+    expect(created?.clientSecret).toContain('cs_test_abc');
+    const recreated = await flow.recreate();
+    expect(recreated?.clientSecret).toBeDefined();
+    expect(events.find((e) => e.type === 'session.recreated')).toBeDefined();
+
+    const syncResult = await flow.syncCart([{ name: 'X', amount: 1 }]);
+    expect(syncResult).toBeDefined();
+
+    flow.complete();
+    expect(events.find((e) => e.type === 'flow.completed')).toBeDefined();
+
+    await flow.clearState();
+    expect(flow.getState().currentStepId).toBeNull();
     flow.destroy();
   });
 

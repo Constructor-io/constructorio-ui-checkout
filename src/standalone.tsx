@@ -2,7 +2,7 @@ import { createCheckoutFlow } from './core/createCheckoutFlow';
 import { createSessionStorageAdapter } from './core/storage/sessionStorageAdapter';
 import type { CheckoutFlowConfig } from './core/types';
 import { CheckoutFlow } from './manager/CheckoutFlow';
-import checkoutRegistry from './registry/CheckoutRegistry';
+import checkoutRegistry from './manager/CheckoutRegistry';
 import version from './version';
 
 import './styles.css';

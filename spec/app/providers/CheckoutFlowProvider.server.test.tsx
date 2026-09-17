@@ -10,7 +10,7 @@ const stubSession = () =>
     publishableKey: 'pk_test',
   });
 
-describe('CheckoutFlowProvider: server (SSR)', () => {
+describe(`${CheckoutFlowProvider.name}: server`, () => {
   it('renders without throwing on the server', () => {
     const view = renderToString(
       <CheckoutFlowProvider

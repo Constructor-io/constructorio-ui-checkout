@@ -1,4 +1,4 @@
-import checkoutRegistry from '@src/registry/CheckoutRegistry';
+import checkoutRegistry from '@src/manager/CheckoutRegistry';
 import CioCheckout from '@src/standalone';
 
 import {
@@ -13,7 +13,7 @@ const SESSION = {
 
 const stubSession = () => Promise.resolve(SESSION);
 
-describe('CioCheckout standalone', () => {
+describe('CioCheckout: client', () => {
   beforeEach(() => {
     globalThis.sessionStorage.clear();
   });

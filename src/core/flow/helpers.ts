@@ -1,9 +1,42 @@
-import type { CheckoutItem } from '@src/types';
+import type { CheckoutItem, CheckoutSessionResponse } from '@src/types';
 
-import type { SessionDiff } from './types';
+import type { FlowState, SessionDiff, Step, StepId } from '../types';
+import { FLOW_SCHEMA_VERSION } from '../types';
 
-// Stripe client_secret format: `<session_id>_secret_<opaque>`. Never expose
-// or log the full client_secret — only the session_id prefix is safe.
+export function makeInitialState(): FlowState {
+  return {
+    currentStepId: null,
+    completedStepIds: [],
+    cartSnapshot: [],
+    sessionId: null,
+    sessionStatus: 'idle',
+    metadata: {},
+    schemaVersion: FLOW_SCHEMA_VERSION,
+  };
+}
+
+export function findStepIndex(steps: Step[], id: StepId | null): number {
+  if (id === null) return -1;
+  return steps.findIndex((s) => s.id === id);
+}
+
+export function toError(reason: unknown): Error {
+  if (reason instanceof Error) return reason;
+  if (typeof reason === 'string') return new Error(reason);
+  return new Error('Unknown error');
+}
+
+export function isValidSessionResponse(
+  r: unknown
+): r is CheckoutSessionResponse {
+  return (
+    r !== null &&
+    typeof r === 'object' &&
+    typeof (r as CheckoutSessionResponse).clientSecret === 'string' &&
+    typeof (r as CheckoutSessionResponse).publishableKey === 'string'
+  );
+}
+
 export function extractSessionId(
   clientSecret: string | null | undefined
 ): string | null {

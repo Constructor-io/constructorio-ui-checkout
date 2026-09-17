@@ -47,7 +47,7 @@ export { CheckoutFlow } from './manager/CheckoutFlow';
 export {
   CheckoutRegistry,
   default as checkoutRegistry,
-} from './registry/CheckoutRegistry';
+} from './manager/CheckoutRegistry';
 
 // i18n helpers
 export { defaultTranslations, t } from './utils/translate';

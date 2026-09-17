@@ -350,11 +350,7 @@ describe(`${createNavigator.name}: client`, () => {
   describe('resume + guard validation', () => {
     it('emits guard error and resets to failing step when a resumed guard fails', async () => {
       const ctxWrap = makeCtx({
-        steps: [
-          { id: 'a' },
-          { id: 'b', guard: () => false },
-          { id: 'c' },
-        ],
+        steps: [{ id: 'a' }, { id: 'b', guard: () => false }, { id: 'c' }],
         config: {
           storage: {
             load: () =>

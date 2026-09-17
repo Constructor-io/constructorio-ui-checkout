@@ -347,9 +347,9 @@ describe(`${createSessionManager.name}: client`, () => {
       });
       await sm.createSession();
       sm.markExpired();
-      expect(
-        events.filter((e) => e.type === 'session.expired')
-      ).toHaveLength(0);
+      expect(events.filter((e) => e.type === 'session.expired')).toHaveLength(
+        0
+      );
       expect(ctx.store.getState().sessionStatus).toBe('expired');
     });
 
@@ -371,9 +371,9 @@ describe(`${createSessionManager.name}: client`, () => {
       });
       await sm.createSession();
       await sm.recreate();
-      expect(
-        events.filter((e) => e.type === 'session.recreated')
-      ).toHaveLength(0);
+      expect(events.filter((e) => e.type === 'session.recreated')).toHaveLength(
+        0
+      );
     });
 
     it('createSession does not emit session.created when clientSecret has no id', async () => {
@@ -388,9 +388,9 @@ describe(`${createSessionManager.name}: client`, () => {
         onSessionActive: () => undefined,
       });
       await sm.createSession();
-      expect(
-        events.filter((e) => e.type === 'session.created')
-      ).toHaveLength(0);
+      expect(events.filter((e) => e.type === 'session.created')).toHaveLength(
+        0
+      );
       expect(ctx.store.getState().sessionStatus).toBe('active');
     });
   });

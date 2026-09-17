@@ -13,16 +13,12 @@ const preview: Preview = {
     options: {
       storySort: {
         order: [
-          'General',
-          [
-            'Introduction',
-            'Integration Guide',
-            'Routing',
-            'Auth',
-            'Sessions',
-            'Cart',
-            'Persistence',
-          ],
+          'Getting Started',
+          ['Introduction', 'Integration Guide', 'Hook-only Composition'],
+          'Core',
+          ['Steps', 'Sessions', 'Cart', 'Auth', 'Events', 'Custom State'],
+          'Adapters',
+          ['Routing', 'Persistence'],
           'Components',
           'Hooks',
         ],

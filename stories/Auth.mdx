@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="General/Auth" />
+<Meta title="Core/Auth" />
 
 # Authentication
 
@@ -48,7 +48,7 @@ function LoginPage() {
   const onSignedIn = () => {
     // Case A: we're here because the checkout flow entered its auth step.
     if (flow.state.currentStepId === 'auth') {
-      void flow.next();  // continues checkout to /checkout/payment
+      flow.next();  // continues checkout to /checkout/payment
       return;
     }
 
@@ -146,15 +146,32 @@ Behavior:
 - User signs in, `LoginPage` calls `flow.next()`.
 - Guard on `stripe` runs — `isSignedIn()` returns `true` → payment step entered.
 
-For a signed-in user who starts checkout, you don't want them to land on `/login` at all. Two ways to skip the auth step:
+For a signed-in user who starts checkout, you don't want them to land on `/login` at all. **`optional: true` alone is not enough** — the flow does not auto-skip optional steps on entry; it only permits `next({ skip: true })` from within them. Three patterns, in order of preference:
 
-**1. Auto-advance from within the auth step.** Render a small effect that calls `flow.next()` if already signed in:
+**1. Omit the auth step from the `steps` list when you know at mount time.** Cleanest — the state machine simply has no auth step to enter.
+
+```tsx
+const authed = useIsAuthenticated();
+
+<CheckoutFlowProvider
+  steps={[
+    { id: 'cart', path: '/cart' },
+    ...(authed ? [] : [{ id: 'auth', path: '/login' }]),
+    { id: STRIPE_STEP, path: '/checkout/payment' },
+  ]}
+  ...
+/>
+```
+
+Zero flash, no extra `next()` plumbing. Trade-off: the step list is snapshotted at mount — if the user logs out mid-flow, you'd need to remount the provider to add the auth step back. Rare in practice, since a mid-flow logout is usually followed by a full navigation anyway.
+
+**2. Auto-advance from within the auth step.** For cases where auth state is determined async post-mount:
 
 ```tsx
 function AuthStepBody() {
   const flow = useCheckoutFlow();
   useEffect(() => {
-    if (isSignedIn()) void flow.next();
+    if (isSignedIn()) flow.next();
   }, [flow.next]);
   return isSignedIn() ? null : <SignInForm />;
 }
@@ -162,18 +179,22 @@ function AuthStepBody() {
 <CheckoutFlowStep id="auth"><AuthStepBody /></CheckoutFlowStep>
 ```
 
-**2. Skip via `next({ skip: true })` from the previous step.** Requires marking `auth` as `optional`:
+Brief render of `null` before the transition. Add a loading state if the flash is visible.
+
+**3. Skip via `next({ skip: true })` from the previous step.** Requires marking `auth` as `optional`:
 
 ```tsx
 { id: 'auth', path: '/login', optional: true },
 
 // From the cart step's Next button:
 if (isSignedIn()) {
-  void flow.next({ skip: true });   // jumps past auth
+  flow.next({ skip: true });   // jumps past auth
 } else {
-  void flow.next();                 // enters auth
+  flow.next();                 // enters auth
 }
 ```
+
+Splits the auth decision across the previous step — awkward when multiple steps can precede auth. Prefer 1 or 2.
 
 `isSignedIn()` is a plain function reading your auth store / cookie / token — no context needed.
 
@@ -199,7 +220,7 @@ function LoginPage() {
 
   const onFullySignedIn = () => {
     if (flow.state.currentStepId === 'auth') {
-      void flow.next();  // one call, at the very end of the auth wizard
+      flow.next();  // one call, at the very end of the auth wizard
       return;
     }
     const returnTo = sanitizeReturnTo(

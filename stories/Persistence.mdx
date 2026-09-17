@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="General/Persistence" />
+<Meta title="Adapters/Persistence" />
 
 # Persistence & Resume
 
@@ -106,7 +106,7 @@ function OrderConfirmed() {
     // Remove the stored entry so a page refresh doesn't resume a finished order.
     // useCheckoutFlow() returns a new wrapper each render, but the underlying
     // clearState reference is stable — depend on it, not on the whole hook.
-    void clearState();
+    clearState();
   }, [clearState]);
   return <ThankYouScreen />;
 }
@@ -204,7 +204,7 @@ Everything in `FlowState`:
 - `metadata` — your integrator state key
 - `schemaVersion` — used to reject incompatible saves
 
-**What isn't saved: the in-memory `session` (`clientSecret`).** That lives only in RAM. On hydrate with `sessionStatus: 'active'`, the library downgrades to `sessionStatus: 'idle'` so the next `CheckoutStripeStep` mount will call `onCreateSession` again to recover. See [Sessions](./?path=/docs/general-sessions--docs#sessions-and-persistence) for the full explanation.
+**What isn't saved: the in-memory `session` (`clientSecret`).** That lives only in RAM. On hydrate with `sessionStatus: 'active'`, the library downgrades to `sessionStatus: 'idle'` so the next `CheckoutStripeStep` mount will call `onCreateSession` again to recover. See [Sessions](./?path=/docs/core-sessions--docs#sessions-and-persistence) for the full explanation.
 
 ## Storage precedence over deep links
 

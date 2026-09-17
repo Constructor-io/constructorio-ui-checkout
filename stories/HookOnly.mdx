@@ -1,0 +1,204 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Getting Started/Hook-only Composition" />
+
+# Hook-only composition
+
+`useCheckoutFlow()` is the primitive. `CheckoutFlowStep`, `CheckoutStripeStep`, and `CheckoutFulfillmentStep` are conveniences that read from the same hook. When the built-in components don't fit — you want a custom Stripe wrapper, a non-standard layout, a route-per-step split — drop them and drive the flow from the hook directly.
+
+This page shows what that looks like end-to-end. If the default step components cover you, prefer them; this is the escape hatch, not the default path.
+
+## What each built-in actually does
+
+- **`<CheckoutFlowStep id="x">`** — three lines. Returns `null` unless `state.currentStepId === 'x'`. You can replace it with any gate.
+- **`<CheckoutStripeStep>`** — kicks off `flow.createSession()` on mount, wraps children in `CheckoutFormProvider` or `CheckoutElementsProvider`, and calls `flow.next()` on confirm. All of that is doable in ~30 lines of your own code.
+- **`<CheckoutFulfillmentStep>`** — polls your `onFulfill` and advances on success. Same pattern.
+
+Bypassing them means you write those ~30 lines yourself, in exchange for owning the render tree.
+
+## Minimal hook-only example
+
+Same flow as the Quick Start, but with no built-in step components — just `useCheckoutFlow` and raw `@stripe/react-stripe-js`:
+
+```tsx
+import { useEffect, useMemo } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+import {
+  CheckoutFormProvider,
+  useCheckoutForm,
+} from '@stripe/react-stripe-js/checkout';
+import {
+  CheckoutFlowProvider,
+  useCheckoutFlow,
+  STRIPE_STEP,
+} from '@constructor-io/constructorio-ui-checkout';
+
+function App() {
+  return (
+    <CheckoutFlowProvider
+      steps={[
+        { id: 'cart' },
+        { id: 'address' },
+        { id: STRIPE_STEP },
+        { id: 'done' },
+      ]}
+      onCreateSession={() =>
+        fetch('/api/checkout-session', { method: 'POST' }).then((r) => r.json())
+      }
+    >
+      <Checkout />
+    </CheckoutFlowProvider>
+  );
+}
+
+function Checkout() {
+  const flow = useCheckoutFlow();
+
+  if (flow.state.currentStepId === null) {
+    return <button onClick={() => flow.start()}>Checkout</button>;
+  }
+
+  switch (flow.state.currentStepId) {
+    case 'cart':
+      return <MyCart onNext={() => flow.next()} />;
+    case 'address':
+      return (
+        <MyAddress
+          onBack={() => flow.back()}
+          onNext={() => flow.next()}
+        />
+      );
+    case STRIPE_STEP:
+      return <MyStripeStep />;
+    case 'done':
+      return <MyConfirmation />;
+    default:
+      return null;
+  }
+}
+
+// Your own Stripe wrapper — full control over provider, options, elements.
+function MyStripeStep() {
+  const flow = useCheckoutFlow();
+  const session = flow.getSession();
+
+  useEffect(() => {
+    if (!session && flow.state.sessionStatus === 'idle') {
+      flow.createSession();
+    }
+  }, [session, flow]);
+
+  const stripe = useMemo(
+    () => (session ? loadStripe(session.publishableKey) : null),
+    [session]
+  );
+
+  if (!session || !stripe) return <div>Loading payment…</div>;
+
+  return (
+    <CheckoutFormProvider
+      stripe={stripe}
+      options={{
+        clientSecret: session.clientSecret,
+        appearance: myBrandAppearance,
+      }}
+    >
+      <MyPayButton />
+    </CheckoutFormProvider>
+  );
+}
+
+function MyPayButton() {
+  const checkout = useCheckoutForm();
+  const flow = useCheckoutFlow();
+  return (
+    <button
+      onClick={async () => {
+        const result = await checkout.confirm({ redirect: 'if_required' });
+        if (result.type === 'success') flow.next();
+      }}
+    >
+      Pay
+    </button>
+  );
+}
+```
+
+Everything the built-in `<CheckoutStripeStep>` did is now visible in `MyStripeStep`. Add whatever you need: a saved-card dropdown, a wallet button, a custom loader, `AddressElement` inside the same provider, per-brand `appearance`.
+
+## Route-per-step
+
+Pair the hook with a router: each URL renders a component that reads `flow.state.currentStepId` and either shows its step or redirects. See [Routing](./?path=/docs/adapters-routing--docs) for the adapter shape.
+
+```tsx
+import { Route, Routes, Navigate } from 'react-router-dom';
+
+function CheckoutRoutes() {
+  const flow = useCheckoutFlow();
+
+  return (
+    <Routes>
+      <Route path="/cart" element={<GateStep id="cart"><MyCart /></GateStep>} />
+      <Route
+        path="/checkout/address"
+        element={<GateStep id="address"><MyAddress /></GateStep>}
+      />
+      <Route
+        path="/checkout/payment"
+        element={<GateStep id={STRIPE_STEP}><MyStripeStep /></GateStep>}
+      />
+      <Route path="/order/confirmed" element={<MyConfirmation />} />
+    </Routes>
+  );
+}
+
+// The flow.state.currentStepId is the source of truth. If the user lands on
+// /checkout/payment but the flow says they're still on 'cart' (e.g. deep-link
+// into an incomplete flow), send them back.
+function GateStep({ id, children }: { id: string; children: React.ReactNode }) {
+  const { state } = useCheckoutFlow();
+  if (state.currentStepId === null) return <Navigate to="/cart" replace />;
+  if (state.currentStepId !== id) {
+    const currentPath = pathFor(state.currentStepId);
+    return <Navigate to={currentPath} replace />;
+  }
+  return <>{children}</>;
+}
+```
+
+With `router` configured on the provider, `flow.next()` pushes the next step's URL and this same gate keeps refresh + back-button honest.
+
+## Varying Stripe per route (not per step)
+
+A common ask that reads like "different Stripe steps for different paths" is really "one Stripe step whose props vary." Don't register two Stripe steps — the state machine tracks one payment step, not two. Vary the props on your own wrapper instead:
+
+```tsx
+function MyStripeStep() {
+  const flow = useCheckoutFlow();
+  const brand = useBrandFromRoute(); // e.g. 'us-storefront' | 'uk-storefront'
+  const session = flow.getSession();
+  // ... (session-loading omitted, same as above)
+
+  const options = {
+    clientSecret: session.clientSecret,
+    appearance: brandAppearances[brand],
+    layout: brand === 'uk-storefront' ? 'compact' : 'expanded',
+  };
+
+  return (
+    <CheckoutFormProvider stripe={stripe} options={options}>
+      <MyPayButton />
+    </CheckoutFormProvider>
+  );
+}
+```
+
+If you genuinely need distinct payment surfaces on different paths (e.g. Stripe on one route, an alternate PSP on another), that's a multi-PSP concern rather than a multi-step one — one step ID with a branching renderer.
+
+## When to keep the built-ins
+
+- You're on the standard Stripe surface (`PaymentElement` or `CheckoutForm`) with no unusual wrapping — `<CheckoutStripeStep>` is fine, saves you the boilerplate.
+- Your steps map 1:1 to component trees with no routing subtleties — `<CheckoutFlowStep>` is a clean gate.
+- Your fulfillment poll matches the default shape — `<CheckoutFulfillmentStep>` handles the retry/timeout logic.
+
+Mix and match: keep `<CheckoutFlowStep>` for gating and swap only `<CheckoutStripeStep>` for a hook-driven wrapper, or vice versa. Nothing forces all-in on either style.

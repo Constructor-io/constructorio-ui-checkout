@@ -1,4 +1,4 @@
-import checkoutRegistry from '@src/registry/CheckoutRegistry';
+import checkoutRegistry from '@src/manager/CheckoutRegistry';
 import CioCheckout from '@src/standalone';
 
 import {

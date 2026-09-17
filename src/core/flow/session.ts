@@ -1,6 +1,6 @@
 import type { CheckoutItem } from '@src/types';
 
-import type { SessionDiff } from './types';
+import type { SessionDiff } from '../types';
 
 // Stripe client_secret format: `<session_id>_secret_<opaque>`. Never expose
 // or log the full client_secret — only the session_id prefix is safe.

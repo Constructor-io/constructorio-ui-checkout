@@ -118,6 +118,10 @@ export interface CheckoutFlowConfig<TState = unknown> {
   storageAutoResume?: boolean;
 }
 
+export interface CreateCheckoutFlowOptions {
+  deferMount?: boolean;
+}
+
 export interface CheckoutFlowCore<TState = unknown> {
   getState(): FlowState;
   subscribe(listener: (state: FlowState) => void): () => void;

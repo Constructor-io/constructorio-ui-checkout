@@ -1,4 +1,4 @@
-import { computeCartDiff, extractSessionId } from '@src/core/session';
+import { computeCartDiff, extractSessionId } from '@src/core/flow/session';
 import type { CheckoutItem } from '@src/types';
 
 describe('extractSessionId', () => {

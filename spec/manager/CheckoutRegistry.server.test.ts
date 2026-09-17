@@ -1,5 +1,5 @@
 import { CheckoutFlow } from '@src/manager/CheckoutFlow';
-import checkoutRegistry from '@src/registry/CheckoutRegistry';
+import checkoutRegistry from '@src/manager/CheckoutRegistry';
 
 describe('CheckoutRegistry: server', () => {
   afterEach(() => {

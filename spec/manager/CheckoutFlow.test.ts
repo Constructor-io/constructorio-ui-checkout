@@ -10,7 +10,7 @@ const sessionResponse = (id = 'cs_test_abc'): CheckoutSessionResponse => ({
 
 const stubSession = () => Promise.resolve(sessionResponse());
 
-describe('CheckoutFlow (imperative)', () => {
+describe(`${CheckoutFlow.name}: client`, () => {
   it('constructs with a valid config', () => {
     const flow = new CheckoutFlow({
       steps: [{ id: 'a' }],

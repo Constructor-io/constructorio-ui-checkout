@@ -26,7 +26,7 @@ const purge = () => {
   toDelete.forEach((k) => globalThis.sessionStorage.removeItem(k));
 };
 
-describe('sessionStorageAdapter', () => {
+describe(`${createSessionStorageAdapter.name}: client`, () => {
   afterEach(() => purge());
 
   it('round-trips a valid FlowState', async () => {
@@ -96,7 +96,7 @@ describe('sessionStorageAdapter', () => {
   });
 });
 
-describe('isFlowStateShape', () => {
+describe(`${isFlowStateShape.name}: client`, () => {
   it('returns true for valid state', () => {
     expect(isFlowStateShape(valid())).toBe(true);
   });

@@ -1,7 +1,9 @@
 import { CheckoutFlow } from '@src/manager/CheckoutFlow';
-import checkoutRegistry from '@src/manager/CheckoutRegistry';
+import checkoutRegistry, {
+  CheckoutRegistry,
+} from '@src/manager/CheckoutRegistry';
 
-describe('CheckoutRegistry: server', () => {
+describe(`${CheckoutRegistry.name}: server`, () => {
   afterEach(() => {
     checkoutRegistry.clear();
   });

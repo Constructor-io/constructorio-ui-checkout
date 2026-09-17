@@ -3,8 +3,12 @@ import type { CheckoutSessionResponse } from '@src/types';
 import type { SessionUpdatePatch } from '../types';
 
 import type { FlowContext } from './context';
-import { isValidSessionResponse, toError } from './helpers';
-import { computeCartDiff, extractSessionId } from './session';
+import {
+  computeCartDiff,
+  extractSessionId,
+  isValidSessionResponse,
+  toError,
+} from './helpers';
 
 export interface SessionManagerOptions {
   onSessionActive: () => void;

@@ -1,5 +1,7 @@
 import { CheckoutFlow } from '@src/manager/CheckoutFlow';
-import checkoutRegistry from '@src/manager/CheckoutRegistry';
+import checkoutRegistry, {
+  CheckoutRegistry,
+} from '@src/manager/CheckoutRegistry';
 
 import {
   DEMO_CLIENT_SECRET,
@@ -12,7 +14,7 @@ const stubSession = () =>
     publishableKey: DEMO_PUBLISHABLE_KEY,
   });
 
-describe('CheckoutRegistry', () => {
+describe(`${CheckoutRegistry.name}: client`, () => {
   beforeEach(() => {
     globalThis.sessionStorage.clear();
   });

@@ -15,7 +15,7 @@ const sessionResponse = (id = 'cs_test_abc'): CheckoutSessionResponse => ({
 
 const stubSession = () => Promise.resolve(sessionResponse());
 
-describe('CheckoutStripeStep', () => {
+describe(`${CheckoutStripeStep.name}: client`, () => {
   beforeEach(() => {
     (globalThis as Record<string, unknown>).__capturedProviderOptions__ =
       undefined;

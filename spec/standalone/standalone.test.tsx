@@ -13,7 +13,7 @@ const SESSION = {
 
 const stubSession = () => Promise.resolve(SESSION);
 
-describe('CioCheckout standalone', () => {
+describe('CioCheckout: client', () => {
   beforeEach(() => {
     globalThis.sessionStorage.clear();
   });

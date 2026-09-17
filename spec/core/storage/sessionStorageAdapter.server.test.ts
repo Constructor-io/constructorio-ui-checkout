@@ -12,7 +12,7 @@ const valid = (): FlowState => ({
   schemaVersion: FLOW_SCHEMA_VERSION,
 });
 
-describe('sessionStorageAdapter: server (SSR)', () => {
+describe(`${createSessionStorageAdapter.name}: server`, () => {
   let originalStorage: Storage | undefined;
 
   beforeEach(() => {

@@ -15,7 +15,7 @@ const stubSession = () =>
     publishableKey: 'pk_test',
   });
 
-describe('CheckoutFulfillmentStep', () => {
+describe(`${CheckoutFulfillmentStep.name}: client`, () => {
   it('runs onFulfill and shows the pending UI while in flight', async () => {
     let resolveFulfill: (r: FulfillmentResult) => void = () => undefined;
     const onFulfill = vi.fn(

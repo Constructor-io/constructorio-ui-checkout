@@ -1,0 +1,190 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Core/Steps" />
+
+# Steps
+
+A step is the smallest unit the flow tracks. Your step list defines the state machine — the library manages `currentStepId`, transitions, guards, and URL sync; you own what renders inside each step.
+
+## `Step` shape
+
+```ts
+interface Step {
+  id: StepId;           // any string; must be unique in the list
+  path?: string;        // URL path — required if you're using a router adapter
+  optional?: boolean;   // skippable via flow.next({ skip: true })
+  guard?: (state: FlowState) => boolean | Promise<boolean>;
+}
+```
+
+That's the whole surface. Nothing else on the step defines rendering — the merchant does that via `<CheckoutFlowStep id="x">` or a custom gate that reads `state.currentStepId`.
+
+## Two built-in step IDs
+
+```ts
+import { CREATE_SESSION_STEP, STRIPE_STEP } from '@constructor-io/constructorio-ui-checkout';
+```
+
+- **`STRIPE_STEP`** (`'stripe'`) — the ID the built-in `<CheckoutStripeStep>` looks for. Use this constant instead of the literal string so future renames stay backwards-compatible.
+- **`CREATE_SESSION_STEP`** (`'createSession'`) — a virtual step ID used in `error` events with `source: 'session.create'`. You do not put this in your `steps` array; the flow uses it internally to describe where a session-creation error originated.
+
+Everything else is your own step ID.
+
+## Designing your step list
+
+Pick step IDs by intent, not by component. `'cart'` and `'address'` and `'review'` describe *what the user is doing*; `'CartPage'` couples the flow to a component name that might move.
+
+Typical B2C flow:
+
+```tsx
+<CheckoutFlowProvider
+  steps={[
+    { id: 'cart' },
+    { id: 'address' },
+    { id: STRIPE_STEP },
+    { id: 'done' },
+  ]}
+  ...
+/>
+```
+
+Typical B2B flow with an approval gate:
+
+```tsx
+steps: [
+  { id: 'cart', path: '/cart' },
+  { id: 'address', path: '/checkout/address' },
+  { id: 'approval', path: '/checkout/approval' },   // waits on a second signer
+  { id: STRIPE_STEP, path: '/checkout/payment' },
+  { id: 'fulfill', path: '/checkout/fulfill' },
+  { id: 'done', path: '/order/confirmed' },
+],
+```
+
+## Optional steps
+
+`optional: true` *permits* `next({ skip: true })` from within the step without marking it completed. Common uses: gift-wrap prompt, marketing opt-in, promo-code entry.
+
+```tsx
+{ id: 'giftWrap', optional: true }
+```
+
+**What `optional` does not do:** it does not cause the flow to auto-skip the step on entry. `flow.next()` from the previous step still lands the user on `giftWrap`; only `flow.next({ skip: true })` moves past it. If you want a step to be conditionally absent (e.g. auth when the user is already signed in), build the `steps` array conditionally at mount:
+
+```tsx
+<CheckoutFlowProvider
+  steps={[
+    { id: 'cart' },
+    ...(authed ? [] : [{ id: 'auth' }]),
+    { id: STRIPE_STEP },
+  ]}
+  ...
+/>
+```
+
+See [Auth — Sending users to /login](./?path=/docs/core-auth--docs#sending-users-to-login-with-a-returnto) for the full pattern.
+
+Don't use `optional` for A/B branching — that's a guard concern, not an optionality concern.
+
+## Guards
+
+`guard` runs before a transition *into* the step. Return `false` (or reject) to block the transition; the flow stays where it was and emits an `error` event with `source: 'guard'`.
+
+**Auth gate:**
+
+```tsx
+{
+  id: STRIPE_STEP,
+  guard: async (state) => {
+    if (state.metadata.userId) return true;
+    window.location.assign('/login?returnTo=/checkout/payment');
+    return false;
+  },
+}
+```
+
+**Cart-total minimum:**
+
+```tsx
+{
+  id: STRIPE_STEP,
+  guard: (state) => cartTotal(state.cartSnapshot) >= 100,
+}
+```
+
+**Inventory check:**
+
+```tsx
+{
+  id: STRIPE_STEP,
+  guard: async (state) => {
+    const stock = await checkInventory(state.cartSnapshot);
+    return stock.allInStock;
+  },
+}
+```
+
+Guards can be sync or async. Async guards should return quickly — the flow shows no step during the check.
+
+## Guard vs branch inside a step
+
+Guards gate entry. Conditional rendering *inside* the step handles branching after entry.
+
+Use a guard when:
+- The gate is external to the step (auth, inventory, backend approval).
+- Failure should keep the user on the previous step.
+
+Use conditional rendering inside a step when:
+- The variant depends on user input (guest vs sign-in on the same page).
+- The step "runs" either way, just with different UI.
+
+```tsx
+<CheckoutFlowStep id="checkout">
+  {loggedIn ? <ExpressCheckout /> : <GuestCheckoutForm />}
+</CheckoutFlowStep>
+```
+
+Registering two separate steps for "guest" and "loggedIn" is almost always the wrong shape — it splits the state machine on a runtime toggle rather than on flow position.
+
+## Custom step components
+
+`<CheckoutFlowStep>` is a three-line convenience — a gate that renders children when `state.currentStepId` matches. You can replace it with any gate that reads the hook. See [Hook-only composition](./?path=/docs/getting-started-hook-only-composition--docs) for the escape hatch pattern.
+
+For steps that own their side effects (auto-creating a session, polling fulfillment), pair a gate with a hook-driven component:
+
+```tsx
+<CheckoutFlowStep id="fulfill">
+  <MyFulfillmentPoll />
+</CheckoutFlowStep>
+
+function MyFulfillmentPoll() {
+  const flow = useCheckoutFlow();
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      const result = await checkFulfillment(flow.state.sessionId);
+      if (result.status === 'ready') flow.next();
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [flow]);
+  return <Spinner />;
+}
+```
+
+## Reaching steps
+
+- **`flow.next()`** — advance to the next step in the list, running the next step's guard.
+- **`flow.next({ skip: true })`** — same, but skip an `optional` step without marking it completed.
+- **`flow.back()`** — return to the previous step. Guards do not run on back navigation.
+- **`flow.goTo(stepId)`** — jump to a specific step. Runs that step's guard. Used for "edit shipping" from the review page, or "start payment" from a summary screen.
+
+`goTo` does not enforce that the target has been previously visited — it's the merchant's responsibility not to jump to a step whose preconditions haven't been met. Use guards on the destination step if you need enforcement.
+
+## Persistence and completed steps
+
+`completedStepIds` is persisted (see [Persistence](./?path=/docs/adapters-persistence--docs)). If a user hydrates into an in-progress flow, `completedStepIds` reflects everything they'd finished before pausing. The current step's guard still runs on resume — a user who paused just after signing in but whose session expired overnight will re-hit the auth guard.
+
+## What steps aren't
+
+- **Not screens.** A step is a state — one step can render multiple screens (e.g. review + edit modal) and multiple steps can share screens.
+- **Not routes.** The `path` field syncs a step to a URL, but a step without `path` is legal (single-page or modal flows).
+- **Not multi-substep containers.** If your "auth" step has three substeps (email → OTP → 2FA), model that inside the step component, not as three top-level flow steps. See [Auth — Multi-step auth](./?path=/docs/core-auth--docs#multi-step-auth-otp-2fa-passkey-mfa) for the pattern.

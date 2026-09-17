@@ -1,0 +1,160 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Core/Events" />
+
+# Events
+
+Everything the flow does — starting, transitioning, creating sessions, hitting errors — emits a typed event through the `onEvent` callback. This is where analytics, telemetry, and error reporting hook in.
+
+```tsx
+<CheckoutFlowProvider
+  onEvent={(event) => {
+    // Route to Segment, GA, Sentry, DataDog — whatever you use.
+  }}
+  ...
+/>
+```
+
+`onEvent` is called synchronously after the state change. Don't do slow work inside it — post to a queue if your analytics client is blocking.
+
+## Event catalog
+
+`CheckoutEvent` is a discriminated union on `type`. Full shape:
+
+| Event                                 | Payload                                                                          | When                                                                          |
+| ------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `flow.started`                        | —                                                                                | `flow.start()` succeeds (guard passes, first step entered)                    |
+| `flow.completed`                      | —                                                                                | `flow.complete()` called or `flow.next()` past the final step                 |
+| `step.entered`                        | `{ stepId; from: StepId \| null }`                                               | Any transition into a step (start / next / back / goTo / resume)              |
+| `step.exited`                         | `{ stepId; to: StepId \| null }`                                                 | Paired with `step.entered` on transition                                      |
+| `session.created`                     | `{ sessionId }`                                                                  | `onCreateSession` resolves                                                    |
+| `session.updated`                     | `{ sessionId; reason: SessionUpdateReason; diff: SessionDiff }`                  | `onUpdateSession` resolves (cart change, address, tax, shipping, coupon, …)   |
+| `session.expired`                     | `{ sessionId }`                                                                  | Stripe reports session expiry, or `flow.markExpired()` is called              |
+| `session.recreated`                   | `{ oldSessionId; newSessionId }`                                                 | `flow.recreate()` succeeds after expiry                                       |
+| `state.changed`                       | `{ state: FlowState }`                                                           | Any mutation to `FlowState` — high-frequency, prefer targeted events for most uses |
+| `error`                               | `{ source: CheckoutEventErrorSource; error: Error; retry?: () => Promise<void> }` | Any failure — see error sources below                                         |
+
+## Error sources
+
+The `error` event's `source` tells you where the failure happened:
+
+- `'session.create'` — `onCreateSession` threw or rejected
+- `'session.update'` — `onUpdateSession` threw or rejected
+- `'session.recover'` — `flow.recreate()` after expiry threw
+- `'storage'` — the storage adapter's `save` / `load` / `clear` threw
+- `'router'` — the router adapter's `push` threw or an unsafe path was rejected
+- `'guard'` — a step's `guard` returned `false` or threw
+- `'authenticate'` — the `authenticate` config callback threw
+
+Some errors include a `retry` function that re-runs the failed operation. `session.create`, `session.update`, and `session.recover` are the current retryable sources.
+
+## `SessionUpdateReason` and `SessionDiff`
+
+`session.updated` events include a `reason` so you can distinguish cart changes from address changes from a manual `updateSession(patch)` call.
+
+```ts
+type SessionUpdateReason =
+  | 'items'      // syncCart / setCart
+  | 'address'
+  | 'tax'
+  | 'shipping'
+  | 'coupon'
+  | 'stock'
+  | 'price'
+  | 'manual';    // updateSession(patch) without a reason
+```
+
+`SessionDiff` describes what changed on `items`-flavored updates:
+
+```ts
+interface SessionDiff {
+  added?: CheckoutItem[];
+  removed?: CheckoutItem[];
+  quantityChanges?: { id: string; from: number; to: number }[];
+  totalChange?: { from: number; to: number };
+}
+```
+
+Useful for firing `product_added_to_cart` events without diffing yourself.
+
+## Analytics wiring — Segment
+
+```tsx
+<CheckoutFlowProvider
+  onEvent={(event) => {
+    switch (event.type) {
+      case 'flow.started':
+        analytics.track('Checkout Started');
+        break;
+      case 'step.entered':
+        analytics.track('Checkout Step Viewed', { step: event.stepId });
+        break;
+      case 'session.updated':
+        if (event.reason === 'items') {
+          event.diff.added?.forEach((item) =>
+            analytics.track('Product Added', { name: item.name, price: item.amount })
+          );
+          event.diff.removed?.forEach((item) =>
+            analytics.track('Product Removed', { name: item.name })
+          );
+        }
+        break;
+      case 'flow.completed':
+        analytics.track('Order Completed');
+        break;
+      case 'error':
+        analytics.track('Checkout Error', {
+          source: event.source,
+          message: event.error.message,
+        });
+        break;
+    }
+  }}
+  ...
+/>
+```
+
+## Error reporting — Sentry
+
+```tsx
+onEvent={(event) => {
+  if (event.type === 'error') {
+    Sentry.captureException(event.error, {
+      tags: { checkout_source: event.source },
+      extra: { retryable: !!event.retry },
+    });
+  }
+}}
+```
+
+For retryable errors, offer the user a retry button that calls `event.retry?.()`:
+
+```tsx
+const [lastError, setLastError] = useState<CheckoutEvent | null>(null);
+
+onEvent={(event) => {
+  if (event.type === 'error' && event.retry) setLastError(event);
+}}
+
+// In your error UI:
+{lastError && (
+  <button onClick={() => lastError.type === 'error' && lastError.retry?.()}>
+    Retry
+  </button>
+)}
+```
+
+## When to use `state.changed`
+
+`state.changed` fires on every `FlowState` mutation — high frequency. It's a debugging hatch, not an analytics primitive. Use the targeted events (`step.entered`, `session.updated`) for user-visible funnels. Reach for `state.changed` only when you need something not covered by the specific events (e.g. observing `sessionStatus` transitions to `'creating'`, which none of the other events emit).
+
+## Ordering guarantees
+
+- `step.exited` always fires before `step.entered` on a transition.
+- `session.created` fires before `step.entered` on the payment step when `<CheckoutStripeStep>` auto-creates the session.
+- `flow.completed` fires after the last `step.entered` for the terminal step.
+- `error` events fire *instead of* the success event for the failed operation — a failed `onCreateSession` emits `error` with `source: 'session.create'`, not `session.created`.
+
+## `onEvent` vs subscribing to state
+
+`onEvent` gives you discrete transitions with rich payloads. `flow.subscribe(listener)` gives you the whole `FlowState` on every change. For most analytics, telemetry, and error use cases, `onEvent` is the right handle — it's typed, filtered, and non-noisy. Use `flow.subscribe` only when you need the imperative store (rare outside custom step components).

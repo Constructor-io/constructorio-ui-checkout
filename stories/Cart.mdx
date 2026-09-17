@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="General/Cart" />
+<Meta title="Core/Cart" />
 
 # Cart
 
@@ -26,7 +26,7 @@ const [cart, setCart] = useState<CheckoutItem[]>([]);
 
 ```tsx
 const flow = useCheckoutFlow();
-void flow.setCart([...cart, newItem]);
+flow.setCart([...cart, newItem]);
 ```
 
 **`flow.syncCart(items)`** — imperative, immediate. Bypasses the debounce and returns a promise that resolves with the updated session. Use when you need to guarantee the update is applied before proceeding.
@@ -88,7 +88,7 @@ function RecommendationCard({ item }) {
   const flow = useCheckoutFlow();
   return (
     <button onClick={() => {
-      void flow.syncCart([...flow.state.cartSnapshot, item]);
+      flow.syncCart([...flow.state.cartSnapshot, item]);
     }}>
       Add to cart
     </button>

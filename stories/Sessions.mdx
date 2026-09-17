@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="General/Sessions" />
+<Meta title="Core/Sessions" />
 
 # Sessions
 
@@ -192,7 +192,7 @@ function MyCustomStripePane() {
   if (flow.state.sessionStatus === 'error') {
     return (
       <MyErrorBanner
-        onRetry={() => void flow.recreate()}
+        onRetry={() => flow.recreate()}
         message="Couldn't prepare checkout"
       />
     );

@@ -40,7 +40,9 @@ function DemoStatus() {
       {flow.state.currentStepId === null && (
         <button
           type="button"
-          onClick={() => void flow.start()}
+          onClick={() => {
+            flow.start().catch(console.error);
+          }}
           style={{ marginTop: 8 }}
         >
           Start
@@ -242,8 +244,8 @@ function RealisticFlowDemo() {
   );
 
   const createSession = () => {
-    void getAuthToken();
-    void getCart();
+    getAuthToken();
+    getCart();
     return Promise.resolve({
       clientSecret: 'cs_test_DEMO_secret_xyz',
       publishableKey: 'pk_test_DEMO',
@@ -350,7 +352,9 @@ function NextButton({ label }: { label: string }) {
     <button
       type="button"
       style={{ marginTop: 8 }}
-      onClick={() => void flow.next()}
+      onClick={() => {
+        flow.next().catch(console.error);
+      }}
     >
       {label}
     </button>

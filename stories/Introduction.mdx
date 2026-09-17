@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="General/Introduction" />
+<Meta title="Getting Started/Introduction" />
 
 # Welcome to Constructor's Checkout UI
 
@@ -8,8 +8,11 @@ Headless primitives for building multi-step checkout on top of Stripe. The libra
 
 ## Where to go next
 
-- **[Integration Guide](./?path=/docs/general-integration-guide--docs)** — install, wire up, and ship a working flow
-- **[Routing](./?path=/docs/general-routing--docs)** — real-world adapter snippets for React Router, Next.js App Router, TanStack Router, and vanilla `window.location`
+- **[Integration Guide](./?path=/docs/getting-started-integration-guide--docs)** — install, wire up, and ship a working flow
+- **[Hook-only composition](./?path=/docs/getting-started-hook-only-composition--docs)** — bypass the built-in step components and drive the flow directly from `useCheckoutFlow()` when you need a custom Stripe wrapper, per-route composition, or unusual layouts
+- **[Routing](./?path=/docs/adapters-routing--docs)** — real-world adapter snippets for React Router, Next.js App Router, TanStack Router, and vanilla `window.location`
+- **[Persistence](./?path=/docs/adapters-persistence--docs)** — session/localStorage or backend-backed pause/resume
+- **[Steps](./?path=/docs/core-steps--docs)**, **[Sessions](./?path=/docs/core-sessions--docs)**, **[Cart](./?path=/docs/core-cart--docs)**, **[Auth](./?path=/docs/core-auth--docs)**, **[Events](./?path=/docs/core-events--docs)**, **[Custom State](./?path=/docs/core-custom-state--docs)** — what the library manages internally, and how you hook in
 - **[Components / CheckoutFlow](./?path=/docs/components-checkoutflow--docs)** — the basic shapes: single-page multi-step, express Buy Now, guest, with-login, routed, persistence
 - **[Components / CheckoutFlow / Advanced](./?path=/story/components-checkoutflow-advanced)** — obscure but real patterns: mid-flow add-to-cart, session recovery, custom fulfillment UI, backend storage, multi-instance, and more
 

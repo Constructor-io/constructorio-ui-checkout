@@ -6,9 +6,9 @@
 
 ## Introduction
 
-A React UI library that wraps Stripe's Custom Checkout into a drop-in checkout experience with modal/inline display modes, fulfillment verification, and lifecycle callbacks. Supports two Stripe surface modes: **elements** (GA Custom Checkout with PaymentElement) and **form** (beta Checkout Form with built-in UI).
+Headless primitives for building multi-step checkout on top of Stripe. The library owns the state machine, session lifecycle, storage, routing, and the default Stripe surface — your app composes the UI (cart, address, review, confirmation, custom steps).
 
-Our [Storybook Docs](https://constructor-io.github.io/constructorio-ui-checkout) are the best place to explore the behavior and the available configuration options for this UI library.
+Our [Storybook Docs](https://constructor-io.github.io/constructorio-ui-checkout) are the best place to explore behavior, adapters, and full integration recipes.
 
 ## Installation
 
@@ -16,86 +16,139 @@ Our [Storybook Docs](https://constructor-io.github.io/constructorio-ui-checkout)
 npm i @constructor-io/constructorio-ui-checkout
 ```
 
-## Usage
+## Three integration paths, one core
 
-### React Component
+| Path              | Best for                          | Entry                                          |
+| ----------------- | --------------------------------- | ---------------------------------------------- |
+| React             | React apps with the full flow     | `<CheckoutFlowProvider>` + `useCheckoutFlow()` |
+| Vanilla JS (npm)  | Non-React SPAs or custom UIs      | `new CheckoutFlow(config)`                     |
+| Standalone bundle | Server-rendered sites, `<script>` | `window.CioCheckout.resume(config)`            |
+
+All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
+
+## Quick start (React)
 
 ```tsx
-import { CioCheckout } from '@constructor-io/constructorio-ui-checkout';
+import {
+  CheckoutFlowProvider,
+  CheckoutFlowStep,
+  CheckoutStripeStep,
+  CheckoutFulfillmentStep,
+  STRIPE_STEP,
+  useCheckoutFlow,
+} from '@constructor-io/constructorio-ui-checkout';
 import '@constructor-io/constructorio-ui-checkout/styles.css';
 
 function App() {
   return (
-    <CioCheckout
-      session={async () => {
+    <CheckoutFlowProvider
+      steps={[
+        { id: 'cart' },
+        { id: 'address' },
+        { id: STRIPE_STEP },
+        { id: 'fulfill' },
+        { id: 'done' },
+      ]}
+      onCreateSession={async () => {
         const res = await fetch('/api/checkout-session', { method: 'POST' });
         return res.json(); // must return { clientSecret, publishableKey }
       }}
-      triggerLabel="Buy Now"
-      uiMode="form" // 'form' (default) or 'elements'
-      layout="expanded" // 'expanded' (default) or 'compact' — form mode only
-      redirectBehavior="if_required" // 'if_required' (default) or 'always'
-      callbacks={{
-        onComplete: (event) =>
-          console.log('Payment complete!', event.sessionId),
-        onError: (error) => console.error('Checkout error:', error),
-      }}
-    />
+      onEvent={(event) => console.log(event)}
+    >
+      <StartButton />
+      <CheckoutFlowStep id="cart"><MyCart /></CheckoutFlowStep>
+      <CheckoutFlowStep id="address"><MyAddressForm /></CheckoutFlowStep>
+      <CheckoutFlowStep id={STRIPE_STEP}>
+        <CheckoutStripeStep uiMode="form" />
+      </CheckoutFlowStep>
+      <CheckoutFlowStep id="fulfill">
+        <CheckoutFulfillmentStep
+          onFulfill={() => fetch('/api/verify').then((r) => r.json())}
+        />
+      </CheckoutFlowStep>
+      <CheckoutFlowStep id="done"><MyConfirmation /></CheckoutFlowStep>
+    </CheckoutFlowProvider>
   );
+}
+
+function StartButton() {
+  const flow = useCheckoutFlow();
+  if (flow.state.currentStepId !== null) return null;
+  return <button onClick={() => flow.start()}>Checkout</button>;
 }
 ```
 
-### Using the JavaScript Bundle
+You own the button, the layout, and every non-Stripe step. See the [Integration Guide](https://constructor-io.github.io/constructorio-ui-checkout/?path=/docs/getting-started-integration-guide--docs) for routed multi-step, modal presentation, guards, guest vs. login, and mid-flow cart updates.
 
-This is a framework-agnostic method that can be used in any JavaScript project. The `CioCheckout` object provides a simple interface to inject an entire Checkout UI into the provided `selector`.
+## Standalone bundle
+
+For non-React SPAs or `<script>`-tag integrations. The bundle exposes `window.CioCheckout` — a state-only namespace; you drive your own DOM.
 
 ```html
-<div id="checkout-container"></div>
-<script src="@constructor-io/constructorio-ui-checkout/constructorio-ui-checkout-standalone"></script>
+<script src="https://unpkg.com/@constructor-io/constructorio-ui-checkout/dist/standalone/constructorio-ui-checkout.standalone.js"></script>
 <script>
-  CioCheckout.init({
-    selector: '#checkout-container',
-    session: {
-      clientSecret: 'cs_test_...',
-      publishableKey: 'pk_test_...',
-    },
+  const flow = CioCheckout.resume({
+    steps: [{ id: 'cart' }, { id: 'stripe' }, { id: 'done' }],
+    onCreateSession: () =>
+      fetch('/api/checkout-session', { method: 'POST' }).then((r) => r.json()),
+    onEvent: (e) => console.log(e),
   });
+
+  flow.start();
 </script>
 ```
 
-#### Standalone API
+`CioCheckout.resume(config)` creates a `CheckoutFlow` backed by a `sessionStorage` adapter (auto-hydrates on page load) and registers it as the active flow so any other CIO library on the page can reach it.
 
-| Method                                   | Description                                            |
-| ---------------------------------------- | ------------------------------------------------------ |
-| `CioCheckout.init(options)`              | Mount the checkout UI into the given `selector`        |
-| `CioCheckout.update(selector, newProps)` | Update props on an existing instance                   |
-| `CioCheckout.destroy(selector?)`         | Unmount one or all instances                           |
-| `CioCheckout.register(session)`          | Register a shared checkout session globally            |
-| `CioCheckout.isRegistered()`             | Check whether a session has been registered            |
-| `CioCheckout.reset()`                    | Reset checkout state and clear all registered sessions |
-| `CioCheckout.VERSION`                    | The current library version                            |
+### Standalone API
 
-### Registry Pattern
+| Member                             | Description                                                                       |
+| ---------------------------------- | --------------------------------------------------------------------------------- |
+| `CioCheckout.VERSION`              | Library version string                                                            |
+| `CioCheckout.CheckoutFlow`         | Class — instantiate directly if you don't want registry/sessionStorage defaults   |
+| `CioCheckout.createCheckoutFlow`   | Factory returning the framework-agnostic core (no manager wrapper)                |
+| `CioCheckout.createSessionStorageAdapter` | Default sessionStorage-backed `StorageAdapter`                             |
+| `CioCheckout.resume(config)`       | Creates + registers a `CheckoutFlow` with the sessionStorage adapter injected     |
+| `CioCheckout.reset()`              | Destroys the registered flow                                                      |
+| `CioCheckout.checkoutRegistry`     | Singleton registry — `register(flow)`, `getFlow()`, `hasFlow()`, `clear()`        |
 
-For non-React or multi-library setups, register a session globally once and omit the `session` prop:
+## Registry pattern
+
+For multi-library setups where another CIO library (e.g. `pia`) needs to reach the active checkout flow, register once and let others call `getFlow()`:
 
 ```ts
-import { checkoutRegistry } from '@constructor-io/constructorio-ui-checkout';
+import {
+  CheckoutFlow,
+  checkoutRegistry,
+} from '@constructor-io/constructorio-ui-checkout';
 
-checkoutRegistry.register(async () => {
-  const res = await fetch('/api/checkout-session', { method: 'POST' });
-  return res.json();
-});
+const flow = new CheckoutFlow({ steps, onCreateSession, ... });
+checkoutRegistry.register(flow);
+
+// Elsewhere:
+const active = checkoutRegistry.getFlow();
+active?.syncCart(newItems);
 ```
+
+## Persistence & resume
+
+Persistence is opt-in. Pass a `storage` adapter + `storageKey` to `CheckoutFlowProvider` (or `new CheckoutFlow`) and the library serializes `FlowState` on every change and hydrates on next mount:
 
 ```tsx
-// No session prop needed - picks it up from the registry
-<CioCheckout triggerLabel="Buy Now" />
+import { createSessionStorageAdapter } from '@constructor-io/constructorio-ui-checkout';
+
+<CheckoutFlowProvider
+  storage={createSessionStorageAdapter()}
+  storageKey={`checkout-${userId}`}
+  ...
+/>
 ```
+
+Supply your own adapter (Redis, DynamoDB, your API) for B2B pause/resume, cross-device recovery, or emailed abandoned-cart links. See [Persistence & Resume](https://constructor-io.github.io/constructorio-ui-checkout/?path=/docs/adapters-persistence--docs) for the full recipe.
 
 ## Local Development
 
-> **Note:** Local development requires Node.js >= 20. The consuming library supports Node.js >= 18, but the Storybook 9 toolchain used for development (`@storybook/react-vite`, `@storybook/test-runner`, `@chromatic-com/storybook`) requires Node.js >= 20.
+> **Note:** Local development requires Node.js >= 20. The consuming library supports Node.js >= 18, but the Storybook 9 toolchain requires Node.js >= 20.
 
 ### Development scripts
 
@@ -112,9 +165,9 @@ npm run build           # build the library
 npm run build-storybook # build Storybook for deployment
 ```
 
-## Server-Side Setup
+## Server-side setup
 
-The server `ui_mode` depends on which `uiMode` the client uses: `'elements'` mode requires `ui_mode: 'elements'`, and `'form'` mode requires `ui_mode: 'form'` (beta). The example below shows form mode:
+Your backend creates the Stripe Checkout Session and returns `{ clientSecret, publishableKey }` to the library. The server `ui_mode` must match the client `uiMode` you pass to `<CheckoutStripeStep>`: `'form'` (beta) or `'elements'` (GA).
 
 ```js
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -128,7 +181,7 @@ app.post('/api/checkout-session', async (req, res) => {
         price_data: {
           currency: 'usd',
           product_data: { name: 'Product Name' },
-          unit_amount: 4999, // $49.99 in cents
+          unit_amount: 4999,
         },
         quantity: 1,
       },
@@ -152,8 +205,8 @@ app.post('/api/checkout-session', async (req, res) => {
 - React >= 16.12.0
 - React DOM >= 16.12.0
 - @stripe/stripe-js >= 9.3.1
-- @stripe/react-stripe-js >= 6.3.0
-- @constructor-io/constructorio-ui-components >= 1.0.0
+- @stripe/react-stripe-js >= 6.6.0
+- @constructor-io/constructorio-ui-components >= 1.4.0
 
 ## Supporting Docs
 

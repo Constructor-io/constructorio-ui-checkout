@@ -1,0 +1,144 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Core/Custom State" />
+
+# Custom State
+
+Your app almost always has flow-scoped state that doesn't fit in the cart, session, or step id — a gift-wrap toggle, the shipping method the user picked on step 2, a coupon draft the user is typing, a "same as billing" checkbox. Custom state is a typed slot on the flow for exactly that.
+
+The library persists it, restores it on resume, and gives you typed getters/setters. You avoid a parallel React state store for anything that lives inside the checkout flow.
+
+## Under the hood
+
+Custom state is the `TState` generic on `CheckoutFlowConfig<TState>` and `useCheckoutFlow<TState>()`. Internally the library calls it `integratorState` — you'll see that in the API method names (`getIntegratorState`, `setIntegratorState`, `initialState`). Same concept, older name.
+
+## Shape
+
+```ts
+interface CheckoutFlowConfig<TState = unknown> {
+  initialState?: TState;
+  // ... other config
+}
+
+interface CheckoutFlowCore<TState = unknown> {
+  getIntegratorState(): TState;
+  setIntegratorState(updater: (prev: TState) => TState): void;
+  // ... other methods
+}
+```
+
+- `initialState` — the value used if there's nothing to hydrate from storage. Required in the type if `TState` isn't `undefined`-compatible.
+- `getIntegratorState()` — synchronous read of the current value.
+- `setIntegratorState(updater)` — functional setter, same shape as React's `setState(prev => next)`.
+
+## Wiring it up
+
+```tsx
+type MyCheckoutState = {
+  giftWrap: boolean;
+  shippingMethod: 'standard' | 'express' | null;
+  couponDraft: string;
+};
+
+const initialState: MyCheckoutState = {
+  giftWrap: false,
+  shippingMethod: null,
+  couponDraft: '',
+};
+
+<CheckoutFlowProvider<MyCheckoutState>
+  steps={[...]}
+  onCreateSession={...}
+  initialState={initialState}
+>
+  <MyCheckout />
+</CheckoutFlowProvider>
+```
+
+Then anywhere inside the provider:
+
+```tsx
+function ShippingPicker() {
+  const flow = useCheckoutFlow<MyCheckoutState>();
+  const shippingMethod = flow.getIntegratorState().shippingMethod;
+
+  return (
+    <select
+      value={shippingMethod ?? ''}
+      onChange={(e) =>
+        flow.setIntegratorState((prev) => ({
+          ...prev,
+          shippingMethod: e.target.value as 'standard' | 'express',
+        }))
+      }
+    >
+      <option value="standard">Standard</option>
+      <option value="express">Express</option>
+    </select>
+  );
+}
+```
+
+The generic on `useCheckoutFlow<MyCheckoutState>()` is the same one you passed to the provider — TypeScript can't infer it across the context boundary, so re-assert it at each call site.
+
+## When state changes trigger re-renders
+
+`setIntegratorState` mutates the flow store, which triggers the same subscription mechanism as `state.currentStepId` or `cartSnapshot`. Components using `useCheckoutFlow()` re-render on every custom state change.
+
+If you have a large custom state and want granular re-renders, select what you need:
+
+```tsx
+const shippingMethod = useCheckoutFlow<MyCheckoutState>()
+  .getIntegratorState().shippingMethod;
+```
+
+React will bail out of the update if `shippingMethod` is referentially equal to last render. For heavy trees, wrap the read in `useMemo` or use a memoized selector pattern.
+
+## Custom state vs `metadata`
+
+The library exposes two ways to carry extra data. They're not interchangeable.
+
+| | Custom State (`integratorState`) | `metadata` on `FlowState` |
+|---|---|---|
+| **Type** | Fully typed via `TState` | `Record<string, unknown>` |
+| **Access** | `getIntegratorState()` / `setIntegratorState()` | `flow.state.metadata` (read-only from your side) |
+| **Written by** | Your code, via `setIntegratorState` | The library (session hooks, auth), not you |
+| **Persisted** | Yes | Yes |
+| **Intended for** | Merchant-owned flow-scoped state | Library-internal metadata + your `initialState`-adjacent hints |
+
+Use custom state for anything you mutate. `metadata` is a slot the library writes into and you read from.
+
+## Custom state vs your app's Redux/Zustand store
+
+Custom state is scoped to *this specific flow instance*. If your app has global state that outlives checkout (user profile, cart before checkout begins, product catalog), keep it in your normal store and pass it in through props / context.
+
+Custom state is the right home when:
+- The value is only meaningful during the checkout flow (gift-wrap choice on this order).
+- You want it persisted alongside `FlowState` and hydrated on resume automatically.
+- Multiple steps read and write it.
+
+Custom state is the wrong home when:
+- The value is app-wide (auth token, user id).
+- The value is a derived read-only projection of props (cart total).
+
+## Persistence
+
+Custom state is part of `FlowState.metadata` under the hood — persisted by your `StorageAdapter`, hydrated on resume. Everything in the [Persistence](./?path=/docs/adapters-persistence--docs) doc about backend storage, encryption, and abandoned-cart recovery applies unchanged.
+
+If you rename or restructure `TState`, bump your `storageKey` to invalidate stored entries — otherwise a resumed flow will hydrate with a shape that doesn't match your new type.
+
+## Reading in `onCreateSession`
+
+`onCreateSession(state)` receives `FlowState`, not `TState`. If your session creator needs the shipping method or gift-wrap toggle, read it from the flow first:
+
+```tsx
+onCreateSession={async (state) => {
+  const { shippingMethod } = flow.getIntegratorState();
+  return fetch('/api/checkout-session', {
+    method: 'POST',
+    body: JSON.stringify({ items: state.cartSnapshot, shippingMethod }),
+  }).then((r) => r.json());
+}}
+```
+
+Or capture the flow via `useMemo` inside a component and close over it — depends on where you construct the config.

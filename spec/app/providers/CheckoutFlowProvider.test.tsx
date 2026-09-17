@@ -101,6 +101,131 @@ describe('CheckoutFlowProvider + useCheckoutFlow', () => {
   });
 });
 
+describe('CheckoutFlowProvider prop shims', () => {
+  it('guard shim reads the latest guard on each invocation', async () => {
+    let allow = false;
+    const guardFn = vi.fn(() => Promise.resolve(allow));
+    function Harness() {
+      return (
+        <CheckoutFlowProvider
+          steps={[{ id: 'a' }, { id: 'b', guard: () => guardFn() }]}
+          onCreateSession={stubSession}
+        >
+          <>
+            <TriggerNext />
+            <CheckoutFlowStep id="a">a-view</CheckoutFlowStep>
+            <CheckoutFlowStep id="b">b-view</CheckoutFlowStep>
+          </>
+        </CheckoutFlowProvider>
+      );
+    }
+    function TriggerNext() {
+      const flow = useCheckoutFlow();
+      React.useEffect(() => {
+        void flow.start();
+      }, [flow]);
+      return (
+        <button type="button" onClick={() => void flow.next()}>
+          next
+        </button>
+      );
+    }
+    render(<Harness />);
+    expect(await screen.findByText('a-view')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByText('next'));
+    expect(guardFn).toHaveBeenCalled();
+    // guard rejected; still on a
+    expect(screen.getByText('a-view')).toBeInTheDocument();
+    allow = true;
+    await userEvent.setup().click(screen.getByText('next'));
+    expect(await screen.findByText('b-view')).toBeInTheDocument();
+  });
+
+  it('forwards onUpdateSession, onEvent, and authenticate through propsRef shims', async () => {
+    const onUpdateSession = vi.fn(() =>
+      Promise.resolve({
+        clientSecret: 'cs_test_updated_secret',
+        publishableKey: 'pk_test',
+      })
+    );
+    const onEvent = vi.fn();
+    const authenticate = vi.fn(() => Promise.resolve({ userId: 'u1' }));
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <CheckoutFlowProvider
+        steps={[{ id: 'a' }, { id: 'b' }]}
+        onCreateSession={stubSession}
+        onUpdateSession={onUpdateSession}
+        onEvent={onEvent}
+        authenticate={authenticate}
+      >
+        {children}
+      </CheckoutFlowProvider>
+    );
+    const { result } = renderHook(() => useCheckoutFlow(), { wrapper });
+    await act(async () => {
+      await result.current.start();
+    });
+    expect(authenticate).toHaveBeenCalled();
+    await act(async () => {
+      await result.current.createSession();
+    });
+    await act(async () => {
+      await result.current.updateSession({ metadata: { touched: true } });
+    });
+    expect(onUpdateSession).toHaveBeenCalled();
+    expect(onEvent).toHaveBeenCalled();
+  });
+
+  it('router wrap forwards getCurrentPath/push/subscribe through propsRef', async () => {
+    let currentPath = '';
+    const push = vi.fn((p: string) => {
+      currentPath = p;
+    });
+    const subscribers: Array<(p: string) => void> = [];
+    const subscribe = vi.fn((cb: (p: string) => void) => {
+      subscribers.push(cb);
+      return () => {
+        const i = subscribers.indexOf(cb);
+        if (i >= 0) subscribers.splice(i, 1);
+      };
+    });
+    const router = {
+      push,
+      getCurrentPath: () => currentPath,
+      subscribe,
+    };
+    function Harness() {
+      return (
+        <CheckoutFlowProvider
+          steps={[
+            { id: 'a', path: '/a' },
+            { id: 'b', path: '/b' },
+          ]}
+          onCreateSession={stubSession}
+          router={router}
+          autoStart
+        >
+          <CheckoutFlowStep id="a">a-view</CheckoutFlowStep>
+          <CheckoutFlowStep id="b">b-view</CheckoutFlowStep>
+        </CheckoutFlowProvider>
+      );
+    }
+    render(<Harness />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(subscribe).toHaveBeenCalled();
+    expect(push).toHaveBeenCalledWith('/a');
+    // Simulate the app router firing a location change to /b
+    await act(async () => {
+      subscribers[0]?.('/b');
+      await Promise.resolve();
+    });
+    expect(await screen.findByText('b-view')).toBeInTheDocument();
+  });
+});
+
 describe('CheckoutFlowStep', () => {
   it('renders children only when its id matches currentStepId', async () => {
     const user = userEvent.setup();

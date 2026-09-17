@@ -80,8 +80,7 @@ export function CheckoutFlowProvider<TState = unknown>(
       flow.destroy();
       flowRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [flow]);
 
   useEffect(() => {
     if (cart === undefined) return;

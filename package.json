@@ -1,6 +1,6 @@
 {
   "name": "@constructor-io/constructorio-ui-checkout",
-  "version": "1.2.0",
+  "version": "0.0.0",
   "description": "Constructor.io Stripe Embedded Checkout UI library for web applications",
   "author": "Constructor.io Corporation",
   "license": "MIT",
@@ -12,6 +12,16 @@
   "bugs": {
     "url": "https://github.com/Constructor-io/constructorio-ui-checkout/issues"
   },
+  "keywords": [
+    "constructor.io",
+    "checkout",
+    "stripe",
+    "stripe embedded checkout",
+    "payments",
+    "ecommerce",
+    "react",
+    "ui"
+  ],
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
   "types": "dist/types/index.d.ts",

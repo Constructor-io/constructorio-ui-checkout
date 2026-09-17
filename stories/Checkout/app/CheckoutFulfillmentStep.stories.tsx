@@ -29,7 +29,12 @@ function StepShell({ children }: { children: React.ReactNode }) {
   const flow = useCheckoutFlow();
   if (flow.state.currentStepId === null) {
     return (
-      <button type="button" onClick={() => void flow.start()}>
+      <button
+        type="button"
+        onClick={async () => {
+          await flow.start();
+        }}
+      >
         Start
       </button>
     );

@@ -210,8 +210,9 @@ app.post('/api/checkout-session', async (req, res) => {
 
 ## Supporting Docs
 
-- [Stripe Custom Checkout](https://docs.stripe.com/payments/checkout/custom)
-- [Stripe Checkout Form (Beta)](https://docs.stripe.com/payments/checkout/custom/checkout-form)
+- [Stripe Custom Checkout (embedded components)](https://docs.stripe.com/payments/checkout/how-checkout-works?payment-ui=embedded-components)
+- [Stripe Checkout Form (embedded form, beta)](https://docs.stripe.com/payments/checkout/how-checkout-works?payment-ui=embedded-form)
+- [Stripe Embedded Checkout — Quickstart](https://docs.stripe.com/checkout/embedded/quickstart)
 - [Constructor.io](https://constructor.io)
 
 ## Publishing New Versions

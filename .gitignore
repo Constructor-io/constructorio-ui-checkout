@@ -30,3 +30,4 @@ storybook-static
 docs
 
 .DS_Store
+*.tgz

@@ -8,7 +8,7 @@ import {
   toError,
 } from '@src/core/flow/helpers';
 import { FLOW_SCHEMA_VERSION } from '@src/core/types';
-import type { CheckoutItem } from '@src/types';
+import type { CheckoutItem, StripePaymentSession } from '@src/types';
 
 describe(`${makeInitialState.name}: client`, () => {
   it('returns a fresh idle state with the current schema version', () => {
@@ -71,7 +71,7 @@ describe(`${toError.name}: client`, () => {
 describe(`${isValidSessionResponse.name}: client`, () => {
   it('accepts any non-null object', () => {
     expect(isValidSessionResponse({ clientSecret: 'cs_x' })).toBe(true);
-    expect(isValidSessionResponse({ sessionId: 'sess_abc' })).toBe(true);
+    expect(isValidSessionResponse({ sessionId: 'session_abc' })).toBe(true);
     expect(isValidSessionResponse({})).toBe(true);
   });
 
@@ -89,21 +89,21 @@ describe(`${isValidSessionResponse.name}: client`, () => {
 describe(`${getSessionIdFromResponse.name}: client`, () => {
   it('returns an explicit sessionId when present', () => {
     expect(
-      getSessionIdFromResponse({ sessionId: 'sess_abc' }, 'fiserv')
-    ).toBe('sess_abc');
+      getSessionIdFromResponse({ sessionId: 'session_abc' }, 'fiserv')
+    ).toBe('session_abc');
   });
 
   it('prefers explicit sessionId over Stripe clientSecret extraction', () => {
     expect(
       getSessionIdFromResponse(
         {
-          sessionId: 'sess_explicit',
+          sessionId: 'session_explicit',
           clientSecret: 'cs_test_abc_secret_xyz',
           publishableKey: 'pk_test',
-        } as unknown as import('@src/types').StripePaymentSession,
+        } as StripePaymentSession,
         'stripe'
       )
-    ).toBe('sess_explicit');
+    ).toBe('session_explicit');
   });
 
   it('falls back to Stripe clientSecret extraction when sessionId is absent', () => {
@@ -112,7 +112,7 @@ describe(`${getSessionIdFromResponse.name}: client`, () => {
         {
           clientSecret: 'cs_test_abc_secret_xyz',
           publishableKey: 'pk_test',
-        } as unknown as import('@src/types').StripePaymentSession,
+        } as StripePaymentSession,
         'stripe'
       )
     ).toBe('cs_test_abc');

@@ -19,9 +19,11 @@ export function useCioCheckout<
 >(): UseCioCheckoutReturn<TProvider, TState> {
   const untyped = useContext(CioCheckoutContext);
   if (!untyped) {
-    throw new Error('useCioCheckout: must be used inside <CioCheckoutProvider>');
+    throw new Error(
+      'useCioCheckout: must be used inside <CioCheckoutProvider>'
+    );
   }
-  const flow = untyped as unknown as CheckoutFlowCore<TProvider, TState>;
+  const flow = untyped as CheckoutFlowCore<TProvider, TState>;
   const subscribe = useCallback(
     (listener: () => void) => flow.subscribe(listener),
     [flow]

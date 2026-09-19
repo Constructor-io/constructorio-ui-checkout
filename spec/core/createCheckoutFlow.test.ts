@@ -30,7 +30,11 @@ describe(`${createCheckoutFlow.name}: client`, () => {
   describe('construction', () => {
     it('throws when steps is empty', () => {
       expect(() =>
-        createCheckoutFlow({ provider: 'stripe', steps: [], onCreateSession: stubSession })
+        createCheckoutFlow({
+          provider: 'stripe',
+          steps: [],
+          onCreateSession: stubSession,
+        })
       ).toThrow(/non-empty array/);
     });
 

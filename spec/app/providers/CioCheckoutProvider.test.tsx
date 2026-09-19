@@ -84,7 +84,8 @@ describe(`${CioCheckoutProvider.name}: client`, () => {
       const guardFn = vi.fn(() => Promise.resolve(allow));
       function Harness() {
         return (
-          <CioCheckoutProvider provider="stripe"
+          <CioCheckoutProvider
+            provider="stripe"
             steps={[{ id: 'a' }, { id: 'b', guard: () => guardFn() }]}
             onCreateSession={stubSession}
           >
@@ -128,7 +129,8 @@ describe(`${CioCheckoutProvider.name}: client`, () => {
       const authenticate = vi.fn(() => Promise.resolve({ userId: 'u1' }));
 
       const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <CioCheckoutProvider provider="stripe"
+        <CioCheckoutProvider
+          provider="stripe"
           steps={[{ id: 'a' }, { id: 'b' }]}
           onCreateSession={stubSession}
           onUpdateSession={onUpdateSession}
@@ -173,7 +175,8 @@ describe(`${CioCheckoutProvider.name}: client`, () => {
       };
       function Harness() {
         return (
-          <CioCheckoutProvider provider="stripe"
+          <CioCheckoutProvider
+            provider="stripe"
             steps={[
               { id: 'a', path: '/a' },
               { id: 'b', path: '/b' },

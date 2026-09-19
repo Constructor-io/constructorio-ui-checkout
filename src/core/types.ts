@@ -117,9 +117,7 @@ export interface CheckoutFlowConfig<
   storage?: StorageAdapter;
   router?: RouterAdapter;
   authenticate?: () => Promise<AuthResult | null>;
-  onCreateSession: (
-    state: FlowState
-  ) => Promise<PaymentSessionFor<TProvider>>;
+  onCreateSession: (state: FlowState) => Promise<PaymentSessionFor<TProvider>>;
   onUpdateSession?: (
     patch: SessionUpdatePatch
   ) => Promise<PaymentSessionFor<TProvider>>;
@@ -161,9 +159,7 @@ export interface CheckoutFlowCore<
   ): Promise<PaymentSessionFor<TProvider> | null>;
   recreate(): Promise<PaymentSessionFor<TProvider> | null>;
   markExpired(): void;
-  syncCart(
-    items: CheckoutItem[]
-  ): Promise<PaymentSessionFor<TProvider> | null>;
+  syncCart(items: CheckoutItem[]): Promise<PaymentSessionFor<TProvider> | null>;
   setCart(items: CheckoutItem[]): void;
   destroy(): void;
 }

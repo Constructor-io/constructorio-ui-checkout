@@ -13,7 +13,8 @@ const stubSession = () =>
 describe(`${CioCheckoutProvider.name}: server`, () => {
   it('renders without throwing on the server', () => {
     const view = renderToString(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'cart' }]}
         onCreateSession={stubSession}
       >
@@ -25,7 +26,8 @@ describe(`${CioCheckoutProvider.name}: server`, () => {
 
   it('CioFlowStep renders nothing on the server when the flow has not started', () => {
     const view = renderToString(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'cart' }]}
         onCreateSession={stubSession}
       >
@@ -43,7 +45,8 @@ describe(`${CioCheckoutProvider.name}: server`, () => {
       return <div data-status={flow.state.sessionStatus} />;
     }
     const view = renderToString(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'cart' }]}
         onCreateSession={stubSession}
       >
@@ -59,7 +62,8 @@ describe(`${CioCheckoutProvider.name}: server`, () => {
     // more importantly, we assert no exception surfaces.
     expect(() =>
       renderToString(
-        <CioCheckoutProvider provider="stripe"
+        <CioCheckoutProvider
+          provider="stripe"
           steps={[{ id: 'cart' }, { id: 'pay' }]}
           onCreateSession={stubSession}
         >

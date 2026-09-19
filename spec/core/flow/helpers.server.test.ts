@@ -28,15 +28,15 @@ describe(`${toError.name}: server`, () => {
 
 describe(`${isValidSessionResponse.name}: server`, () => {
   it('runs server-side without any browser globals', () => {
-    expect(isValidSessionResponse({ sessionId: 'sess_abc' })).toBe(true);
+    expect(isValidSessionResponse({ sessionId: 'session_abc' })).toBe(true);
   });
 });
 
 describe(`${getSessionIdFromResponse.name}: server`, () => {
   it('runs server-side without any browser globals', () => {
     expect(
-      getSessionIdFromResponse({ sessionId: 'sess_abc' }, 'stripe')
-    ).toBe('sess_abc');
+      getSessionIdFromResponse({ sessionId: 'session_abc' }, 'stripe')
+    ).toBe('session_abc');
   });
 });
 

@@ -12,7 +12,8 @@ const stubSession = () =>
 describe(`${CioFlowStep.name}: server`, () => {
   it('renders nothing on the server when the flow has not started', () => {
     const view = renderToString(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'cart' }]}
         onCreateSession={stubSession}
       >

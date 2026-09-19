@@ -88,9 +88,7 @@ export function CioCheckoutProvider<
   }, [cart, flow]);
 
   return (
-    <CioCheckoutContext.Provider
-      value={flow as unknown as CheckoutFlowCore<string, unknown>}
-    >
+    <CioCheckoutContext.Provider value={flow}>
       {children}
     </CioCheckoutContext.Provider>
   );

@@ -11,7 +11,6 @@ import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
 import checkoutManager from '@src/manager/CheckoutManager';
 import type {
   CheckoutComponentOverrides,
-  CheckoutLayout,
   CheckoutRedirectBehavior,
   CheckoutStripeOptions,
   CheckoutUiMode,
@@ -23,7 +22,6 @@ import './CioStripePaymentStep.css';
 export interface CioStripePaymentStepProps extends CheckoutStripeOptions {
   uiMode?: CheckoutUiMode;
   redirectBehavior?: CheckoutRedirectBehavior;
-  layout?: CheckoutLayout;
   translations?: Translations;
   componentOverrides?: CheckoutComponentOverrides;
   onError?: (error: Error) => void;
@@ -45,9 +43,10 @@ export function CioStripePaymentStep({
   syncAddressCheckbox,
 }: CioStripePaymentStepProps) {
   const flow = useCioCheckout<'stripe', unknown>();
-  if (flow.provider !== 'stripe') {
+  const receivedProvider: string = flow.provider;
+  if (receivedProvider !== 'stripe') {
     throw new Error(
-      `<CioStripePaymentStep> must be rendered inside <CioCheckoutProvider provider="stripe">, received provider="${flow.provider}".`
+      `<CioStripePaymentStep> must be rendered inside <CioCheckoutProvider provider="stripe">, received provider="${receivedProvider}".`
     );
   }
   const session = flow.getSession();

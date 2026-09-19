@@ -26,7 +26,8 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
     );
 
     render(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'fulfill' }]}
         onCreateSession={stubSession}
         autoStart
@@ -57,7 +58,8 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
     }
 
     render(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'fulfill' }, { id: 'done' }]}
         onCreateSession={stubSession}
         autoStart
@@ -90,7 +92,8 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
     });
 
     render(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'fulfill' }, { id: 'done' }]}
         onCreateSession={stubSession}
         autoStart
@@ -121,7 +124,8 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
     }
 
     render(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'fulfill' }, { id: 'done' }]}
         onCreateSession={stubSession}
         autoStart
@@ -142,7 +146,8 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
 
   it('supports a custom render prop', async () => {
     render(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'fulfill' }]}
         onCreateSession={stubSession}
         autoStart
@@ -171,7 +176,8 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
 
   it('handles a throwing onFulfill as a failure', async () => {
     render(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'fulfill' }]}
         onCreateSession={stubSession}
         autoStart

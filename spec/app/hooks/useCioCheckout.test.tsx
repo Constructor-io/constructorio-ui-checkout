@@ -1,6 +1,12 @@
 import { useEffect } from 'react';
 
-import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import type React from 'react';
 
@@ -62,7 +68,7 @@ describe(`${useCioCheckout.name}: client`, () => {
     it('drives a custom-provider flow through mocked steps to completion', async () => {
       const customSession = vi.fn(() =>
         Promise.resolve<CustomSession>({
-          sessionId: 'sess_test_1',
+          sessionId: 'session_test_1',
           approvalToken: 'tok_test',
           merchantId: 'merchant-test',
         })

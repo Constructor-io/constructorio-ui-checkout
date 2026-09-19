@@ -15,7 +15,8 @@ describe(`${CioStripePaymentStep.name}: server`, () => {
   it('is safe to render inside a Provider server-side', () => {
     expect(() =>
       renderToString(
-        <CioCheckoutProvider provider="stripe"
+        <CioCheckoutProvider
+          provider="stripe"
           steps={[{ id: PAYMENT_STEP }]}
           onCreateSession={stubSession}
         >
@@ -29,7 +30,8 @@ describe(`${CioStripePaymentStep.name}: server`, () => {
 
   it('renders nothing before the flow enters the stripe step', () => {
     const view = renderToString(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={stubSession}
       >

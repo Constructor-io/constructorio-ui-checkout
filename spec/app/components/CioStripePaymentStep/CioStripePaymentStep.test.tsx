@@ -24,7 +24,8 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
   it('auto-creates a session on mount and renders the Stripe provider', async () => {
     function Harness() {
       return (
-        <CioCheckoutProvider provider="stripe"
+        <CioCheckoutProvider
+          provider="stripe"
           steps={[{ id: PAYMENT_STEP }]}
           onCreateSession={stubSession}
           autoStart
@@ -42,7 +43,8 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
 
   it('renders form mode (CheckoutForm) by default', async () => {
     render(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={stubSession}
         autoStart
@@ -59,7 +61,8 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
 
   it('renders elements mode when uiMode="elements"', async () => {
     render(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={stubSession}
         autoStart
@@ -86,7 +89,8 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
       );
     }
     render(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: PAYMENT_STEP }, { id: 'done' }]}
         onCreateSession={stubSession}
         autoStart
@@ -103,9 +107,12 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
 
   it('renders nothing while session is being created', async () => {
     render(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: PAYMENT_STEP }]}
-        onCreateSession={() => new Promise<StripePaymentSession>(() => undefined)}
+        onCreateSession={() =>
+          new Promise<StripePaymentSession>(() => undefined)
+        }
         autoStart
       >
         <CioFlowStep id={PAYMENT_STEP}>
@@ -127,7 +134,8 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
     });
     const onError = vi.fn();
     render(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={onCreateSession}
         autoStart
@@ -159,7 +167,8 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
       return null;
     }
     render(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={onCreateSession}
         autoStart

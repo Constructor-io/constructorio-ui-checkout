@@ -17,7 +17,8 @@ describe(`${useCioCheckout.name}: server`, () => {
       return null;
     }
     renderToString(
-      <CioCheckoutProvider provider="stripe"
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'cart' }]}
         onCreateSession={stubSession}
       >

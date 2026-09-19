@@ -14,8 +14,8 @@ Both should point at the same `/login` route and the same `<LoginPage>` componen
 ## One page, two entry paths
 
 ```tsx
-// App root — CheckoutFlowProvider above the router outlet
-<CheckoutFlowProvider
+// App root — CioPaymentProvider above the router outlet
+<CioPaymentProvider
   steps={[
     { id: 'cart', path: '/cart' },
     { id: 'auth', path: '/login' },              // routed auth step
@@ -31,7 +31,7 @@ Both should point at the same `/login` route and the same `<LoginPage>` componen
     <Route path="/checkout/payment" element={<PaymentPage />} />
     <Route path="/order/confirmed" element={<OrderConfirmed />} />
   </Routes>
-</CheckoutFlowProvider>
+</CioPaymentProvider>
 ```
 
 ## LoginPage — checkout-aware, but works standalone
@@ -153,7 +153,7 @@ For a signed-in user who starts checkout, you don't want them to land on `/login
 ```tsx
 const authed = useIsAuthenticated();
 
-<CheckoutFlowProvider
+<CioPaymentProvider
   steps={[
     { id: 'cart', path: '/cart' },
     ...(authed ? [] : [{ id: 'auth', path: '/login' }]),
@@ -176,7 +176,7 @@ function AuthStepBody() {
   return isSignedIn() ? null : <SignInForm />;
 }
 
-<CheckoutFlowStep id="auth"><AuthStepBody /></CheckoutFlowStep>
+<CioFlowStep id="auth"><AuthStepBody /></CioFlowStep>
 ```
 
 Brief render of `null` before the transition. Add a loading state if the flash is visible.
@@ -206,7 +206,7 @@ If you'd rather sign-in be a modal over whatever page the user was on (no URL ch
 { id: 'auth' }
 ```
 
-Render a `<SignInModal>` inside `<CheckoutFlowStep id="auth">`. The modal only appears during checkout — the `<LoginPage>` at `/login` still handles the nav-triggered case. The tradeoffs: no deep link to auth, no browser-back into auth, but no route change either.
+Render a `<SignInModal>` inside `<CioFlowStep id="auth">`. The modal only appears during checkout — the `<LoginPage>` at `/login` still handles the nav-triggered case. The tradeoffs: no deep link to auth, no browser-back into auth, but no route change either.
 
 ## Multi-step auth (OTP, 2FA, passkey, MFA)
 

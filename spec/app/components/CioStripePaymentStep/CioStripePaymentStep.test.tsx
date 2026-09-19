@@ -1,10 +1,10 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
-import { CheckoutFlowStep } from '@src/app/components/CheckoutFlowStep';
-import { CheckoutStripeStep } from '@src/app/components/CheckoutStripeStep';
+import { CioFlowStep } from '@src/app/components/CioFlowStep';
+import { CioStripePaymentStep } from '@src/app/components/CioStripePaymentStep';
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
-import { CheckoutFlowProvider } from '@src/app/providers/CheckoutFlowProvider';
+import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 import { STRIPE_STEP } from '@src/core/types';
 import type { CheckoutSessionResponse } from '@src/types';
 
@@ -15,7 +15,7 @@ const sessionResponse = (id = 'cs_test_abc'): CheckoutSessionResponse => ({
 
 const stubSession = () => Promise.resolve(sessionResponse());
 
-describe(`${CheckoutStripeStep.name}: client`, () => {
+describe(`${CioStripePaymentStep.name}: client`, () => {
   beforeEach(() => {
     (globalThis as Record<string, unknown>).__capturedProviderOptions__ =
       undefined;
@@ -24,15 +24,15 @@ describe(`${CheckoutStripeStep.name}: client`, () => {
   it('auto-creates a session on mount and renders the Stripe provider', async () => {
     function Harness() {
       return (
-        <CheckoutFlowProvider
+        <CioPaymentProvider
           steps={[{ id: STRIPE_STEP }]}
           onCreateSession={stubSession}
           autoStart
         >
-          <CheckoutFlowStep id={STRIPE_STEP}>
-            <CheckoutStripeStep />
-          </CheckoutFlowStep>
-        </CheckoutFlowProvider>
+          <CioFlowStep id={STRIPE_STEP}>
+            <CioStripePaymentStep />
+          </CioFlowStep>
+        </CioPaymentProvider>
       );
     }
     render(<Harness />);
@@ -42,15 +42,15 @@ describe(`${CheckoutStripeStep.name}: client`, () => {
 
   it('renders form mode (CheckoutForm) by default', async () => {
     render(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: STRIPE_STEP }]}
         onCreateSession={stubSession}
         autoStart
       >
-        <CheckoutFlowStep id={STRIPE_STEP}>
-          <CheckoutStripeStep />
-        </CheckoutFlowStep>
-      </CheckoutFlowProvider>
+        <CioFlowStep id={STRIPE_STEP}>
+          <CioStripePaymentStep />
+        </CioFlowStep>
+      </CioPaymentProvider>
     );
     expect(
       await screen.findByTestId('stripe-checkout-form')
@@ -59,15 +59,15 @@ describe(`${CheckoutStripeStep.name}: client`, () => {
 
   it('renders elements mode when uiMode="elements"', async () => {
     render(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: STRIPE_STEP }]}
         onCreateSession={stubSession}
         autoStart
       >
-        <CheckoutFlowStep id={STRIPE_STEP}>
-          <CheckoutStripeStep uiMode="elements" />
-        </CheckoutFlowStep>
-      </CheckoutFlowProvider>
+        <CioFlowStep id={STRIPE_STEP}>
+          <CioStripePaymentStep uiMode="elements" />
+        </CioFlowStep>
+      </CioPaymentProvider>
     );
     expect(
       await screen.findByTestId('stripe-payment-element')
@@ -80,19 +80,19 @@ describe(`${CheckoutStripeStep.name}: client`, () => {
       const flow = useCheckoutFlow();
       events.push(String(flow.state.currentStepId));
       return (
-        <CheckoutFlowStep id={STRIPE_STEP}>
-          <CheckoutStripeStep />
-        </CheckoutFlowStep>
+        <CioFlowStep id={STRIPE_STEP}>
+          <CioStripePaymentStep />
+        </CioFlowStep>
       );
     }
     render(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: STRIPE_STEP }, { id: 'done' }]}
         onCreateSession={stubSession}
         autoStart
       >
         <Harness />
-      </CheckoutFlowProvider>
+      </CioPaymentProvider>
     );
     const user = userEvent.setup();
     await user.click(await screen.findByTestId('stripe-checkout-form'));
@@ -103,15 +103,15 @@ describe(`${CheckoutStripeStep.name}: client`, () => {
 
   it('renders nothing while session is being created', async () => {
     render(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: STRIPE_STEP }]}
         onCreateSession={() => new Promise(() => undefined)}
         autoStart
       >
-        <CheckoutFlowStep id={STRIPE_STEP}>
-          <CheckoutStripeStep />
-        </CheckoutFlowStep>
-      </CheckoutFlowProvider>
+        <CioFlowStep id={STRIPE_STEP}>
+          <CioStripePaymentStep />
+        </CioFlowStep>
+      </CioPaymentProvider>
     );
     await waitFor(() => {
       expect(screen.queryByTestId('stripe-provider')).not.toBeInTheDocument();
@@ -127,15 +127,15 @@ describe(`${CheckoutStripeStep.name}: client`, () => {
     });
     const onError = vi.fn();
     render(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: STRIPE_STEP }]}
         onCreateSession={onCreateSession}
         autoStart
       >
-        <CheckoutFlowStep id={STRIPE_STEP}>
-          <CheckoutStripeStep onError={onError} />
-        </CheckoutFlowStep>
-      </CheckoutFlowProvider>
+        <CioFlowStep id={STRIPE_STEP}>
+          <CioStripePaymentStep onError={onError} />
+        </CioFlowStep>
+      </CioPaymentProvider>
     );
     const retryBtn = await screen.findByRole('button', { name: /retry/i });
     expect(retryBtn).toBeInTheDocument();
@@ -159,16 +159,16 @@ describe(`${CheckoutStripeStep.name}: client`, () => {
       return null;
     }
     render(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: STRIPE_STEP }]}
         onCreateSession={onCreateSession}
         autoStart
       >
         <Grabber />
-        <CheckoutFlowStep id={STRIPE_STEP}>
-          <CheckoutStripeStep />
-        </CheckoutFlowStep>
-      </CheckoutFlowProvider>
+        <CioFlowStep id={STRIPE_STEP}>
+          <CioStripePaymentStep />
+        </CioFlowStep>
+      </CioPaymentProvider>
     );
     await screen.findByTestId('stripe-provider');
     expect(onCreateSession).toHaveBeenCalledTimes(1);

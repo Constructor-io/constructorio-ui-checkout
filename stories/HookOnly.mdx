@@ -4,15 +4,15 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Hook-only composition
 
-`useCheckoutFlow()` is the primitive. `CheckoutFlowStep`, `CheckoutStripeStep`, and `CheckoutFulfillmentStep` are conveniences that read from the same hook. When the built-in components don't fit — you want a custom Stripe wrapper, a non-standard layout, a route-per-step split — drop them and drive the flow from the hook directly.
+`useCheckoutFlow()` is the primitive. `CioFlowStep`, `CioStripePaymentStep`, and `CioFulfillmentStep` are conveniences that read from the same hook. When the built-in components don't fit — you want a custom Stripe wrapper, a non-standard layout, a route-per-step split — drop them and drive the flow from the hook directly.
 
 This page shows what that looks like end-to-end. If the default step components cover you, prefer them; this is the escape hatch, not the default path.
 
 ## What each built-in actually does
 
-- **`<CheckoutFlowStep id="x">`** — three lines. Returns `null` unless `state.currentStepId === 'x'`. You can replace it with any gate.
-- **`<CheckoutStripeStep>`** — kicks off `flow.createSession()` on mount, wraps children in `CheckoutFormProvider` or `CheckoutElementsProvider`, and calls `flow.next()` on confirm. All of that is doable in ~30 lines of your own code.
-- **`<CheckoutFulfillmentStep>`** — polls your `onFulfill` and advances on success. Same pattern.
+- **`<CioFlowStep id="x">`** — three lines. Returns `null` unless `state.currentStepId === 'x'`. You can replace it with any gate.
+- **`<CioStripePaymentStep>`** — kicks off `flow.createSession()` on mount, wraps children in `CheckoutFormProvider` or `CheckoutElementsProvider`, and calls `flow.next()` on confirm. All of that is doable in ~30 lines of your own code.
+- **`<CioFulfillmentStep>`** — polls your `onFulfill` and advances on success. Same pattern.
 
 Bypassing them means you write those ~30 lines yourself, in exchange for owning the render tree.
 
@@ -28,14 +28,14 @@ import {
   useCheckoutForm,
 } from '@stripe/react-stripe-js/checkout';
 import {
-  CheckoutFlowProvider,
+  CioPaymentProvider,
   useCheckoutFlow,
   STRIPE_STEP,
 } from '@constructor-io/constructorio-ui-checkout';
 
 function App() {
   return (
-    <CheckoutFlowProvider
+    <CioPaymentProvider
       steps={[
         { id: 'cart' },
         { id: 'address' },
@@ -47,7 +47,7 @@ function App() {
       }
     >
       <Checkout />
-    </CheckoutFlowProvider>
+    </CioPaymentProvider>
   );
 }
 
@@ -124,7 +124,7 @@ function MyPayButton() {
 }
 ```
 
-Everything the built-in `<CheckoutStripeStep>` did is now visible in `MyStripeStep`. Add whatever you need: a saved-card dropdown, a wallet button, a custom loader, `AddressElement` inside the same provider, per-brand `appearance`.
+Everything the built-in `<CioStripePaymentStep>` did is now visible in `MyStripeStep`. Add whatever you need: a saved-card dropdown, a wallet button, a custom loader, `AddressElement` inside the same provider, per-brand `appearance`.
 
 ## Route-per-step
 
@@ -197,8 +197,8 @@ If you genuinely need distinct payment surfaces on different paths (e.g. Stripe 
 
 ## When to keep the built-ins
 
-- You're on the standard Stripe surface (`PaymentElement` or `CheckoutForm`) with no unusual wrapping — `<CheckoutStripeStep>` is fine, saves you the boilerplate.
-- Your steps map 1:1 to component trees with no routing subtleties — `<CheckoutFlowStep>` is a clean gate.
-- Your fulfillment poll matches the default shape — `<CheckoutFulfillmentStep>` handles the retry/timeout logic.
+- You're on the standard Stripe surface (`PaymentElement` or `CheckoutForm`) with no unusual wrapping — `<CioStripePaymentStep>` is fine, saves you the boilerplate.
+- Your steps map 1:1 to component trees with no routing subtleties — `<CioFlowStep>` is a clean gate.
+- Your fulfillment poll matches the default shape — `<CioFulfillmentStep>` handles the retry/timeout logic.
 
-Mix and match: keep `<CheckoutFlowStep>` for gating and swap only `<CheckoutStripeStep>` for a hook-driven wrapper, or vice versa. Nothing forces all-in on either style.
+Mix and match: keep `<CioFlowStep>` for gating and swap only `<CioStripePaymentStep>` for a hook-driven wrapper, or vice versa. Nothing forces all-in on either style.

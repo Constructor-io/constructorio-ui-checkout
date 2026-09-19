@@ -14,9 +14,9 @@ End-to-end wiring with create, update, expiry, error handling, and analytics —
 
 ```tsx
 import {
-  CheckoutFlowProvider,
-  CheckoutFlowStep,
-  CheckoutStripeStep,
+  CioPaymentProvider,
+  CioFlowStep,
+  CioStripePaymentStep,
   STRIPE_STEP,
   useCheckoutFlow,
 } from '@constructor-io/constructorio-ui-checkout';
@@ -47,7 +47,7 @@ function CheckoutApp() {
   };
 
   return (
-    <CheckoutFlowProvider
+    <CioPaymentProvider
       steps={[
         { id: 'cart', path: '/cart' },
         { id: STRIPE_STEP, path: '/checkout/payment' },
@@ -87,12 +87,12 @@ function CheckoutApp() {
         }
       }}
     >
-      <CheckoutFlowStep id={STRIPE_STEP}>
-        <CheckoutStripeStep
+      <CioFlowStep id={STRIPE_STEP}>
+        <CioStripePaymentStep
           onError={(err) => reportToSentry(err)}
         />
-      </CheckoutFlowStep>
-    </CheckoutFlowProvider>
+      </CioFlowStep>
+    </CioPaymentProvider>
   );
 }
 ```
@@ -165,7 +165,7 @@ If you don't provide `onUpdateSession`, calls to `updateSession()` / `syncCart()
 
 Two ways a session can expire:
 
-**Stripe reports it.** `CheckoutStripeStep` catches this and calls `flow.markExpired()` automatically — you don't need to wire anything. Merchant code just watches `sessionStatus === 'expired'` if it wants to render its own recovery UI.
+**Stripe reports it.** `CioStripePaymentStep` catches this and calls `flow.markExpired()` automatically — you don't need to wire anything. Merchant code just watches `sessionStatus === 'expired'` if it wants to render its own recovery UI.
 
 **You detect it externally** (e.g., server pushed an event over a WebSocket). Call `flow.markExpired()` yourself. It clears the in-memory session, sets status to `expired`, and emits `session.expired`.
 
@@ -179,7 +179,7 @@ await flow.recreate();
 
 ## Handling creation errors
 
-`CheckoutStripeStep` handles this out of the box:
+`CioStripePaymentStep` handles this out of the box:
 
 - When `sessionStatus === 'error'`, it renders an error state with a Retry button that calls `flow.recreate()`.
 - It fires `onError(err)` once when transitioning into `error` (subsequent renders don't refire — tracked via a ref).
@@ -200,13 +200,13 @@ function MyCustomStripePane() {
   if (flow.state.sessionStatus === 'creating' || !flow.getSession()) {
     return <MySkeleton />;
   }
-  return <CheckoutStripeStep />;
+  return <CioStripePaymentStep />;
 }
 ```
 
 ## Error events
 
-All errors emit via `onEvent` (and via `CheckoutFlowProvider`'s error listener). The event has a `source` you can switch on:
+All errors emit via `onEvent` (and via `CioPaymentProvider`'s error listener). The event has a `source` you can switch on:
 
 - **`session.create`** — `onCreateSession` rejected or returned invalid data.
 - **`session.update`** — `onUpdateSession` rejected or returned invalid data.
@@ -223,7 +223,7 @@ onEvent: (event) => {
       source: event.source,
       message: event.error.message,
     });
-    // For `session.create` errors, `CheckoutStripeStep` shows a Retry
+    // For `session.create` errors, `CioStripePaymentStep` shows a Retry
     // button that calls `flow.recreate()`. For other sources, you can
     // wire your own retry (e.g. `flow.recreate()`, `flow.syncCart(...)`).
   }
@@ -245,6 +245,6 @@ Merchants sometimes worry about double-charging if `onCreateSession` runs twice.
 
 ## Sessions and persistence
 
-When storage is enabled and state is rehydrated with `sessionStatus === 'active'` or `'creating'`, the in-memory session (`clientSecret`) is gone — only the flow state was persisted. The library detects this and downgrades to `sessionStatus: 'idle'` on hydrate, so the next `CheckoutStripeStep` mount will call `onCreateSession` again to recover.
+When storage is enabled and state is rehydrated with `sessionStatus === 'active'` or `'creating'`, the in-memory session (`clientSecret`) is gone — only the flow state was persisted. The library detects this and downgrades to `sessionStatus: 'idle'` on hydrate, so the next `CioStripePaymentStep` mount will call `onCreateSession` again to recover.
 
 If you need multi-tab session sharing (both tabs use the same clientSecret), that's outside the checkout library's scope — you'd persist the session via your own channel (BroadcastChannel, server-pushed WebSocket, etc.) and pass it back in.

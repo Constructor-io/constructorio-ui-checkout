@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import type React from 'react';
 
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
-import { CheckoutFlowProvider } from '@src/app/providers/CheckoutFlowProvider';
+import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 import type { CheckoutFlowConfig } from '@src/core/types';
 
 const stubSession = () =>
@@ -27,7 +27,7 @@ describe(`${useCheckoutFlow.name}: client`, () => {
 
   it('exposes flow instance state and updates on transitions', async () => {
     const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <CheckoutFlowProvider {...baseConfig}>{children}</CheckoutFlowProvider>
+      <CioPaymentProvider {...baseConfig}>{children}</CioPaymentProvider>
     );
     const { result } = renderHook(() => useCheckoutFlow(), { wrapper });
     expect(result.current.state.currentStepId).toBeNull();

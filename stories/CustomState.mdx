@@ -46,13 +46,13 @@ const initialState: MyCheckoutState = {
   couponDraft: '',
 };
 
-<CheckoutFlowProvider<MyCheckoutState>
+<CioPaymentProvider<MyCheckoutState>
   steps={[...]}
   onCreateSession={...}
   initialState={initialState}
 >
   <MyCheckout />
-</CheckoutFlowProvider>
+</CioPaymentProvider>
 ```
 
 Then anywhere inside the provider:

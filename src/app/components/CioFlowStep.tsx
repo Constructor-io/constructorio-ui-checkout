@@ -3,15 +3,15 @@ import React from 'react';
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
 import type { StepId } from '@src/core/types';
 
-export interface CheckoutFlowStepProps {
+export interface CioFlowStepProps {
   id: StepId;
   children?: React.ReactNode;
 }
 
-export function CheckoutFlowStep({
+export function CioFlowStep({
   id,
   children,
-}: CheckoutFlowStepProps): React.ReactElement | null {
+}: CioFlowStepProps): React.ReactElement | null {
   const { state } = useCheckoutFlow();
   if (state.currentStepId !== id) return null;
   return <>{children}</>;

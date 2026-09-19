@@ -25,22 +25,22 @@ export {
 } from './core/types';
 
 // React adapter
-export type { CheckoutFlowStepProps } from './app/components/CheckoutFlowStep';
-export { CheckoutFlowStep } from './app/components/CheckoutFlowStep';
+export type { CioFlowStepProps } from './app/components/CioFlowStep';
+export { CioFlowStep } from './app/components/CioFlowStep';
 export type {
-  CheckoutFulfillmentStepProps,
-  FulfillmentRenderProps,
-  FulfillmentResult,
-  FulfillmentStatus,
-} from './app/components/CheckoutFulfillmentStep';
-export { CheckoutFulfillmentStep } from './app/components/CheckoutFulfillmentStep';
-export type { CheckoutStripeStepProps } from './app/components/CheckoutStripeStep';
-export { CheckoutStripeStep } from './app/components/CheckoutStripeStep';
+  CioFulfillmentRenderProps,
+  CioFulfillmentResult,
+  CioFulfillmentStatus,
+  CioFulfillmentStepProps,
+} from './app/components/CioFulfillmentStep';
+export { CioFulfillmentStep } from './app/components/CioFulfillmentStep';
+export type { CioStripePaymentStepProps } from './app/components/CioStripePaymentStep';
+export { CioStripePaymentStep } from './app/components/CioStripePaymentStep';
 export type { UseCheckoutFlowReturn } from './app/hooks/useCheckoutFlow';
 export { useCheckoutFlow } from './app/hooks/useCheckoutFlow';
 export { CheckoutFlowContext } from './app/providers/CheckoutFlowContext';
-export type { CheckoutFlowProviderProps } from './app/providers/CheckoutFlowProvider';
-export { CheckoutFlowProvider } from './app/providers/CheckoutFlowProvider';
+export type { CioPaymentProviderProps } from './app/providers/CioPaymentProvider';
+export { CioPaymentProvider } from './app/providers/CioPaymentProvider';
 
 // Imperative / vanilla JS
 export { CheckoutFlow } from './manager/CheckoutFlow';
@@ -52,7 +52,7 @@ export {
 // i18n helpers
 export { defaultTranslations, t } from './utils/translate';
 
-// Stripe-render types (used with CheckoutStripeStep)
+// Stripe-render types (used with CioStripePaymentStep)
 export type {
   CheckoutItem,
   CheckoutLayout,

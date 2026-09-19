@@ -2,41 +2,41 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
 
-import './CheckoutFulfillmentStep.css';
+import './CioFulfillmentStep.css';
 
-export interface FulfillmentResult {
+export interface CioFulfillmentResult {
   success: boolean;
   message?: string;
 }
 
-export type FulfillmentStatus = 'idle' | 'pending' | 'fulfilled' | 'failed';
+export type CioFulfillmentStatus = 'idle' | 'pending' | 'fulfilled' | 'failed';
 
-export interface FulfillmentRenderProps {
-  status: FulfillmentStatus;
-  result: FulfillmentResult | null;
+export interface CioFulfillmentRenderProps {
+  status: CioFulfillmentStatus;
+  result: CioFulfillmentResult | null;
   retry: () => void;
   advance: () => void;
 }
 
-export interface CheckoutFulfillmentStepProps {
-  onFulfill: () => Promise<FulfillmentResult>;
-  onFulfillComplete?: (result: FulfillmentResult) => void;
+export interface CioFulfillmentStepProps {
+  onFulfill: () => Promise<CioFulfillmentResult>;
+  onFulfillComplete?: (result: CioFulfillmentResult) => void;
   advanceOnSuccess?: boolean;
-  render?: (props: FulfillmentRenderProps) => React.ReactNode;
+  render?: (props: CioFulfillmentRenderProps) => React.ReactNode;
 }
 
 // Verifies the order post-payment. Runs onFulfill once on mount, exposes
 // status + retry via render prop. Advances the flow on success by default.
 // Retry re-runs onFulfill without changing session state.
-export function CheckoutFulfillmentStep({
+export function CioFulfillmentStep({
   onFulfill,
   onFulfillComplete,
   advanceOnSuccess = true,
   render,
-}: CheckoutFulfillmentStepProps) {
+}: CioFulfillmentStepProps) {
   const flow = useCheckoutFlow();
-  const [status, setStatus] = useState<FulfillmentStatus>('idle');
-  const [result, setResult] = useState<FulfillmentResult | null>(null);
+  const [status, setStatus] = useState<CioFulfillmentStatus>('idle');
+  const [result, setResult] = useState<CioFulfillmentResult | null>(null);
   const inFlightRef = useRef(false);
   const mountedRef = useRef(true);
 
@@ -51,7 +51,7 @@ export function CheckoutFulfillmentStep({
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     setStatus('pending');
-    let outcome: FulfillmentResult;
+    let outcome: CioFulfillmentResult;
     try {
       outcome = await onFulfill();
     } catch (reason) {
@@ -134,4 +134,4 @@ export function CheckoutFulfillmentStep({
   return null;
 }
 
-export default CheckoutFulfillmentStep;
+export default CioFulfillmentStep;

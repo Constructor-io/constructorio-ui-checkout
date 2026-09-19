@@ -17,7 +17,7 @@ interface Step {
 }
 ```
 
-That's the whole surface. Nothing else on the step defines rendering — the merchant does that via `<CheckoutFlowStep id="x">` or a custom gate that reads `state.currentStepId`.
+That's the whole surface. Nothing else on the step defines rendering — the merchant does that via `<CioFlowStep id="x">` or a custom gate that reads `state.currentStepId`.
 
 ## Two built-in step IDs
 
@@ -25,7 +25,7 @@ That's the whole surface. Nothing else on the step defines rendering — the mer
 import { CREATE_SESSION_STEP, STRIPE_STEP } from '@constructor-io/constructorio-ui-checkout';
 ```
 
-- **`STRIPE_STEP`** (`'stripe'`) — the ID the built-in `<CheckoutStripeStep>` looks for. Use this constant instead of the literal string so future renames stay backwards-compatible.
+- **`STRIPE_STEP`** (`'stripe'`) — the ID the built-in `<CioStripePaymentStep>` looks for. Use this constant instead of the literal string so future renames stay backwards-compatible.
 - **`CREATE_SESSION_STEP`** (`'createSession'`) — a virtual step ID used in `error` events with `source: 'session.create'`. You do not put this in your `steps` array; the flow uses it internally to describe where a session-creation error originated.
 
 Everything else is your own step ID.
@@ -37,7 +37,7 @@ Pick step IDs by intent, not by component. `'cart'` and `'address'` and `'review
 Typical B2C flow:
 
 ```tsx
-<CheckoutFlowProvider
+<CioPaymentProvider
   steps={[
     { id: 'cart' },
     { id: 'address' },
@@ -72,7 +72,7 @@ steps: [
 **What `optional` does not do:** it does not cause the flow to auto-skip the step on entry. `flow.next()` from the previous step still lands the user on `giftWrap`; only `flow.next({ skip: true })` moves past it. If you want a step to be conditionally absent (e.g. auth when the user is already signed in), build the `steps` array conditionally at mount:
 
 ```tsx
-<CheckoutFlowProvider
+<CioPaymentProvider
   steps={[
     { id: 'cart' },
     ...(authed ? [] : [{ id: 'auth' }]),
@@ -139,23 +139,23 @@ Use conditional rendering inside a step when:
 - The step "runs" either way, just with different UI.
 
 ```tsx
-<CheckoutFlowStep id="checkout">
+<CioFlowStep id="checkout">
   {loggedIn ? <ExpressCheckout /> : <GuestCheckoutForm />}
-</CheckoutFlowStep>
+</CioFlowStep>
 ```
 
 Registering two separate steps for "guest" and "loggedIn" is almost always the wrong shape — it splits the state machine on a runtime toggle rather than on flow position.
 
 ## Custom step components
 
-`<CheckoutFlowStep>` is a three-line convenience — a gate that renders children when `state.currentStepId` matches. You can replace it with any gate that reads the hook. See [Hook-only composition](./?path=/docs/getting-started-hook-only-composition--docs) for the escape hatch pattern.
+`<CioFlowStep>` is a three-line convenience — a gate that renders children when `state.currentStepId` matches. You can replace it with any gate that reads the hook. See [Hook-only composition](./?path=/docs/getting-started-hook-only-composition--docs) for the escape hatch pattern.
 
 For steps that own their side effects (auto-creating a session, polling fulfillment), pair a gate with a hook-driven component:
 
 ```tsx
-<CheckoutFlowStep id="fulfill">
+<CioFlowStep id="fulfill">
   <MyFulfillmentPoll />
-</CheckoutFlowStep>
+</CioFlowStep>
 
 function MyFulfillmentPoll() {
   const flow = useCheckoutFlow();

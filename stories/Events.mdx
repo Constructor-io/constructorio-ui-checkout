@@ -7,7 +7,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 Everything the flow does — starting, transitioning, creating sessions, hitting errors — emits a typed event through the `onEvent` callback. This is where analytics, telemetry, and error reporting hook in.
 
 ```tsx
-<CheckoutFlowProvider
+<CioPaymentProvider
   onEvent={(event) => {
     // Route to Segment, GA, Sentry, DataDog — whatever you use.
   }}
@@ -19,20 +19,31 @@ Everything the flow does — starting, transitioning, creating sessions, hitting
 
 ## Event catalog
 
-`CheckoutEvent` is a discriminated union on `type`. Full shape:
+`CheckoutEvent` is a discriminated union on `type`.
 
-| Event                                 | Payload                                                                          | When                                                                          |
-| ------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `flow.started`                        | —                                                                                | `flow.start()` succeeds (guard passes, first step entered)                    |
-| `flow.completed`                      | —                                                                                | `flow.complete()` called or `flow.next()` past the final step                 |
-| `step.entered`                        | `{ stepId; from: StepId \| null }`                                               | Any transition into a step (start / next / back / goTo / resume)              |
-| `step.exited`                         | `{ stepId; to: StepId \| null }`                                                 | Paired with `step.entered` on transition                                      |
-| `session.created`                     | `{ sessionId }`                                                                  | `onCreateSession` resolves                                                    |
-| `session.updated`                     | `{ sessionId; reason: SessionUpdateReason; diff: SessionDiff }`                  | `onUpdateSession` resolves (cart change, address, tax, shipping, coupon, …)   |
-| `session.expired`                     | `{ sessionId }`                                                                  | Stripe reports session expiry, or `flow.markExpired()` is called              |
-| `session.recreated`                   | `{ oldSessionId; newSessionId }`                                                 | `flow.recreate()` succeeds after expiry                                       |
-| `state.changed`                       | `{ state: FlowState }`                                                           | Any mutation to `FlowState` — high-frequency, prefer targeted events for most uses |
-| `error`                               | `{ source: CheckoutEventErrorSource; error: Error; retry?: () => Promise<void> }` | Any failure — see error sources below                                         |
+| Event                 | Payload            | When                                                                               |
+| --------------------- | ------------------ | ---------------------------------------------------------------------------------- |
+| `flow.started`        | —                  | `flow.start()` succeeds (guard passes, first step entered)                         |
+| `flow.completed`      | —                  | `flow.complete()` called or `flow.next()` past the final step                      |
+| `step.entered`        | `StepTransition`   | Any transition into a step (start / next / back / goTo / resume)                   |
+| `step.exited`         | `StepTransition`   | Paired with `step.entered` on transition                                           |
+| `session.created`     | `SessionRef`       | `onCreateSession` resolves                                                         |
+| `session.updated`     | `SessionUpdate`    | `onUpdateSession` resolves (cart change, address, tax, shipping, coupon, …)        |
+| `session.expired`     | `SessionRef`       | Stripe reports session expiry, or `flow.markExpired()` is called                   |
+| `session.recreated`   | `SessionRecreated` | `flow.recreate()` succeeds after expiry                                            |
+| `state.changed`       | `StateChanged`     | Any mutation to `FlowState` — high-frequency, prefer targeted events for most uses |
+| `error`               | `CheckoutError`    | Any failure — see error sources below                                              |
+
+Payload shapes:
+
+```ts
+type StepTransition   = { stepId: StepId; from: StepId | null };  // step.exited uses `to` instead
+type SessionRef       = { sessionId: string };
+type SessionUpdate    = { sessionId: string; reason: SessionUpdateReason; diff: SessionDiff };
+type SessionRecreated = { oldSessionId: string; newSessionId: string };
+type StateChanged     = { state: FlowState };
+type CheckoutError    = { source: CheckoutEventErrorSource; error: Error; retry?: () => Promise<void> };
+```
 
 ## Error sources
 
@@ -80,7 +91,7 @@ Useful for firing `product_added_to_cart` events without diffing yourself.
 ## Analytics wiring — Segment
 
 ```tsx
-<CheckoutFlowProvider
+<CioPaymentProvider
   onEvent={(event) => {
     switch (event.type) {
       case 'flow.started':
@@ -151,7 +162,7 @@ onEvent={(event) => {
 ## Ordering guarantees
 
 - `step.exited` always fires before `step.entered` on a transition.
-- `session.created` fires before `step.entered` on the payment step when `<CheckoutStripeStep>` auto-creates the session.
+- `session.created` fires before `step.entered` on the payment step when `<CioStripePaymentStep>` auto-creates the session.
 - `flow.completed` fires after the last `step.entered` for the terminal step.
 - `error` events fire *instead of* the success event for the failed operation — a failed `onCreateSession` emits `error` with `source: 'session.create'`, not `session.created`.
 

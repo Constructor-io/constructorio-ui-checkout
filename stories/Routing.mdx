@@ -54,9 +54,9 @@ function useReactRouterAdapter() {
 function App() {
   const router = useReactRouterAdapter();
   return (
-    <CheckoutFlowProvider steps={[...]} router={router} onCreateSession={...}>
+    <CioPaymentProvider steps={[...]} router={router} onCreateSession={...}>
       <Routes>{/* your routes */}</Routes>
-    </CheckoutFlowProvider>
+    </CioPaymentProvider>
   );
 }
 ```

@@ -1,8 +1,8 @@
 import { renderToString } from 'react-dom/server';
 
-import { CheckoutFlowStep } from '@src/app/components/CheckoutFlowStep';
+import { CioFlowStep } from '@src/app/components/CioFlowStep';
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
-import { CheckoutFlowProvider } from '@src/app/providers/CheckoutFlowProvider';
+import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 
 const stubSession = () =>
   Promise.resolve({
@@ -10,29 +10,29 @@ const stubSession = () =>
     publishableKey: 'pk_test',
   });
 
-describe(`${CheckoutFlowProvider.name}: server`, () => {
+describe(`${CioPaymentProvider.name}: server`, () => {
   it('renders without throwing on the server', () => {
     const view = renderToString(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: 'cart' }]}
         onCreateSession={stubSession}
       >
         <span data-testid="child">child</span>
-      </CheckoutFlowProvider>
+      </CioPaymentProvider>
     );
     expect(view).toContain('child');
   });
 
-  it('CheckoutFlowStep renders nothing on the server when the flow has not started', () => {
+  it('CioFlowStep renders nothing on the server when the flow has not started', () => {
     const view = renderToString(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: 'cart' }]}
         onCreateSession={stubSession}
       >
-        <CheckoutFlowStep id="cart">
+        <CioFlowStep id="cart">
           <span data-testid="cart">cart</span>
-        </CheckoutFlowStep>
-      </CheckoutFlowProvider>
+        </CioFlowStep>
+      </CioPaymentProvider>
     );
     expect(view).not.toContain('data-testid="cart"');
   });
@@ -43,12 +43,12 @@ describe(`${CheckoutFlowProvider.name}: server`, () => {
       return <div data-status={flow.state.sessionStatus} />;
     }
     const view = renderToString(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: 'cart' }]}
         onCreateSession={stubSession}
       >
         <Probe />
-      </CheckoutFlowProvider>
+      </CioPaymentProvider>
     );
     expect(view).toContain('data-status="idle"');
   });
@@ -59,12 +59,12 @@ describe(`${CheckoutFlowProvider.name}: server`, () => {
     // more importantly, we assert no exception surfaces.
     expect(() =>
       renderToString(
-        <CheckoutFlowProvider
+        <CioPaymentProvider
           steps={[{ id: 'cart' }, { id: 'pay' }]}
           onCreateSession={stubSession}
         >
           <span />
-        </CheckoutFlowProvider>
+        </CioPaymentProvider>
       )
     ).not.toThrow();
   });

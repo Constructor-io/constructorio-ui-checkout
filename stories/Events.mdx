@@ -7,7 +7,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 Everything the flow does — starting, transitioning, creating sessions, hitting errors — emits a typed event through the `onEvent` callback. This is where analytics, telemetry, and error reporting hook in.
 
 ```tsx
-<CheckoutFlowProvider
+<CioPaymentProvider
   onEvent={(event) => {
     // Route to Segment, GA, Sentry, DataDog — whatever you use.
   }}
@@ -91,7 +91,7 @@ Useful for firing `product_added_to_cart` events without diffing yourself.
 ## Analytics wiring — Segment
 
 ```tsx
-<CheckoutFlowProvider
+<CioPaymentProvider
   onEvent={(event) => {
     switch (event.type) {
       case 'flow.started':
@@ -162,7 +162,7 @@ onEvent={(event) => {
 ## Ordering guarantees
 
 - `step.exited` always fires before `step.entered` on a transition.
-- `session.created` fires before `step.entered` on the payment step when `<CheckoutStripeStep>` auto-creates the session.
+- `session.created` fires before `step.entered` on the payment step when `<CioStripePaymentStep>` auto-creates the session.
 - `flow.completed` fires after the last `step.entered` for the terminal step.
 - `error` events fire *instead of* the success event for the failed operation — a failed `onCreateSession` emits `error` with `source: 'session.create'`, not `session.created`.
 

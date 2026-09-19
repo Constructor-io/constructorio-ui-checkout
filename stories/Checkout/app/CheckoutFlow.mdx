@@ -8,7 +8,7 @@ Headless primitives for building multi-step checkout on top of Stripe. The libra
 
 ## Three integration paths, one core
 
-- **React** — `<CheckoutFlowProvider>` + `useCheckoutFlow()` + `<CheckoutFlowStep>` + `<CheckoutStripeStep>` / `<CheckoutFulfillmentStep>`
+- **React** — `<CioPaymentProvider>` + `useCheckoutFlow()` + `<CioFlowStep>` + `<CioStripePaymentStep>` / `<CioFulfillmentStep>`
 - **Vanilla JS (npm)** — `new CheckoutFlow(config)` from `@constructor-io/constructorio-ui-checkout`
 - **Standalone bundle** — `<script>` tag exposes `window.CioCheckout` with the same class
 
@@ -18,17 +18,17 @@ All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
 
 ```tsx
 import {
-  CheckoutFlowProvider,
-  CheckoutFlowStep,
-  CheckoutStripeStep,
-  CheckoutFulfillmentStep,
+  CioPaymentProvider,
+  CioFlowStep,
+  CioStripePaymentStep,
+  CioFulfillmentStep,
   STRIPE_STEP,
   useCheckoutFlow,
 } from '@constructor-io/constructorio-ui-checkout';
 
 function App() {
   return (
-    <CheckoutFlowProvider
+    <CioPaymentProvider
       steps={[
         { id: 'cart' },
         { id: 'address' },
@@ -40,18 +40,18 @@ function App() {
       onEvent={(event) => console.log(event)}
     >
       <StartButton />
-      <CheckoutFlowStep id="cart"><MyCart /></CheckoutFlowStep>
-      <CheckoutFlowStep id="address"><MyAddressForm /></CheckoutFlowStep>
-      <CheckoutFlowStep id={STRIPE_STEP}>
-        <CheckoutStripeStep uiMode="form" />
-      </CheckoutFlowStep>
-      <CheckoutFlowStep id="fulfill">
-        <CheckoutFulfillmentStep
+      <CioFlowStep id="cart"><MyCart /></CioFlowStep>
+      <CioFlowStep id="address"><MyAddressForm /></CioFlowStep>
+      <CioFlowStep id={STRIPE_STEP}>
+        <CioStripePaymentStep uiMode="form" />
+      </CioFlowStep>
+      <CioFlowStep id="fulfill">
+        <CioFulfillmentStep
           onFulfill={() => fetch('/api/verify').then(r => r.json())}
         />
-      </CheckoutFlowStep>
-      <CheckoutFlowStep id="done"><MyConfirmation /></CheckoutFlowStep>
-    </CheckoutFlowProvider>
+      </CioFlowStep>
+      <CioFlowStep id="done"><MyConfirmation /></CioFlowStep>
+    </CioPaymentProvider>
   );
 }
 
@@ -81,11 +81,11 @@ function BuyButton() {
 There's no `displayMode` prop — you wrap the `stripe` step in your own modal or render it inline:
 
 ```tsx
-<CheckoutFlowStep id={STRIPE_STEP}>
+<CioFlowStep id={STRIPE_STEP}>
   <MyModal open>
-    <CheckoutStripeStep />
+    <CioStripePaymentStep />
   </MyModal>
-</CheckoutFlowStep>
+</CioFlowStep>
 ```
 
 ## Routed multi-step
@@ -93,7 +93,7 @@ There's no `displayMode` prop — you wrap the `stripe` step in your own modal o
 Pass a `router` adapter and give each step a `path`. The library keeps URL and state in sync, so browser back / refresh / deep links all work:
 
 ```tsx
-<CheckoutFlowProvider
+<CioPaymentProvider
   steps={[
     { id: 'cart', path: '/cart' },
     { id: 'address', path: '/checkout/address' },
@@ -107,7 +107,7 @@ Pass a `router` adapter and give each step a `path`. The library keeps URL and s
   onCreateSession={...}
 >
   ...
-</CheckoutFlowProvider>
+</CioPaymentProvider>
 ```
 
 Steps with a `path` participate in URL sync; steps without one render inline/modal.
@@ -117,7 +117,7 @@ Steps with a `path` participate in URL sync; steps without one render inline/mod
 Pass a `storage` adapter and `storageKey` to auto-save state and hydrate on the next mount. The default `createSessionStorageAdapter()` survives page reloads in the same tab. For B2B pause/resume (approver on a different device) provide a custom async adapter that hits your backend.
 
 ```tsx
-<CheckoutFlowProvider
+<CioPaymentProvider
   storage={createSessionStorageAdapter()}
   storageKey={`user-${userId}`}
   ...

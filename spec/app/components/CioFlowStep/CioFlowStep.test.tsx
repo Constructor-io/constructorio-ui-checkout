@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
-import { CheckoutFlowStep } from '@src/app/components/CheckoutFlowStep';
+import { CioFlowStep } from '@src/app/components/CioFlowStep';
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
-import { CheckoutFlowProvider } from '@src/app/providers/CheckoutFlowProvider';
+import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 import type { CheckoutFlowConfig } from '@src/core/types';
 
 const stubSession = () =>
@@ -17,7 +17,7 @@ const baseConfig: CheckoutFlowConfig = {
   onCreateSession: stubSession,
 };
 
-describe(`${CheckoutFlowStep.name}: client`, () => {
+describe(`${CioFlowStep.name}: client`, () => {
   it('renders children only when its id matches currentStepId', async () => {
     const user = userEvent.setup();
     function App() {
@@ -40,16 +40,16 @@ describe(`${CheckoutFlowStep.name}: client`, () => {
           >
             next
           </button>
-          <CheckoutFlowStep id="cart">cart-view</CheckoutFlowStep>
-          <CheckoutFlowStep id="auth">auth-view</CheckoutFlowStep>
-          <CheckoutFlowStep id="pay">pay-view</CheckoutFlowStep>
+          <CioFlowStep id="cart">cart-view</CioFlowStep>
+          <CioFlowStep id="auth">auth-view</CioFlowStep>
+          <CioFlowStep id="pay">pay-view</CioFlowStep>
         </>
       );
     }
     render(
-      <CheckoutFlowProvider {...baseConfig}>
+      <CioPaymentProvider {...baseConfig}>
         <App />
-      </CheckoutFlowProvider>
+      </CioPaymentProvider>
     );
     expect(screen.queryByText('cart-view')).not.toBeInTheDocument();
     await user.click(screen.getByText('start'));

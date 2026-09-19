@@ -3,9 +3,9 @@ import React from 'react';
 import { act, render, renderHook, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
-import { CheckoutFlowStep } from '@src/app/components/CheckoutFlowStep';
+import { CioFlowStep } from '@src/app/components/CioFlowStep';
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
-import { CheckoutFlowProvider } from '@src/app/providers/CheckoutFlowProvider';
+import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 import type { CheckoutFlowConfig } from '@src/core/types';
 
 const stubSession = () =>
@@ -19,11 +19,11 @@ const baseConfig: CheckoutFlowConfig = {
   onCreateSession: stubSession,
 };
 
-describe(`${CheckoutFlowProvider.name}: client`, () => {
+describe(`${CioPaymentProvider.name}: client`, () => {
   describe('lifecycle', () => {
     it('destroys the flow on unmount', () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <CheckoutFlowProvider {...baseConfig}>{children}</CheckoutFlowProvider>
+        <CioPaymentProvider {...baseConfig}>{children}</CioPaymentProvider>
       );
       const { result, unmount } = renderHook(() => useCheckoutFlow(), {
         wrapper,
@@ -35,9 +35,9 @@ describe(`${CheckoutFlowProvider.name}: client`, () => {
 
     it('autoStart triggers start on mount', async () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <CheckoutFlowProvider {...baseConfig} autoStart>
+        <CioPaymentProvider {...baseConfig} autoStart>
           {children}
-        </CheckoutFlowProvider>
+        </CioPaymentProvider>
       );
       const { result } = renderHook(() => useCheckoutFlow(), { wrapper });
       await act(async () => {
@@ -62,9 +62,9 @@ describe(`${CheckoutFlowProvider.name}: client`, () => {
 
       function Harness({ cart }: { cart: typeof cartV1 }) {
         return (
-          <CheckoutFlowProvider {...baseConfig} cart={cart} cartDebounceMs={0}>
+          <CioPaymentProvider {...baseConfig} cart={cart} cartDebounceMs={0}>
             <Probe />
-          </CheckoutFlowProvider>
+          </CioPaymentProvider>
         );
       }
 
@@ -83,16 +83,16 @@ describe(`${CheckoutFlowProvider.name}: client`, () => {
       const guardFn = vi.fn(() => Promise.resolve(allow));
       function Harness() {
         return (
-          <CheckoutFlowProvider
+          <CioPaymentProvider
             steps={[{ id: 'a' }, { id: 'b', guard: () => guardFn() }]}
             onCreateSession={stubSession}
           >
             <>
               <TriggerNext />
-              <CheckoutFlowStep id="a">a-view</CheckoutFlowStep>
-              <CheckoutFlowStep id="b">b-view</CheckoutFlowStep>
+              <CioFlowStep id="a">a-view</CioFlowStep>
+              <CioFlowStep id="b">b-view</CioFlowStep>
             </>
-          </CheckoutFlowProvider>
+          </CioPaymentProvider>
         );
       }
       function TriggerNext() {
@@ -127,7 +127,7 @@ describe(`${CheckoutFlowProvider.name}: client`, () => {
       const authenticate = vi.fn(() => Promise.resolve({ userId: 'u1' }));
 
       const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <CheckoutFlowProvider
+        <CioPaymentProvider
           steps={[{ id: 'a' }, { id: 'b' }]}
           onCreateSession={stubSession}
           onUpdateSession={onUpdateSession}
@@ -135,7 +135,7 @@ describe(`${CheckoutFlowProvider.name}: client`, () => {
           authenticate={authenticate}
         >
           {children}
-        </CheckoutFlowProvider>
+        </CioPaymentProvider>
       );
       const { result } = renderHook(() => useCheckoutFlow(), { wrapper });
       await act(async () => {
@@ -172,7 +172,7 @@ describe(`${CheckoutFlowProvider.name}: client`, () => {
       };
       function Harness() {
         return (
-          <CheckoutFlowProvider
+          <CioPaymentProvider
             steps={[
               { id: 'a', path: '/a' },
               { id: 'b', path: '/b' },
@@ -181,9 +181,9 @@ describe(`${CheckoutFlowProvider.name}: client`, () => {
             router={router}
             autoStart
           >
-            <CheckoutFlowStep id="a">a-view</CheckoutFlowStep>
-            <CheckoutFlowStep id="b">b-view</CheckoutFlowStep>
-          </CheckoutFlowProvider>
+            <CioFlowStep id="a">a-view</CioFlowStep>
+            <CioFlowStep id="b">b-view</CioFlowStep>
+          </CioPaymentProvider>
         );
       }
       render(<Harness />);

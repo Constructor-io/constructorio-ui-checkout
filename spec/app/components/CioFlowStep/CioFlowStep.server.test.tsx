@@ -1,7 +1,7 @@
 import { renderToString } from 'react-dom/server';
 
-import { CheckoutFlowStep } from '@src/app/components/CheckoutFlowStep';
-import { CheckoutFlowProvider } from '@src/app/providers/CheckoutFlowProvider';
+import { CioFlowStep } from '@src/app/components/CioFlowStep';
+import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 
 const stubSession = () =>
   Promise.resolve({
@@ -9,17 +9,17 @@ const stubSession = () =>
     publishableKey: 'pk_test',
   });
 
-describe(`${CheckoutFlowStep.name}: server`, () => {
+describe(`${CioFlowStep.name}: server`, () => {
   it('renders nothing on the server when the flow has not started', () => {
     const view = renderToString(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: 'cart' }]}
         onCreateSession={stubSession}
       >
-        <CheckoutFlowStep id="cart">
+        <CioFlowStep id="cart">
           <span data-testid="cart">cart</span>
-        </CheckoutFlowStep>
-      </CheckoutFlowProvider>
+        </CioFlowStep>
+      </CioPaymentProvider>
     );
     expect(view).not.toContain('data-testid="cart"');
   });

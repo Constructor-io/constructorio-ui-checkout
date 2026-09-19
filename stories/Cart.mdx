@@ -8,12 +8,12 @@ The flow keeps a `cartSnapshot` in state, and it can propagate cart changes to t
 
 ## Three cart-sync APIs
 
-**`cart` prop on `<CheckoutFlowProvider>`** — reactive, debounced. Best when cart lives in React state.
+**`cart` prop on `<CioPaymentProvider>`** — reactive, debounced. Best when cart lives in React state.
 
 ```tsx
 const [cart, setCart] = useState<CheckoutItem[]>([]);
 
-<CheckoutFlowProvider
+<CioPaymentProvider
   cart={cart}
   cartDebounceMs={400}         // default is 400ms
   onCreateSession={...}

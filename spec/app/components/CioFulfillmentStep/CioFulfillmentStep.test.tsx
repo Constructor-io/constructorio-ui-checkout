@@ -1,13 +1,13 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
-import { CheckoutFlowStep } from '@src/app/components/CheckoutFlowStep';
+import { CioFlowStep } from '@src/app/components/CioFlowStep';
 import {
-  CheckoutFulfillmentStep,
-  type FulfillmentResult,
-} from '@src/app/components/CheckoutFulfillmentStep';
+  CioFulfillmentStep,
+  type CioFulfillmentResult,
+} from '@src/app/components/CioFulfillmentStep';
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
-import { CheckoutFlowProvider } from '@src/app/providers/CheckoutFlowProvider';
+import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 
 const stubSession = () =>
   Promise.resolve({
@@ -15,26 +15,26 @@ const stubSession = () =>
     publishableKey: 'pk_test',
   });
 
-describe(`${CheckoutFulfillmentStep.name}: client`, () => {
+describe(`${CioFulfillmentStep.name}: client`, () => {
   it('runs onFulfill and shows the pending UI while in flight', async () => {
-    let resolveFulfill: (r: FulfillmentResult) => void = () => undefined;
+    let resolveFulfill: (r: CioFulfillmentResult) => void = () => undefined;
     const onFulfill = vi.fn(
       () =>
-        new Promise<FulfillmentResult>((resolve) => {
+        new Promise<CioFulfillmentResult>((resolve) => {
           resolveFulfill = resolve;
         })
     );
 
     render(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: 'fulfill' }]}
         onCreateSession={stubSession}
         autoStart
       >
-        <CheckoutFlowStep id="fulfill">
-          <CheckoutFulfillmentStep onFulfill={onFulfill} />
-        </CheckoutFlowStep>
-      </CheckoutFlowProvider>
+        <CioFlowStep id="fulfill">
+          <CioFulfillmentStep onFulfill={onFulfill} />
+        </CioFlowStep>
+      </CioPaymentProvider>
     );
 
     await waitFor(() => {
@@ -57,20 +57,20 @@ describe(`${CheckoutFulfillmentStep.name}: client`, () => {
     }
 
     render(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: 'fulfill' }, { id: 'done' }]}
         onCreateSession={stubSession}
         autoStart
       >
         <Probe />
-        <CheckoutFlowStep id="fulfill">
-          <CheckoutFulfillmentStep
+        <CioFlowStep id="fulfill">
+          <CioFulfillmentStep
             onFulfill={() =>
               Promise.resolve({ success: true, message: 'Order #123' })
             }
           />
-        </CheckoutFlowStep>
-      </CheckoutFlowProvider>
+        </CioFlowStep>
+      </CioPaymentProvider>
     );
 
     await waitFor(() => {
@@ -82,7 +82,7 @@ describe(`${CheckoutFulfillmentStep.name}: client`, () => {
     let call = 0;
     const onFulfill = vi.fn(() => {
       call += 1;
-      return Promise.resolve<FulfillmentResult>(
+      return Promise.resolve<CioFulfillmentResult>(
         call === 1
           ? { success: false, message: 'Verification failed' }
           : { success: true, message: 'Order confirmed' }
@@ -90,18 +90,18 @@ describe(`${CheckoutFulfillmentStep.name}: client`, () => {
     });
 
     render(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: 'fulfill' }, { id: 'done' }]}
         onCreateSession={stubSession}
         autoStart
       >
-        <CheckoutFlowStep id="fulfill">
-          <CheckoutFulfillmentStep
+        <CioFlowStep id="fulfill">
+          <CioFulfillmentStep
             advanceOnSuccess={false}
             onFulfill={onFulfill}
           />
-        </CheckoutFlowStep>
-      </CheckoutFlowProvider>
+        </CioFlowStep>
+      </CioPaymentProvider>
     );
 
     expect(await screen.findByText('Verification failed')).toBeInTheDocument();
@@ -124,19 +124,19 @@ describe(`${CheckoutFulfillmentStep.name}: client`, () => {
     }
 
     render(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: 'fulfill' }, { id: 'done' }]}
         onCreateSession={stubSession}
         autoStart
       >
         <Probe />
-        <CheckoutFlowStep id="fulfill">
-          <CheckoutFulfillmentStep
+        <CioFlowStep id="fulfill">
+          <CioFulfillmentStep
             advanceOnSuccess={false}
             onFulfill={() => Promise.resolve({ success: true })}
           />
-        </CheckoutFlowStep>
-      </CheckoutFlowProvider>
+        </CioFlowStep>
+      </CioPaymentProvider>
     );
 
     expect(await screen.findByText('Order confirmed')).toBeInTheDocument();
@@ -145,13 +145,13 @@ describe(`${CheckoutFulfillmentStep.name}: client`, () => {
 
   it('supports a custom render prop', async () => {
     render(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: 'fulfill' }]}
         onCreateSession={stubSession}
         autoStart
       >
-        <CheckoutFlowStep id="fulfill">
-          <CheckoutFulfillmentStep
+        <CioFlowStep id="fulfill">
+          <CioFulfillmentStep
             onFulfill={() =>
               Promise.resolve({ success: true, message: 'Custom rendered' })
             }
@@ -161,8 +161,8 @@ describe(`${CheckoutFulfillmentStep.name}: client`, () => {
               </div>
             )}
           />
-        </CheckoutFlowStep>
-      </CheckoutFlowProvider>
+        </CioFlowStep>
+      </CioPaymentProvider>
     );
 
     await waitFor(() =>
@@ -174,17 +174,17 @@ describe(`${CheckoutFulfillmentStep.name}: client`, () => {
 
   it('handles a throwing onFulfill as a failure', async () => {
     render(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: 'fulfill' }]}
         onCreateSession={stubSession}
         autoStart
       >
-        <CheckoutFlowStep id="fulfill">
-          <CheckoutFulfillmentStep
+        <CioFlowStep id="fulfill">
+          <CioFulfillmentStep
             onFulfill={() => Promise.reject(new Error('server down'))}
           />
-        </CheckoutFlowStep>
-      </CheckoutFlowProvider>
+        </CioFlowStep>
+      </CioPaymentProvider>
     );
     expect(await screen.findByText('server down')).toBeInTheDocument();
   });

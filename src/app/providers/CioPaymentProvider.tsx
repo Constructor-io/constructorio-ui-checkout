@@ -12,14 +12,14 @@ import type {
 
 import '@src/styles.css';
 
-export interface CheckoutFlowProviderProps<
+export interface CioPaymentProviderProps<
   TState = unknown,
 > extends CheckoutFlowConfig<TState> {
   children?: React.ReactNode;
 }
 
-export function CheckoutFlowProvider<TState = unknown>(
-  props: CheckoutFlowProviderProps<TState>
+export function CioPaymentProvider<TState = unknown>(
+  props: CioPaymentProviderProps<TState>
 ): React.ReactElement {
   const { children, cart } = props;
   const propsRef = useRef(props);

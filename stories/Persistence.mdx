@@ -14,9 +14,9 @@ End-to-end wiring for a B2B pause/resume flow with backend storage, per-order ke
 import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
-  CheckoutFlowProvider,
-  CheckoutFlowStep,
-  CheckoutStripeStep,
+  CioPaymentProvider,
+  CioFlowStep,
+  CioStripePaymentStep,
   STRIPE_STEP,
   useCheckoutFlow,
 } from '@constructor-io/constructorio-ui-checkout';
@@ -68,7 +68,7 @@ function CheckoutApp() {
   );
 
   return (
-    <CheckoutFlowProvider
+    <CioPaymentProvider
       steps={[
         { id: 'cart', path: '/cart' },
         { id: 'approval', path: '/checkout/approval' },
@@ -88,15 +88,15 @@ function CheckoutApp() {
       }}
       autoStart
     >
-      <CheckoutFlowStep id="cart"><CartView /></CheckoutFlowStep>
-      <CheckoutFlowStep id="approval"><ApprovalGate /></CheckoutFlowStep>
-      <CheckoutFlowStep id={STRIPE_STEP}>
-        <CheckoutStripeStep />
-      </CheckoutFlowStep>
-      <CheckoutFlowStep id="done">
+      <CioFlowStep id="cart"><CartView /></CioFlowStep>
+      <CioFlowStep id="approval"><ApprovalGate /></CioFlowStep>
+      <CioFlowStep id={STRIPE_STEP}>
+        <CioStripePaymentStep />
+      </CioFlowStep>
+      <CioFlowStep id="done">
         <OrderConfirmed />
-      </CheckoutFlowStep>
-    </CheckoutFlowProvider>
+      </CioFlowStep>
+    </CioPaymentProvider>
   );
 }
 
@@ -118,11 +118,11 @@ That covers create, resume from URL token, backend transport, auth on every call
 
 ```tsx
 import {
-  CheckoutFlowProvider,
+  CioPaymentProvider,
   createSessionStorageAdapter,
 } from '@constructor-io/constructorio-ui-checkout';
 
-<CheckoutFlowProvider
+<CioPaymentProvider
   storage={createSessionStorageAdapter()}
   storageKey={`checkout-${userId}`}     // scoped per user
   storageSaveDebounceMs={150}            // default
@@ -174,7 +174,7 @@ const backendStorage: StorageAdapter = {
     }),
 };
 
-<CheckoutFlowProvider
+<CioPaymentProvider
   storage={backendStorage}
   storageKey={`b2b-order-${orderId}`}
   ...
@@ -204,7 +204,7 @@ Everything in `FlowState`:
 - `metadata` — your integrator state key
 - `schemaVersion` — used to reject incompatible saves
 
-**What isn't saved: the in-memory `session` (`clientSecret`).** That lives only in RAM. On hydrate with `sessionStatus: 'active'`, the library downgrades to `sessionStatus: 'idle'` so the next `CheckoutStripeStep` mount will call `onCreateSession` again to recover. See [Sessions](./?path=/docs/core-sessions--docs#sessions-and-persistence) for the full explanation.
+**What isn't saved: the in-memory `session` (`clientSecret`).** That lives only in RAM. On hydrate with `sessionStatus: 'active'`, the library downgrades to `sessionStatus: 'idle'` so the next `CioStripePaymentStep` mount will call `onCreateSession` again to recover. See [Sessions](./?path=/docs/core-sessions--docs#sessions-and-persistence) for the full explanation.
 
 ## Storage precedence over deep links
 
@@ -222,8 +222,8 @@ Sequence:
 1. Flow is running; `storage.save()` writes state on every change.
 2. User closes tab. Data is in sessionStorage (survives that tab's session) or your backend (survives everything).
 3. User clicks the emailed link → same URL.
-4. `<CheckoutFlowProvider>` mounts, `start()` hydrates from storage.
-5. Flow enters the persisted step. `CheckoutStripeStep` re-runs `onCreateSession` to recover the session (since `clientSecret` didn't persist).
+4. `<CioPaymentProvider>` mounts, `start()` hydrates from storage.
+5. Flow enters the persisted step. `CioStripePaymentStep` re-runs `onCreateSession` to recover the session (since `clientSecret` didn't persist).
 6. Buyer picks up where they left off.
 
 For emailed recovery, backend storage is the right choice (sessionStorage doesn't survive cross-device). Use the recovery token from the email URL as the `storageKey`:
@@ -232,7 +232,7 @@ For emailed recovery, backend storage is the right choice (sessionStorage doesn'
 const params = new URLSearchParams(location.search);
 const recoveryToken = params.get('recover');   // e.g. '?recover=abc123'
 
-<CheckoutFlowProvider
+<CioPaymentProvider
   storage={backendStorage}
   storageKey={recoveryToken ?? `checkout-${userId}`}
   ...

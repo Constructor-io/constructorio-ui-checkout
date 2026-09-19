@@ -16,7 +16,7 @@ export function useCheckoutFlow<
   const untyped = useContext(CheckoutFlowContext);
   if (!untyped) {
     throw new Error(
-      'useCheckoutFlow: must be used inside <CheckoutFlowProvider>'
+      'useCheckoutFlow: must be used inside <CioPaymentProvider>'
     );
   }
   const flow = untyped as CheckoutFlowCore<TState>;

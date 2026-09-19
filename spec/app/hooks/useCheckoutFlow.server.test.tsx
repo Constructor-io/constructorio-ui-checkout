@@ -1,7 +1,7 @@
 import { renderToString } from 'react-dom/server';
 
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
-import { CheckoutFlowProvider } from '@src/app/providers/CheckoutFlowProvider';
+import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 
 const stubSession = () =>
   Promise.resolve({
@@ -17,12 +17,12 @@ describe(`${useCheckoutFlow.name}: server`, () => {
       return null;
     }
     renderToString(
-      <CheckoutFlowProvider
+      <CioPaymentProvider
         steps={[{ id: 'cart' }]}
         onCreateSession={stubSession}
       >
         <Probe />
-      </CheckoutFlowProvider>
+      </CioPaymentProvider>
     );
     expect(captured).toBeDefined();
     expect(captured?.state.currentStepId).toBeNull();

@@ -18,9 +18,9 @@ import type {
   Translations,
 } from '@src/types';
 
-import './CheckoutStripeStep.css';
+import './CioStripePaymentStep.css';
 
-export interface CheckoutStripeStepProps extends CheckoutStripeOptions {
+export interface CioStripePaymentStepProps extends CheckoutStripeOptions {
   uiMode?: CheckoutUiMode;
   redirectBehavior?: CheckoutRedirectBehavior;
   layout?: CheckoutLayout;
@@ -33,7 +33,7 @@ export interface CheckoutStripeStepProps extends CheckoutStripeOptions {
 // first render, loads Stripe, wraps in the appropriate provider based on
 // uiMode, and advances the flow on completion / marks it expired if Stripe
 // reports session expiry.
-export function CheckoutStripeStep({
+export function CioStripePaymentStep({
   uiMode = 'form',
   redirectBehavior,
   layout,
@@ -47,7 +47,7 @@ export function CheckoutStripeStep({
   defaultValues,
   adaptivePricing,
   syncAddressCheckbox,
-}: CheckoutStripeStepProps) {
+}: CioStripePaymentStepProps) {
   const flow = useCheckoutFlow();
   const session = flow.getSession();
   const sessionStatus = flow.state.sessionStatus;
@@ -176,4 +176,4 @@ export function CheckoutStripeStep({
   );
 }
 
-export default CheckoutStripeStep;
+export default CioStripePaymentStep;

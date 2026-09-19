@@ -2,13 +2,13 @@ import { useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/react';
 
-import { CheckoutFlowStep } from '@src/app/components/CheckoutFlowStep';
+import { CioFlowStep } from '@src/app/components/CioFlowStep';
 import {
-  CheckoutFulfillmentStep,
-  type FulfillmentResult,
-} from '@src/app/components/CheckoutFulfillmentStep';
+  CioFulfillmentStep,
+  type CioFulfillmentResult,
+} from '@src/app/components/CioFulfillmentStep';
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
-import { CheckoutFlowProvider } from '@src/app/providers/CheckoutFlowProvider';
+import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 
 const stubSession = () =>
   Promise.resolve({
@@ -16,14 +16,14 @@ const stubSession = () =>
     publishableKey: 'pk_test_DEMO',
   });
 
-const meta: Meta<typeof CheckoutFulfillmentStep> = {
-  title: 'Components/CheckoutFulfillmentStep',
-  component: CheckoutFulfillmentStep,
+const meta: Meta<typeof CioFulfillmentStep> = {
+  title: 'Components/CioFulfillmentStep',
+  component: CioFulfillmentStep,
   tags: ['autodocs'],
   parameters: { layout: 'padded' },
 };
 export default meta;
-type Story = StoryObj<typeof CheckoutFulfillmentStep>;
+type Story = StoryObj<typeof CioFulfillmentStep>;
 
 function StepShell({ children }: { children: React.ReactNode }) {
   const flow = useCheckoutFlow();
@@ -64,28 +64,28 @@ export const Success: Story = {
     },
   },
   render: () => (
-    <CheckoutFlowProvider
+    <CioPaymentProvider
       steps={[{ id: 'fulfill' }, { id: 'done' }]}
       onCreateSession={stubSession}
     >
       <StepShell>
-        <CheckoutFlowStep id="fulfill">
-          <CheckoutFulfillmentStep
+        <CioFlowStep id="fulfill">
+          <CioFulfillmentStep
             onFulfill={() =>
-              delay<FulfillmentResult>({
+              delay<CioFulfillmentResult>({
                 success: true,
                 message: 'Order #12345 confirmed',
               })
             }
           />
-        </CheckoutFlowStep>
-        <CheckoutFlowStep id="done">
+        </CioFlowStep>
+        <CioFlowStep id="done">
           <div style={{ padding: 12, background: '#e8f6ee', borderRadius: 6 }}>
             <strong>Done</strong> — flow advanced.
           </div>
-        </CheckoutFlowStep>
+        </CioFlowStep>
       </StepShell>
-    </CheckoutFlowProvider>
+    </CioPaymentProvider>
   ),
 };
 
@@ -100,23 +100,23 @@ export const Failure: Story = {
     },
   },
   render: () => (
-    <CheckoutFlowProvider
+    <CioPaymentProvider
       steps={[{ id: 'fulfill' }]}
       onCreateSession={stubSession}
     >
       <StepShell>
-        <CheckoutFlowStep id="fulfill">
-          <CheckoutFulfillmentStep
+        <CioFlowStep id="fulfill">
+          <CioFulfillmentStep
             onFulfill={() =>
-              delay<FulfillmentResult>({
+              delay<CioFulfillmentResult>({
                 success: false,
                 message: 'Warehouse unreachable — try again',
               })
             }
           />
-        </CheckoutFlowStep>
+        </CioFlowStep>
       </StepShell>
-    </CheckoutFlowProvider>
+    </CioPaymentProvider>
   ),
 };
 
@@ -131,16 +131,16 @@ export const CustomRender: Story = {
     },
   },
   render: () => (
-    <CheckoutFlowProvider
+    <CioPaymentProvider
       steps={[{ id: 'fulfill' }, { id: 'done' }]}
       onCreateSession={stubSession}
     >
       <StepShell>
-        <CheckoutFlowStep id="fulfill">
-          <CheckoutFulfillmentStep
+        <CioFlowStep id="fulfill">
+          <CioFulfillmentStep
             advanceOnSuccess={false}
             onFulfill={() =>
-              delay<FulfillmentResult>({
+              delay<CioFulfillmentResult>({
                 success: true,
                 message: 'Order verified',
               })
@@ -174,31 +174,31 @@ export const CustomRender: Story = {
               </div>
             )}
           />
-        </CheckoutFlowStep>
-        <CheckoutFlowStep id="done">
+        </CioFlowStep>
+        <CioFlowStep id="done">
           <div style={{ padding: 12, background: '#e8f6ee', borderRadius: 6 }}>
             <strong>Done</strong>
           </div>
-        </CheckoutFlowStep>
+        </CioFlowStep>
       </StepShell>
-    </CheckoutFlowProvider>
+    </CioPaymentProvider>
   ),
 };
 
 function FlakyDemo() {
   const [attempt, setAttempt] = useState(0);
   return (
-    <CheckoutFlowProvider
+    <CioPaymentProvider
       steps={[{ id: 'fulfill' }, { id: 'done' }]}
       onCreateSession={stubSession}
     >
       <StepShell>
-        <CheckoutFlowStep id="fulfill">
-          <CheckoutFulfillmentStep
+        <CioFlowStep id="fulfill">
+          <CioFulfillmentStep
             onFulfill={() => {
               const next = attempt + 1;
               setAttempt(next);
-              return delay<FulfillmentResult>({
+              return delay<CioFulfillmentResult>({
                 success: next >= 2,
                 message:
                   next >= 2
@@ -207,14 +207,14 @@ function FlakyDemo() {
               });
             }}
           />
-        </CheckoutFlowStep>
-        <CheckoutFlowStep id="done">
+        </CioFlowStep>
+        <CioFlowStep id="done">
           <div style={{ padding: 12, background: '#e8f6ee', borderRadius: 6 }}>
             <strong>Done</strong>
           </div>
-        </CheckoutFlowStep>
+        </CioFlowStep>
       </StepShell>
-    </CheckoutFlowProvider>
+    </CioPaymentProvider>
   );
 }
 

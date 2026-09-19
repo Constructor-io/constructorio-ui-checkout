@@ -218,7 +218,7 @@ app.post('/api/checkout-session', async (req, res) => {
 - [Stripe Custom Checkout (embedded components)](https://docs.stripe.com/payments/checkout/how-checkout-works?payment-ui=embedded-components)
 - [Stripe Checkout Form (embedded form, beta)](https://docs.stripe.com/payments/checkout/how-checkout-works?payment-ui=embedded-form)
 - [Stripe Embedded Checkout — Quickstart](https://docs.stripe.com/checkout/embedded/quickstart)
-- [Constructor.io](https://constructor.io)
+- [Constructor.io](https://constructor.com)
 
 ## Publishing New Versions
 

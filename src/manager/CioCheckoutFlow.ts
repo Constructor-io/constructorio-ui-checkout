@@ -11,7 +11,7 @@ import type { CheckoutItem, CheckoutSessionResponse } from '@src/types';
 // Imperative wrapper over createCheckoutFlow for non-React apps and the
 // standalone bundle. Same behavior, class-shaped surface. All methods delegate
 // to the framework-agnostic core built in src/core.
-export class CheckoutFlow<TState = unknown> {
+export class CioCheckoutFlow<TState = unknown> {
   private readonly core: CheckoutFlowCore<TState>;
 
   constructor(config: CheckoutFlowConfig<TState>) {

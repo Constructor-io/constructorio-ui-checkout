@@ -20,8 +20,8 @@ npm i @constructor-io/constructorio-ui-checkout
 
 | Path              | Best for                          | Entry                                          |
 | ----------------- | --------------------------------- | ---------------------------------------------- |
-| React             | React apps with the full flow     | `<CheckoutFlowProvider>` + `useCheckoutFlow()` |
-| Vanilla JS (npm)  | Non-React SPAs or custom UIs      | `new CheckoutFlow(config)`                     |
+| React             | React apps with the full flow     | `<CioPaymentProvider>` + `useCheckoutFlow()` |
+| Vanilla JS (npm)  | Non-React SPAs or custom UIs      | `new CioCheckoutFlow(config)`                     |
 | Standalone bundle | Server-rendered sites, `<script>` | `window.CioCheckout.resume(config)`            |
 
 All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
@@ -30,10 +30,10 @@ All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
 
 ```tsx
 import {
-  CheckoutFlowProvider,
-  CheckoutFlowStep,
-  CheckoutStripeStep,
-  CheckoutFulfillmentStep,
+  CioPaymentProvider,
+  CioFlowStep,
+  CioStripePaymentStep,
+  CioFulfillmentStep,
   STRIPE_STEP,
   useCheckoutFlow,
 } from '@constructor-io/constructorio-ui-checkout';
@@ -41,7 +41,7 @@ import '@constructor-io/constructorio-ui-checkout/styles.css';
 
 function App() {
   return (
-    <CheckoutFlowProvider
+    <CioPaymentProvider
       steps={[
         { id: 'cart' },
         { id: 'address' },
@@ -56,18 +56,18 @@ function App() {
       onEvent={(event) => console.log(event)}
     >
       <StartButton />
-      <CheckoutFlowStep id="cart"><MyCart /></CheckoutFlowStep>
-      <CheckoutFlowStep id="address"><MyAddressForm /></CheckoutFlowStep>
-      <CheckoutFlowStep id={STRIPE_STEP}>
-        <CheckoutStripeStep uiMode="form" />
-      </CheckoutFlowStep>
-      <CheckoutFlowStep id="fulfill">
-        <CheckoutFulfillmentStep
+      <CioFlowStep id="cart"><MyCart /></CioFlowStep>
+      <CioFlowStep id="address"><MyAddressForm /></CioFlowStep>
+      <CioFlowStep id={STRIPE_STEP}>
+        <CioStripePaymentStep uiMode="form" />
+      </CioFlowStep>
+      <CioFlowStep id="fulfill">
+        <CioFulfillmentStep
           onFulfill={() => fetch('/api/verify').then((r) => r.json())}
         />
-      </CheckoutFlowStep>
-      <CheckoutFlowStep id="done"><MyConfirmation /></CheckoutFlowStep>
-    </CheckoutFlowProvider>
+      </CioFlowStep>
+      <CioFlowStep id="done"><MyConfirmation /></CioFlowStep>
+    </CioPaymentProvider>
   );
 }
 
@@ -98,17 +98,17 @@ For non-React SPAs or `<script>`-tag integrations. The bundle exposes `window.Ci
 </script>
 ```
 
-`CioCheckout.resume(config)` creates a `CheckoutFlow` backed by a `sessionStorage` adapter (auto-hydrates on page load) and registers it as the active flow so any other CIO library on the page can reach it.
+`CioCheckout.resume(config)` creates a `CioCheckoutFlow` backed by a `sessionStorage` adapter (auto-hydrates on page load) and registers it as the active flow so any other CIO library on the page can reach it.
 
 ### Standalone API
 
 | Member                             | Description                                                                       |
 | ---------------------------------- | --------------------------------------------------------------------------------- |
 | `CioCheckout.VERSION`              | Library version string                                                            |
-| `CioCheckout.CheckoutFlow`         | Class — instantiate directly if you don't want registry/sessionStorage defaults   |
+| `CioCheckout.CioCheckoutFlow`         | Class — instantiate directly if you don't want registry/sessionStorage defaults   |
 | `CioCheckout.createCheckoutFlow`   | Factory returning the framework-agnostic core (no manager wrapper)                |
 | `CioCheckout.createSessionStorageAdapter` | Default sessionStorage-backed `StorageAdapter`                             |
-| `CioCheckout.resume(config)`       | Creates + registers a `CheckoutFlow` with the sessionStorage adapter injected     |
+| `CioCheckout.resume(config)`       | Creates + registers a `CioCheckoutFlow` with the sessionStorage adapter injected     |
 | `CioCheckout.reset()`              | Destroys the registered flow                                                      |
 | `CioCheckout.checkoutRegistry`     | Singleton registry — `register(flow)`, `getFlow()`, `hasFlow()`, `clear()`        |
 
@@ -118,11 +118,11 @@ For multi-library setups where another CIO library (e.g. `pia`) needs to reach t
 
 ```ts
 import {
-  CheckoutFlow,
+  CioCheckoutFlow,
   checkoutRegistry,
 } from '@constructor-io/constructorio-ui-checkout';
 
-const flow = new CheckoutFlow({ steps, onCreateSession, ... });
+const flow = new CioCheckoutFlow({ steps, onCreateSession, ... });
 checkoutRegistry.register(flow);
 
 // Elsewhere:
@@ -132,12 +132,12 @@ active?.syncCart(newItems);
 
 ## Persistence & resume
 
-Persistence is opt-in. Pass a `storage` adapter + `storageKey` to `CheckoutFlowProvider` (or `new CheckoutFlow`) and the library serializes `FlowState` on every change and hydrates on next mount:
+Persistence is opt-in. Pass a `storage` adapter + `storageKey` to `CioPaymentProvider` (or `new CioCheckoutFlow`) and the library serializes `FlowState` on every change and hydrates on next mount:
 
 ```tsx
 import { createSessionStorageAdapter } from '@constructor-io/constructorio-ui-checkout';
 
-<CheckoutFlowProvider
+<CioPaymentProvider
   storage={createSessionStorageAdapter()}
   storageKey={`checkout-${userId}`}
   ...
@@ -167,7 +167,7 @@ npm run build-storybook # build Storybook for deployment
 
 ## Server-side setup
 
-Your backend creates the Stripe Checkout Session and returns `{ clientSecret, publishableKey }` to the library. The server `ui_mode` must match the client `uiMode` you pass to `<CheckoutStripeStep>`: `'form'` (beta) or `'elements'` (GA).
+Your backend creates the Stripe Checkout Session and returns `{ clientSecret, publishableKey }` to the library. The server `ui_mode` must match the client `uiMode` you pass to `<CioStripePaymentStep>`: `'form'` (beta) or `'elements'` (GA).
 
 ```js
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);

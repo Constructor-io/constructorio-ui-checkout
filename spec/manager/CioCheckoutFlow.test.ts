@@ -1,6 +1,6 @@
 import { createSessionStorageAdapter } from '@src/core/storage/sessionStorageAdapter';
 import type { CheckoutEvent } from '@src/core/types';
-import { CheckoutFlow } from '@src/manager/CheckoutFlow';
+import { CioCheckoutFlow } from '@src/manager/CioCheckoutFlow';
 import type { CheckoutItem, CheckoutSessionResponse } from '@src/types';
 
 const sessionResponse = (id = 'cs_test_abc'): CheckoutSessionResponse => ({
@@ -10,20 +10,20 @@ const sessionResponse = (id = 'cs_test_abc'): CheckoutSessionResponse => ({
 
 const stubSession = () => Promise.resolve(sessionResponse());
 
-describe(`${CheckoutFlow.name}: client`, () => {
+describe(`${CioCheckoutFlow.name}: client`, () => {
   it('constructs with a valid config', () => {
-    const flow = new CheckoutFlow({
+    const flow = new CioCheckoutFlow({
       steps: [{ id: 'a' }],
       onCreateSession: stubSession,
     });
-    expect(flow).toBeInstanceOf(CheckoutFlow);
+    expect(flow).toBeInstanceOf(CioCheckoutFlow);
     expect(flow.getState().currentStepId).toBeNull();
   });
 
   it('throws on invalid config (empty steps)', () => {
     expect(
       () =>
-        new CheckoutFlow({
+        new CioCheckoutFlow({
           steps: [],
           onCreateSession: stubSession,
         })
@@ -32,7 +32,7 @@ describe(`${CheckoutFlow.name}: client`, () => {
 
   it('subscribes to state changes and unsubscribes cleanly', async () => {
     const states: string[] = [];
-    const flow = new CheckoutFlow({
+    const flow = new CioCheckoutFlow({
       steps: [{ id: 'a' }, { id: 'b' }],
       onCreateSession: stubSession,
     });
@@ -53,7 +53,7 @@ describe(`${CheckoutFlow.name}: client`, () => {
 
   it('drives full navigation lifecycle', async () => {
     const events: CheckoutEvent[] = [];
-    const flow = new CheckoutFlow({
+    const flow = new CioCheckoutFlow({
       steps: [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
       onCreateSession: stubSession,
       onEvent: (e) => events.push(e),
@@ -71,7 +71,7 @@ describe(`${CheckoutFlow.name}: client`, () => {
     const onUpdateSession = vi.fn(() =>
       Promise.resolve(sessionResponse('cs_test_updated'))
     );
-    const flow = new CheckoutFlow({
+    const flow = new CioCheckoutFlow({
       steps: [{ id: 'a' }],
       onCreateSession,
       onUpdateSession,
@@ -91,7 +91,7 @@ describe(`${CheckoutFlow.name}: client`, () => {
     const onUpdateSession = vi.fn(() =>
       Promise.resolve(sessionResponse('cs_test_updated'))
     );
-    const flow = new CheckoutFlow({
+    const flow = new CioCheckoutFlow({
       steps: [{ id: 'a' }],
       onCreateSession: stubSession,
       onUpdateSession,
@@ -110,7 +110,7 @@ describe(`${CheckoutFlow.name}: client`, () => {
   it('persists and resumes via a storage adapter', async () => {
     globalThis.sessionStorage.clear();
     const storage = createSessionStorageAdapter();
-    const first = new CheckoutFlow({
+    const first = new CioCheckoutFlow({
       steps: [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
       onCreateSession: stubSession,
       storage,
@@ -122,7 +122,7 @@ describe(`${CheckoutFlow.name}: client`, () => {
     await new Promise((r) => setTimeout(r, 10));
     first.destroy();
 
-    const second = new CheckoutFlow({
+    const second = new CioCheckoutFlow({
       steps: [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
       onCreateSession: stubSession,
       storage,
@@ -136,7 +136,7 @@ describe(`${CheckoutFlow.name}: client`, () => {
 
   it('emits typed error events for session and storage failures', async () => {
     const events: CheckoutEvent[] = [];
-    const flow = new CheckoutFlow({
+    const flow = new CioCheckoutFlow({
       steps: [{ id: 'a' }],
       onCreateSession: () => Promise.reject(new Error('server down')),
       onEvent: (e) => events.push(e),
@@ -151,7 +151,7 @@ describe(`${CheckoutFlow.name}: client`, () => {
   });
 
   it('stores integrator-owned metadata via setIntegratorState', () => {
-    const flow = new CheckoutFlow<{ tag: string }>({
+    const flow = new CioCheckoutFlow<{ tag: string }>({
       steps: [{ id: 'a' }],
       onCreateSession: stubSession,
       initialState: { tag: 'initial' },
@@ -164,7 +164,7 @@ describe(`${CheckoutFlow.name}: client`, () => {
 
   it('delegates goTo/complete/hydrate/reset/clearState/recreate/syncCart to the core', async () => {
     const events: CheckoutEvent[] = [];
-    const flow = new CheckoutFlow({
+    const flow = new CioCheckoutFlow({
       steps: [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
       onCreateSession: stubSession,
       onEvent: (e) => events.push(e),
@@ -213,7 +213,7 @@ describe(`${CheckoutFlow.name}: client`, () => {
     );
     const storage = createSessionStorageAdapter();
     globalThis.sessionStorage.clear();
-    const flow = new CheckoutFlow({
+    const flow = new CioCheckoutFlow({
       steps: [{ id: 'a' }],
       onCreateSession: stubSession,
       onUpdateSession,

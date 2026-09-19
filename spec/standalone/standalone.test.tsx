@@ -28,8 +28,8 @@ describe('CioCheckout: client', () => {
     expect(CioCheckout.VERSION.length).toBeGreaterThan(0);
   });
 
-  it('exposes the CheckoutFlow class', () => {
-    expect(typeof CioCheckout.CheckoutFlow).toBe('function');
+  it('exposes the CioCheckoutFlow class', () => {
+    expect(typeof CioCheckout.CioCheckoutFlow).toBe('function');
   });
 
   it('exposes createCheckoutFlow factory', () => {

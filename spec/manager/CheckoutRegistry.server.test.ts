@@ -1,4 +1,4 @@
-import { CheckoutFlow } from '@src/manager/CheckoutFlow';
+import { CioCheckoutFlow } from '@src/manager/CioCheckoutFlow';
 import checkoutRegistry, {
   CheckoutRegistry,
 } from '@src/manager/CheckoutRegistry';
@@ -18,7 +18,7 @@ describe(`${CheckoutRegistry.name}: server`, () => {
   });
 
   it('register works without browser globals', () => {
-    const flow = new CheckoutFlow({
+    const flow = new CioCheckoutFlow({
       steps: [{ id: 'a' }],
       onCreateSession: () =>
         Promise.resolve({

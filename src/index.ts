@@ -43,7 +43,7 @@ export type { CioPaymentProviderProps } from './app/providers/CioPaymentProvider
 export { CioPaymentProvider } from './app/providers/CioPaymentProvider';
 
 // Imperative / vanilla JS
-export { CheckoutFlow } from './manager/CheckoutFlow';
+export { CioCheckoutFlow } from './manager/CioCheckoutFlow';
 export {
   CheckoutRegistry,
   default as checkoutRegistry,

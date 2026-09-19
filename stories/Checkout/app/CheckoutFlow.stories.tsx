@@ -16,7 +16,7 @@ const stubSession = () =>
   });
 
 const meta: Meta<typeof CioPaymentProvider> = {
-  title: 'Components/CheckoutFlow',
+  title: 'Components/CioCheckoutFlow',
   component: CioPaymentProvider,
   tags: ['autodocs'],
   parameters: { layout: 'padded' },

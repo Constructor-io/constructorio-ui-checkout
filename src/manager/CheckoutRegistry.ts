@@ -1,26 +1,26 @@
 import { createSessionStorageAdapter } from '@src/core/storage/sessionStorageAdapter';
 import type { CheckoutFlowConfig } from '@src/core/types';
-import { CheckoutFlow } from '@src/manager/CheckoutFlow';
+import { CioCheckoutFlow } from '@src/manager/CioCheckoutFlow';
 
 // Non-React singleton so any CIO library on the page (e.g. pia dispatching an
-// add-to-cart mid-flow) can reach the active CheckoutFlow instance. resume()
+// add-to-cart mid-flow) can reach the active CioCheckoutFlow instance. resume()
 // is the typical entry point for the standalone-bundle case — it creates a
 // flow with the default sessionStorage adapter, registers it, and returns it.
-// Stored as `CheckoutFlow<unknown>` for type erasure — the merchant asserts
+// Stored as `CioCheckoutFlow<unknown>` for type erasure — the merchant asserts
 // TState on read via getFlow/resume generics.
 class CheckoutRegistry {
-  private flow: CheckoutFlow<unknown> | null = null;
+  private flow: CioCheckoutFlow<unknown> | null = null;
 
-  register<TState>(flow: CheckoutFlow<TState>): void {
-    const erased = flow as CheckoutFlow<unknown>;
+  register<TState>(flow: CioCheckoutFlow<TState>): void {
+    const erased = flow as CioCheckoutFlow<unknown>;
     if (this.flow && this.flow !== erased) {
       this.flow.destroy();
     }
     this.flow = erased;
   }
 
-  getFlow<TState = unknown>(): CheckoutFlow<TState> | null {
-    return this.flow as CheckoutFlow<TState> | null;
+  getFlow<TState = unknown>(): CioCheckoutFlow<TState> | null {
+    return this.flow as CioCheckoutFlow<TState> | null;
   }
 
   hasFlow(): boolean {
@@ -36,9 +36,9 @@ class CheckoutRegistry {
 
   resume<TState = unknown>(
     config: CheckoutFlowConfig<TState>
-  ): CheckoutFlow<TState> {
+  ): CioCheckoutFlow<TState> {
     const storage = config.storage ?? createSessionStorageAdapter();
-    const flow = new CheckoutFlow<TState>({ ...config, storage });
+    const flow = new CioCheckoutFlow<TState>({ ...config, storage });
     this.register(flow);
     return flow;
   }

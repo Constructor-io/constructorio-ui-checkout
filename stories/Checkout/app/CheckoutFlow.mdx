@@ -2,14 +2,14 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 <Meta title="Getting Started/Integration Guide" />
 
-# CheckoutFlow
+# CioCheckoutFlow
 
 Headless primitives for building multi-step checkout on top of Stripe. The library gives you the state machine, session lifecycle, storage, and Stripe surface — your app composes the UI.
 
 ## Three integration paths, one core
 
 - **React** — `<CioPaymentProvider>` + `useCheckoutFlow()` + `<CioFlowStep>` + `<CioStripePaymentStep>` / `<CioFulfillmentStep>`
-- **Vanilla JS (npm)** — `new CheckoutFlow(config)` from `@constructor-io/constructorio-ui-checkout`
+- **Vanilla JS (npm)** — `new CioCheckoutFlow(config)` from `@constructor-io/constructorio-ui-checkout`
 - **Standalone bundle** — `<script>` tag exposes `window.CioCheckout` with the same class
 
 All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
@@ -134,9 +134,9 @@ Two options, both funnel through `onUpdateSession`:
 ## Vanilla JS
 
 ```js
-import { CheckoutFlow } from '@constructor-io/constructorio-ui-checkout';
+import { CioCheckoutFlow } from '@constructor-io/constructorio-ui-checkout';
 
-const flow = new CheckoutFlow({
+const flow = new CioCheckoutFlow({
   steps: [{ id: 'createSession' }, { id: 'stripe' }],
   onCreateSession: () => fetch('/api/session').then(r => r.json()),
 });

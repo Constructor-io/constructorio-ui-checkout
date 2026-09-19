@@ -1,4 +1,4 @@
-import { CheckoutFlow } from '@src/manager/CheckoutFlow';
+import { CioCheckoutFlow } from '@src/manager/CioCheckoutFlow';
 import checkoutRegistry, {
   CheckoutRegistry,
 } from '@src/manager/CheckoutRegistry';
@@ -30,7 +30,7 @@ describe(`${CheckoutRegistry.name}: client`, () => {
   });
 
   it('register stores an existing flow instance', () => {
-    const flow = new CheckoutFlow({
+    const flow = new CioCheckoutFlow({
       steps: [{ id: 'a' }],
       onCreateSession: stubSession,
     });
@@ -40,14 +40,14 @@ describe(`${CheckoutRegistry.name}: client`, () => {
   });
 
   it('register destroys the previous flow when replacing', () => {
-    const first = new CheckoutFlow({
+    const first = new CioCheckoutFlow({
       steps: [{ id: 'a' }],
       onCreateSession: stubSession,
     });
     const destroySpy = vi.spyOn(first, 'destroy');
     checkoutRegistry.register(first);
 
-    const second = new CheckoutFlow({
+    const second = new CioCheckoutFlow({
       steps: [{ id: 'b' }],
       onCreateSession: stubSession,
     });
@@ -58,7 +58,7 @@ describe(`${CheckoutRegistry.name}: client`, () => {
   });
 
   it('clear destroys and unregisters the flow', () => {
-    const flow = new CheckoutFlow({
+    const flow = new CioCheckoutFlow({
       steps: [{ id: 'a' }],
       onCreateSession: stubSession,
     });
@@ -76,7 +76,7 @@ describe(`${CheckoutRegistry.name}: client`, () => {
       storageKey: 'user-r',
       storageSaveDebounceMs: 0,
     });
-    expect(flow).toBeInstanceOf(CheckoutFlow);
+    expect(flow).toBeInstanceOf(CioCheckoutFlow);
     expect(checkoutRegistry.getFlow()).toBe(flow);
 
     await flow.start();
@@ -105,6 +105,6 @@ describe(`${CheckoutRegistry.name}: client`, () => {
       storage: custom,
       storageKey: 'user-c',
     });
-    expect(flow).toBeInstanceOf(CheckoutFlow);
+    expect(flow).toBeInstanceOf(CioCheckoutFlow);
   });
 });

@@ -2,6 +2,7 @@ import {
   computeCartDiff,
   extractSessionId,
   findStepIndex,
+  getSessionIdFromResponse,
   isValidSessionResponse,
   makeInitialState,
   toError,
@@ -27,9 +28,15 @@ describe(`${toError.name}: server`, () => {
 
 describe(`${isValidSessionResponse.name}: server`, () => {
   it('runs server-side without any browser globals', () => {
+    expect(isValidSessionResponse({ sessionId: 'sess_abc' })).toBe(true);
+  });
+});
+
+describe(`${getSessionIdFromResponse.name}: server`, () => {
+  it('runs server-side without any browser globals', () => {
     expect(
-      isValidSessionResponse({ clientSecret: 'x', publishableKey: 'y' })
-    ).toBe(true);
+      getSessionIdFromResponse({ sessionId: 'sess_abc' }, 'stripe')
+    ).toBe('sess_abc');
   });
 });
 

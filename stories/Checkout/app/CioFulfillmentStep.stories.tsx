@@ -7,8 +7,8 @@ import {
   type CioFulfillmentResult,
   CioFulfillmentStep,
 } from '@src/app/components/CioFulfillmentStep';
-import { useCioPayment } from '@src/app/hooks/useCioPayment';
-import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
+import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
+import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 
 const stubSession = () =>
   Promise.resolve({
@@ -26,7 +26,7 @@ export default meta;
 type Story = StoryObj<typeof CioFulfillmentStep>;
 
 function StepShell({ children }: { children: React.ReactNode }) {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   if (flow.state.currentStepId === null) {
     return (
       <button
@@ -64,7 +64,8 @@ export const Success: Story = {
     },
   },
   render: () => (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[{ id: 'fulfill' }, { id: 'done' }]}
       onCreateSession={stubSession}
     >
@@ -85,7 +86,7 @@ export const Success: Story = {
           </div>
         </CioFlowStep>
       </StepShell>
-    </CioPaymentProvider>
+    </CioCheckoutProvider>
   ),
 };
 
@@ -100,7 +101,8 @@ export const Failure: Story = {
     },
   },
   render: () => (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[{ id: 'fulfill' }]}
       onCreateSession={stubSession}
     >
@@ -116,7 +118,7 @@ export const Failure: Story = {
           />
         </CioFlowStep>
       </StepShell>
-    </CioPaymentProvider>
+    </CioCheckoutProvider>
   ),
 };
 
@@ -131,7 +133,8 @@ export const CustomRender: Story = {
     },
   },
   render: () => (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[{ id: 'fulfill' }, { id: 'done' }]}
       onCreateSession={stubSession}
     >
@@ -181,14 +184,15 @@ export const CustomRender: Story = {
           </div>
         </CioFlowStep>
       </StepShell>
-    </CioPaymentProvider>
+    </CioCheckoutProvider>
   ),
 };
 
 function FlakyDemo() {
   const [attempt, setAttempt] = useState(0);
   return (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[{ id: 'fulfill' }, { id: 'done' }]}
       onCreateSession={stubSession}
     >
@@ -214,7 +218,7 @@ function FlakyDemo() {
           </div>
         </CioFlowStep>
       </StepShell>
-    </CioPaymentProvider>
+    </CioCheckoutProvider>
   );
 }
 

@@ -2,9 +2,9 @@ import { makeCtx } from '@spec/factory/flowCtx';
 
 import { createSessionManager } from '@src/core/flow/sessionManager';
 import type { SessionUpdatePatch } from '@src/core/types';
-import type { CheckoutSessionResponse } from '@src/types';
+import type { StripePaymentSession } from '@src/types';
 
-const goodResponse = (id = 'cs_test_abc'): CheckoutSessionResponse => ({
+const goodResponse = (id = 'cs_test_abc'): StripePaymentSession => ({
   clientSecret: `${id}_secret_xyz`,
   publishableKey: 'pk_test',
 });
@@ -63,13 +63,11 @@ describe(`${createSessionManager.name}: client`, () => {
       );
     });
 
-    it('emits error when onCreateSession returns invalid shape', async () => {
+    it('emits error when onCreateSession resolves with a non-object', async () => {
       const { ctx, events } = makeCtx({
         config: {
           onCreateSession: () =>
-            Promise.resolve({
-              wrong: true,
-            } as unknown as CheckoutSessionResponse),
+            Promise.resolve(null as unknown as StripePaymentSession),
         },
       });
       const sm = createSessionManager(ctx, {
@@ -162,13 +160,11 @@ describe(`${createSessionManager.name}: client`, () => {
       );
     });
 
-    it('emits error when onUpdateSession returns invalid shape', async () => {
+    it('emits error when onUpdateSession resolves with a non-object', async () => {
       const { ctx, events } = makeCtx({
         config: {
           onUpdateSession: () =>
-            Promise.resolve({
-              bad: true,
-            } as unknown as CheckoutSessionResponse),
+            Promise.resolve(null as unknown as StripePaymentSession),
         },
       });
       const sm = createSessionManager(ctx, {
@@ -238,10 +234,10 @@ describe(`${createSessionManager.name}: client`, () => {
 
   describe('drainQueue', () => {
     it('resolves queued (not-yet-running) updates with null', async () => {
-      let resolveFirst: (v: CheckoutSessionResponse) => void = () => {};
+      let resolveFirst: (v: StripePaymentSession) => void = () => {};
       const onUpdateSession = vi.fn(
         () =>
-          new Promise<CheckoutSessionResponse>((resolve) => {
+          new Promise<StripePaymentSession>((resolve) => {
             resolveFirst = resolve;
           })
       );
@@ -262,10 +258,10 @@ describe(`${createSessionManager.name}: client`, () => {
 
   describe('destroy-mid-flight guards', () => {
     it('drops createSession response when destroyed mid-flight', async () => {
-      let resolveCreate: (r: CheckoutSessionResponse) => void = () => {};
+      let resolveCreate: (r: StripePaymentSession) => void = () => {};
       const onCreateSession = vi.fn(
         () =>
-          new Promise<CheckoutSessionResponse>((resolve) => {
+          new Promise<StripePaymentSession>((resolve) => {
             resolveCreate = resolve;
           })
       );
@@ -281,10 +277,10 @@ describe(`${createSessionManager.name}: client`, () => {
     });
 
     it('drops updateSession response when destroyed mid-flight', async () => {
-      let resolveUpdate: (r: CheckoutSessionResponse) => void = () => {};
+      let resolveUpdate: (r: StripePaymentSession) => void = () => {};
       const onUpdateSession = vi.fn(
         () =>
-          new Promise<CheckoutSessionResponse>((resolve) => {
+          new Promise<StripePaymentSession>((resolve) => {
             resolveUpdate = resolve;
           })
       );
@@ -300,12 +296,12 @@ describe(`${createSessionManager.name}: client`, () => {
     });
 
     it('recreate returns null when destroyed mid-flight', async () => {
-      let resolveSecond: (r: CheckoutSessionResponse) => void = () => {};
+      let resolveSecond: (r: StripePaymentSession) => void = () => {};
       let call = 0;
       const onCreateSession = vi.fn(() => {
         call += 1;
         if (call === 1) return Promise.resolve(goodResponse('cs_v1'));
-        return new Promise<CheckoutSessionResponse>((resolve) => {
+        return new Promise<StripePaymentSession>((resolve) => {
           resolveSecond = resolve;
         });
       });
@@ -335,7 +331,7 @@ describe(`${createSessionManager.name}: client`, () => {
 
   describe('null-sessionId branches', () => {
     it('markExpired does not emit session.expired when clientSecret has no id', async () => {
-      const badResponse: CheckoutSessionResponse = {
+      const badResponse: StripePaymentSession = {
         clientSecret: '_secret_leading',
         publishableKey: 'pk_test',
       };
@@ -354,7 +350,7 @@ describe(`${createSessionManager.name}: client`, () => {
     });
 
     it('recreate does not emit session.recreated when new clientSecret has no id', async () => {
-      const badResponse: CheckoutSessionResponse = {
+      const badResponse: StripePaymentSession = {
         clientSecret: '_secret_bad',
         publishableKey: 'pk_test',
       };
@@ -377,7 +373,7 @@ describe(`${createSessionManager.name}: client`, () => {
     });
 
     it('createSession does not emit session.created when clientSecret has no id', async () => {
-      const badResponse: CheckoutSessionResponse = {
+      const badResponse: StripePaymentSession = {
         clientSecret: '_secret_bad',
         publishableKey: 'pk_test',
       };
@@ -397,10 +393,10 @@ describe(`${createSessionManager.name}: client`, () => {
 
   describe('reset', () => {
     it('clears the session and drains still-queued updates', async () => {
-      let firstResolve: (v: CheckoutSessionResponse) => void = () => {};
+      let firstResolve: (v: StripePaymentSession) => void = () => {};
       const onUpdateSession = vi.fn(
         () =>
-          new Promise<CheckoutSessionResponse>((resolve) => {
+          new Promise<StripePaymentSession>((resolve) => {
             firstResolve = resolve;
           })
       );

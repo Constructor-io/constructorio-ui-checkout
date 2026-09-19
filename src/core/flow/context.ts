@@ -7,8 +7,11 @@ import type {
   Step,
 } from '../types';
 
-export interface FlowContext<TState = unknown> {
-  config: CheckoutFlowConfig<TState>;
+export interface FlowContext<
+  TProvider extends string = string,
+  TState = unknown,
+> {
+  config: CheckoutFlowConfig<TProvider, TState>;
   steps: Step[];
   store: ReturnType<typeof createStore<FlowState>>;
   events: ReturnType<typeof createEmitter>;

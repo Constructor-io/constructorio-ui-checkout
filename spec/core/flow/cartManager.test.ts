@@ -2,9 +2,9 @@ import { makeCtx } from '@spec/factory/flowCtx';
 
 import { createCartManager } from '@src/core/flow/cartManager';
 import { createSessionManager } from '@src/core/flow/sessionManager';
-import type { CheckoutSessionResponse } from '@src/types';
+import type { StripePaymentSession } from '@src/types';
 
-const goodResponse = (id = 'cs_test_abc'): CheckoutSessionResponse => ({
+const goodResponse = (id = 'cs_test_abc'): StripePaymentSession => ({
   clientSecret: `${id}_secret_xyz`,
   publishableKey: 'pk_test',
 });
@@ -93,10 +93,10 @@ describe(`${createCartManager.name}: client`, () => {
     });
 
     it('chains through an in-flight createSession and applies the update after', async () => {
-      let resolveCreate: (r: CheckoutSessionResponse) => void = () => {};
+      let resolveCreate: (r: StripePaymentSession) => void = () => {};
       const onCreateSession = vi.fn(
         () =>
-          new Promise<CheckoutSessionResponse>((resolve) => {
+          new Promise<StripePaymentSession>((resolve) => {
             resolveCreate = resolve;
           })
       );

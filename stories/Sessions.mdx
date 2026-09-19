@@ -4,21 +4,21 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Sessions
 
-A Stripe session is what the flow creates to render the payment surface. It has a `clientSecret` (identifies the session), a `publishableKey` (drives `loadStripe`), and a status the flow tracks in `state.sessionStatus`.
+A Stripe session is what the flow creates to render the payment surface. It carries a `clientSecret` (identifies the session), a `publishableKey` (drives `loadStripe`), and a status the flow tracks in `state.sessionStatus`.
 
-Most merchant bugs in checkout come from misunderstanding the interaction between flow state, session state, and network state. This page walks through all three.
+Most checkout bugs stem from misunderstanding the interaction between flow state, session state, and network state. This page walks through all three.
 
 ## Full example
 
-End-to-end wiring with create, update, expiry, error handling, and analytics — the shape most production integrations end up with:
+End-to-end wiring with create, update, expiry, error handling, and analytics — the shape most production integrations settle on:
 
 ```tsx
 import {
-  CioPaymentProvider,
+  CioCheckoutProvider,
   CioFlowStep,
   CioStripePaymentStep,
   PAYMENT_STEP,
-  useCioPayment,
+  useCioCheckout,
 } from '@constructor-io/constructorio-ui-checkout';
 import { getCart, getCartId } from './lib/cart';
 import { getAuthToken } from './lib/auth';
@@ -47,7 +47,8 @@ function CheckoutApp() {
   };
 
   return (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[
         { id: 'cart', path: '/cart' },
         { id: PAYMENT_STEP, path: '/checkout/payment' },
@@ -92,24 +93,24 @@ function CheckoutApp() {
           onError={(err) => reportToSentry(err)}
         />
       </CioFlowStep>
-    </CioPaymentProvider>
+    </CioCheckoutProvider>
   );
 }
 ```
 
-That's a complete wiring. The sections below unpack each piece.
+That is a complete wiring. The sections below unpack each piece.
 
 ## Session status
 
 `state.sessionStatus` is a discriminated string:
 
-- **`idle`** — no session yet. Set on init and after `reset()` / `clearState()` / `recreate()`.
+- **`idle`** — no session yet. Set on init and after `reset()`, `clearState()`, or `recreate()`.
 - **`creating`** — `onCreateSession` is in flight.
 - **`active`** — a session exists and is usable for payment.
-- **`expired`** — the session was live but is no longer valid (Stripe reported expiry, or you called `markExpired()`).
-- **`error`** — `onCreateSession` rejected or returned an invalid shape. Retry via `recreate()`.
+- **`expired`** — the session was live but is no longer valid (Stripe reported expiry or `markExpired()` was called).
+- **`error`** — `onCreateSession` rejected or returned an invalid shape. Retry with `recreate()`.
 
-The transitions are always driven by the library, not by merchant code:
+The library drives every transition; merchant code does not:
 
 ```
 idle ─(createSession)→ creating ──(success)→ active
@@ -119,11 +120,11 @@ idle ─(createSession)→ creating ──(success)→ active
 active ──(Stripe reports expired / markExpired())→ expired ──(recreate)→ creating → ...
 ```
 
-You never write to `sessionStatus` directly. You call the methods; the status updates.
+Never write to `sessionStatus` directly. Call the methods; the status updates.
 
 ## `onCreateSession` contract
 
-The library will call `onCreateSession(state)` with the current `FlowState` (cart, metadata, whatever). You return a `Promise` that resolves with:
+The library calls `onCreateSession(state)` with the current `FlowState` (cart, metadata, etc.). Return a `Promise` that resolves with:
 
 ```ts
 {
@@ -132,7 +133,7 @@ The library will call `onCreateSession(state)` with the current `FlowState` (car
 }
 ```
 
-Reject the promise on failure. The library validates the shape — if `clientSecret` or `publishableKey` isn't a string, it treats that as a rejection.
+Reject the promise on failure. The library validates the shape — if `clientSecret` or `publishableKey` is not a string, the resolution is treated as a rejection.
 
 ```tsx
 const onCreateSession = async () => {
@@ -147,7 +148,7 @@ const onCreateSession = async () => {
 
 ## `onUpdateSession` contract
 
-Optional. Called whenever `updateSession()` or `syncCart()` fires. Same shape in / out — merchants typically use it to push updated cart items back to Stripe.
+Optional. Called whenever `updateSession()` or `syncCart()` fires. Same shape in and out; typical use is pushing updated cart items back to Stripe.
 
 ```tsx
 const onUpdateSession = async (patch) => {
@@ -159,15 +160,15 @@ const onUpdateSession = async (patch) => {
 };
 ```
 
-If you don't provide `onUpdateSession`, calls to `updateSession()` / `syncCart()` after session creation will emit an error event.
+Without an `onUpdateSession`, calls to `updateSession()` or `syncCart()` after session creation emit an error event.
 
 ## Handling expiry
 
 Two ways a session can expire:
 
-**Stripe reports it.** `CioStripePaymentStep` catches this and calls `flow.markExpired()` automatically — you don't need to wire anything. Merchant code just watches `sessionStatus === 'expired'` if it wants to render its own recovery UI.
+**Stripe reports it.** `CioStripePaymentStep` catches this and calls `flow.markExpired()` automatically — no wiring required. Merchant code watches `sessionStatus === 'expired'` when it wants to render its own recovery UI.
 
-**You detect it externally** (e.g., server pushed an event over a WebSocket). Call `flow.markExpired()` yourself. It clears the in-memory session, sets status to `expired`, and emits `session.expired`.
+**Detected externally** (e.g. a server-pushed WebSocket event). Call `flow.markExpired()`. It clears the in-memory session, sets status to `expired`, and emits `session.expired`.
 
 Either way, recovery is one call:
 
@@ -175,20 +176,20 @@ Either way, recovery is one call:
 await flow.recreate();
 ```
 
-`recreate()` invalidates the old session, runs `onCreateSession` again with the *current* state (so any cart mutations since expiry are included), and emits `session.recreated` with both the old and new session IDs — useful if you attach analytics to session IDs.
+`recreate()` invalidates the old session, runs `onCreateSession` again with the *current* state (so any cart mutations since expiry are included), and emits `session.recreated` with both old and new session IDs — useful when analytics is keyed by session id.
 
 ## Handling creation errors
 
 `CioStripePaymentStep` handles this out of the box:
 
 - When `sessionStatus === 'error'`, it renders an error state with a Retry button that calls `flow.recreate()`.
-- It fires `onError(err)` once when transitioning into `error` (subsequent renders don't refire — tracked via a ref).
+- It fires `onError(err)` once on transition into `error`; subsequent renders do not refire (tracked via a ref).
 
-If you want your own recovery UI, render conditionally on `sessionStatus`:
+For custom recovery UI, render conditionally on `sessionStatus`:
 
 ```tsx
 function MyCustomStripePane() {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   if (flow.state.sessionStatus === 'error') {
     return (
       <MyErrorBanner
@@ -206,7 +207,7 @@ function MyCustomStripePane() {
 
 ## Error events
 
-All errors emit via `onEvent` (and via `CioPaymentProvider`'s error listener). The event has a `source` you can switch on:
+All errors emit through `onEvent` (and through `CioCheckoutProvider`'s error listener). The event carries a `source` to switch on:
 
 - **`session.create`** — `onCreateSession` rejected or returned invalid data.
 - **`session.update`** — `onUpdateSession` rejected or returned invalid data.
@@ -224,27 +225,27 @@ onEvent: (event) => {
       message: event.error.message,
     });
     // For `session.create` errors, `CioStripePaymentStep` shows a Retry
-    // button that calls `flow.recreate()`. For other sources, you can
-    // wire your own retry (e.g. `flow.recreate()`, `flow.syncCart(...)`).
+    // button that calls `flow.recreate()`. For other sources, wire your
+    // own retry (e.g. `flow.recreate()`, `flow.syncCart(...)`).
   }
 }
 ```
 
 ## Late-response protection
 
-`onCreateSession` and `onUpdateSession` are network calls. If the user calls `reset()`, `markExpired()`, `recreate()`, or `destroy()` while a request is in flight, the library discards the stale response — it won't resurrect an invalidated session.
+`onCreateSession` and `onUpdateSession` are network calls. When the caller invokes `reset()`, `markExpired()`, `recreate()`, or `destroy()` while a request is in flight, the library discards the stale response — an invalidated session cannot be resurrected.
 
-Practically: if your server takes 5 seconds to return a session and the user closes the modal after 2 seconds, the eventual response is dropped. You don't have to write cancellation logic yourself.
+In practice: if the server takes 5 seconds to return a session and the user closes the modal after 2 seconds, the eventual response is dropped. No cancellation logic required on the caller side.
 
 ## Idempotency
 
-Merchants sometimes worry about double-charging if `onCreateSession` runs twice. Two protections:
+Two protections against double-charging if `onCreateSession` runs twice:
 
 1. **The flow coalesces concurrent creates.** Multiple simultaneous `createSession()` calls return the same in-flight promise. Only one HTTP request goes out.
-2. **You should also send an idempotency key server-side.** Stripe supports this natively. Use a stable **pre-existing** identifier — cart id, order id, or a checkout-attempt id you generate on the client. Do *not* use the session id: it's returned *by* the create call, so it doesn't exist at request time. The [full example above](#full-example) uses `getCartId()` as the `Idempotency-Key` header for exactly this reason.
+2. **Send an idempotency key server-side as well.** Stripe supports this natively. Use a stable **pre-existing** identifier — cart id, order id, or a checkout-attempt id generated on the client. Do *not* use the session id: it is returned *by* the create call, so it does not exist at request time. The [full example above](#full-example) uses `getCartId()` as the `Idempotency-Key` header for this reason.
 
 ## Sessions and persistence
 
-When storage is enabled and state is rehydrated with `sessionStatus === 'active'` or `'creating'`, the in-memory session (`clientSecret`) is gone — only the flow state was persisted. The library detects this and downgrades to `sessionStatus: 'idle'` on hydrate, so the next `CioStripePaymentStep` mount will call `onCreateSession` again to recover.
+When storage is enabled and state rehydrates with `sessionStatus === 'active'` or `'creating'`, the in-memory session (`clientSecret`) is gone — only flow state was persisted. The library detects this and downgrades to `sessionStatus: 'idle'` on hydrate, so the next `CioStripePaymentStep` mount calls `onCreateSession` again to recover.
 
-If you need multi-tab session sharing (both tabs use the same clientSecret), that's outside the checkout library's scope — you'd persist the session via your own channel (BroadcastChannel, server-pushed WebSocket, etc.) and pass it back in.
+Multi-tab session sharing (both tabs using the same clientSecret) is outside the library's scope — persist the session through a separate channel (BroadcastChannel, server-pushed WebSocket) and pass it back in.

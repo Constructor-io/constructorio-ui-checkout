@@ -3,7 +3,10 @@ import type { Step } from '../types';
 import type { FlowContext } from './context';
 import { toError } from './helpers';
 
-export function createGuards(ctx: FlowContext) {
+export function createGuards<
+  TProvider extends string = string,
+  TState = unknown,
+>(ctx: FlowContext<TProvider, TState>) {
   const runGuard = async (step: Step): Promise<boolean> => {
     if (!step.guard) return true;
     try {

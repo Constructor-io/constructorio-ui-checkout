@@ -4,7 +4,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Steps
 
-A step is the smallest unit the flow tracks. Your step list defines the state machine — the library manages `currentStepId`, transitions, guards, and URL sync; you own what renders inside each step.
+A step is the smallest unit the flow tracks. The step list defines the state machine — the library manages `currentStepId`, transitions, guards, and URL sync; you own what renders inside each step.
 
 ## `Step` shape
 
@@ -17,7 +17,7 @@ interface Step {
 }
 ```
 
-That's the whole surface. Nothing else on the step defines rendering — the merchant does that via `<CioFlowStep id="x">` or a custom gate that reads `state.currentStepId`.
+That is the entire surface. Nothing else on the step defines rendering — that happens via `<CioFlowStep id="x">` or a custom gate that reads `state.currentStepId`.
 
 ## Two built-in step IDs
 
@@ -25,19 +25,20 @@ That's the whole surface. Nothing else on the step defines rendering — the mer
 import { CREATE_SESSION_STEP, PAYMENT_STEP } from '@constructor-io/constructorio-ui-checkout';
 ```
 
-- **`PAYMENT_STEP`** (`'stripe'`) — the ID the built-in `<CioStripePaymentStep>` looks for. Use this constant instead of the literal string so future renames stay backwards-compatible.
-- **`CREATE_SESSION_STEP`** (`'createSession'`) — a virtual step ID used in `error` events with `source: 'session.create'`. You do not put this in your `steps` array; the flow uses it internally to describe where a session-creation error originated.
+- **`PAYMENT_STEP`** (`'stripe'`) — the ID the built-in `<CioStripePaymentStep>` looks for. Use the constant rather than the literal string so future renames stay backwards-compatible.
+- **`CREATE_SESSION_STEP`** (`'createSession'`) — a virtual step ID used in `error` events with `source: 'session.create'`. Do not put it in the `steps` array; the flow uses it internally to describe where a session-creation error originated.
 
-Everything else is your own step ID.
+All other step IDs are merchant-defined.
 
 ## Designing your step list
 
-Pick step IDs by intent, not by component. `'cart'` and `'address'` and `'review'` describe *what the user is doing*; `'CartPage'` couples the flow to a component name that might move.
+Pick step IDs by intent, not by component. `'cart'`, `'address'`, and `'review'` describe *what the user is doing*; `'CartPage'` couples the flow to a component name that may move.
 
 Typical B2C flow:
 
 ```tsx
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   steps={[
     { id: 'cart' },
     { id: 'address' },
@@ -69,10 +70,11 @@ steps: [
 { id: 'giftWrap', optional: true }
 ```
 
-**What `optional` does not do:** it does not cause the flow to auto-skip the step on entry. `flow.next()` from the previous step still lands the user on `giftWrap`; only `flow.next({ skip: true })` moves past it. If you want a step to be conditionally absent (e.g. auth when the user is already signed in), build the `steps` array conditionally at mount:
+**What `optional` does not do:** it does not cause the flow to auto-skip the step on entry. `flow.next()` from the previous step still lands the user on `giftWrap`; only `flow.next({ skip: true })` moves past it. For a step that should be conditionally absent (e.g. auth when the user is already signed in), build the `steps` array conditionally at mount:
 
 ```tsx
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   steps={[
     { id: 'cart' },
     ...(authed ? [] : [{ id: 'auth' }]),
@@ -84,11 +86,11 @@ steps: [
 
 See [Auth — Sending users to /login](./?path=/docs/core-auth--docs#sending-users-to-login-with-a-returnto) for the full pattern.
 
-Don't use `optional` for A/B branching — that's a guard concern, not an optionality concern.
+Do not use `optional` for A/B branching — that is a guard concern, not an optionality concern.
 
 ## Guards
 
-`guard` runs before a transition *into* the step. Return `false` (or reject) to block the transition; the flow stays where it was and emits an `error` event with `source: 'guard'`.
+`guard` runs before a transition *into* the step. Return `false` (or reject) to block the transition; the flow stays put and emits an `error` event with `source: 'guard'`.
 
 **Auth gate:**
 
@@ -124,7 +126,7 @@ Don't use `optional` for A/B branching — that's a guard concern, not an option
 }
 ```
 
-Guards can be sync or async. Async guards should return quickly — the flow shows no step during the check.
+Guards can be sync or async. Async guards should return quickly — the flow renders no step during the check.
 
 ## Guard vs branch inside a step
 
@@ -136,7 +138,7 @@ Use a guard when:
 
 Use conditional rendering inside a step when:
 - The variant depends on user input (guest vs sign-in on the same page).
-- The step "runs" either way, just with different UI.
+- The step runs either way, only with different UI.
 
 ```tsx
 <CioFlowStep id="checkout">
@@ -148,7 +150,7 @@ Registering two separate steps for "guest" and "loggedIn" is almost always the w
 
 ## Custom step components
 
-`<CioFlowStep>` is a three-line convenience — a gate that renders children when `state.currentStepId` matches. You can replace it with any gate that reads the hook. See [Hook-only composition](./?path=/docs/getting-started-hook-only-composition--docs) for the escape hatch pattern.
+`<CioFlowStep>` is a three-line convenience — a gate that renders children when `state.currentStepId` matches. Replace it with any gate that reads the hook. See [Hook-only composition](./?path=/docs/getting-started-hook-only-composition--docs) for the escape-hatch pattern.
 
 For steps that own their side effects (auto-creating a session, polling fulfillment), pair a gate with a hook-driven component:
 
@@ -158,7 +160,7 @@ For steps that own their side effects (auto-creating a session, polling fulfillm
 </CioFlowStep>
 
 function MyFulfillmentPoll() {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   useEffect(() => {
     const timer = setInterval(async () => {
       const result = await checkFulfillment(flow.state.sessionId);
@@ -172,19 +174,19 @@ function MyFulfillmentPoll() {
 
 ## Reaching steps
 
-- **`flow.next()`** — advance to the next step in the list, running the next step's guard.
+- **`flow.next()`** — advance to the next step in the list, running its guard.
 - **`flow.next({ skip: true })`** — same, but skip an `optional` step without marking it completed.
 - **`flow.back()`** — return to the previous step. Guards do not run on back navigation.
-- **`flow.goTo(stepId)`** — jump to a specific step. Runs that step's guard. Used for "edit shipping" from the review page, or "start payment" from a summary screen.
+- **`flow.goTo(stepId)`** — jump to a specific step and run its guard. Use for "edit shipping" from a review page or "start payment" from a summary screen.
 
-`goTo` does not enforce that the target has been previously visited — it's the merchant's responsibility not to jump to a step whose preconditions haven't been met. Use guards on the destination step if you need enforcement.
+`goTo` does not enforce that the target has been previously visited — it is the caller's responsibility not to jump to a step whose preconditions have not been met. Add guards on the destination step to enforce.
 
 ## Persistence and completed steps
 
-`completedStepIds` is persisted (see [Persistence](./?path=/docs/adapters-persistence--docs)). If a user hydrates into an in-progress flow, `completedStepIds` reflects everything they'd finished before pausing. The current step's guard still runs on resume — a user who paused just after signing in but whose session expired overnight will re-hit the auth guard.
+`completedStepIds` is persisted (see [Persistence](./?path=/docs/adapters-persistence--docs)). When a user hydrates into an in-progress flow, `completedStepIds` reflects everything finished before pausing. The current step's guard still runs on resume — a user who paused just after signing in but whose session expired overnight re-hits the auth guard.
 
 ## What steps aren't
 
-- **Not screens.** A step is a state — one step can render multiple screens (e.g. review + edit modal) and multiple steps can share screens.
+- **Not screens.** A step is a state — one step can render multiple screens (e.g. review + edit modal), and multiple steps can share screens.
 - **Not routes.** The `path` field syncs a step to a URL, but a step without `path` is legal (single-page or modal flows).
-- **Not multi-substep containers.** If your "auth" step has three substeps (email → OTP → 2FA), model that inside the step component, not as three top-level flow steps. See [Auth — Multi-step auth](./?path=/docs/core-auth--docs#multi-step-auth-otp-2fa-passkey-mfa) for the pattern.
+- **Not multi-substep containers.** For an "auth" step with three substeps (email → OTP → 2FA), model them inside the step component rather than as three top-level flow steps. See [Auth — Multi-step auth](./?path=/docs/core-auth--docs#multi-step-auth-otp-2fa-passkey-mfa) for the pattern.

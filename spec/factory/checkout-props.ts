@@ -1,13 +1,13 @@
 import { Factory } from 'fishery';
 
-import type { CheckoutItem, CheckoutSessionResponse } from '@src/types';
+import type { CheckoutItem, StripePaymentSession } from '@src/types';
 
 import {
   DEMO_CLIENT_SECRET,
   DEMO_PUBLISHABLE_KEY,
 } from '../__tests__/constants';
 
-export const checkoutSessionResponse = Factory.define<CheckoutSessionResponse>(
+export const checkoutSessionResponse = Factory.define<StripePaymentSession>(
   () => ({
     clientSecret: DEMO_CLIENT_SECRET,
     publishableKey: DEMO_PUBLISHABLE_KEY,

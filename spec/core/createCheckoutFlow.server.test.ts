@@ -10,6 +10,7 @@ describe(`${createCheckoutFlow.name}: server`, () => {
   it('constructs safely without storage or router adapters', () => {
     expect(() =>
       createCheckoutFlow({
+        provider: 'stripe',
         steps: [{ id: 'a' }],
         onCreateSession: stubSession,
       })
@@ -18,6 +19,7 @@ describe(`${createCheckoutFlow.name}: server`, () => {
 
   it('returns initial state server-side', () => {
     const flow = createCheckoutFlow({
+      provider: 'stripe',
       steps: [{ id: 'a' }, { id: 'b' }],
       onCreateSession: stubSession,
     });
@@ -29,6 +31,7 @@ describe(`${createCheckoutFlow.name}: server`, () => {
 
   it('subscribes / unsubscribes safely server-side', () => {
     const flow = createCheckoutFlow({
+      provider: 'stripe',
       steps: [{ id: 'a' }],
       onCreateSession: stubSession,
     });
@@ -41,6 +44,7 @@ describe(`${createCheckoutFlow.name}: server`, () => {
   it('deferMount option skips router.subscribe and autoStart', () => {
     const flow = createCheckoutFlow(
       {
+        provider: 'stripe',
         steps: [{ id: 'a' }],
         onCreateSession: stubSession,
         autoStart: true,

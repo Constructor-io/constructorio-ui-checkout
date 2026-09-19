@@ -3,13 +3,16 @@ import type { StepId } from '../types';
 import type { FlowContext } from './context';
 import { createGuards } from './guards';
 import { findStepIndex, toError } from './helpers';
-import type { RouterBridge } from './routerBridge';
-import type { StorageManager } from './storageManager';
+import type { createRouterBridge } from './routerBridge';
+import type { createStorageManager } from './storageManager';
 
-export function createNavigator<TState>(
-  ctx: FlowContext<TState>,
-  storage: StorageManager,
-  router: RouterBridge
+export function createNavigator<
+  TProvider extends string = string,
+  TState = unknown,
+>(
+  ctx: FlowContext<TProvider, TState>,
+  storage: ReturnType<typeof createStorageManager<TProvider, TState>>,
+  router: ReturnType<typeof createRouterBridge<TProvider, TState>>
 ) {
   const { config, steps, store, isDestroyed, events, emitError } = ctx;
   const { runGuard, findFirstFailingGuard } = createGuards(ctx);

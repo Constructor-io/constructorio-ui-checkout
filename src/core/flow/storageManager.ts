@@ -7,10 +7,10 @@ export interface StorageManagerOptions {
   hydrate: (state: FlowState) => void;
 }
 
-export function createStorageManager<TState>(
-  ctx: FlowContext<TState>,
-  opts: StorageManagerOptions
-) {
+export function createStorageManager<
+  TProvider extends string = string,
+  TState = unknown,
+>(ctx: FlowContext<TProvider, TState>, opts: StorageManagerOptions) {
   const { config, store, isDestroyed, emitError } = ctx;
   const storage = config.storage;
   const storageKey = config.storageKey;

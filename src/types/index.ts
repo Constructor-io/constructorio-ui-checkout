@@ -27,10 +27,31 @@ export interface CheckoutItem {
   imageUrl?: string;
 }
 
-export interface CheckoutSessionResponse {
+export interface BasePaymentSession {
+  sessionId?: string;
+}
+
+export interface StripePaymentSession extends BasePaymentSession {
   clientSecret: string;
   publishableKey: string;
 }
+
+// Extend via module augmentation to add custom PSPs:
+//   declare module '@constructor-io/constructorio-ui-checkout' {
+//     interface PaymentSessionMap { myPsp: MyPspSession }
+//   }
+export interface PaymentSessionMap {
+  stripe: StripePaymentSession;
+}
+
+export type BuiltInPaymentProvider = keyof PaymentSessionMap;
+
+export type PaymentProvider = BuiltInPaymentProvider | (string & {});
+
+export type PaymentSessionFor<TProvider extends string> =
+  TProvider extends keyof PaymentSessionMap
+    ? PaymentSessionMap[TProvider]
+    : BasePaymentSession;
 
 export type CheckoutUiMode = 'elements' | 'form';
 

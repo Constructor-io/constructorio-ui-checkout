@@ -1,4 +1,4 @@
-import type { CheckoutItem, CheckoutSessionResponse } from '@src/types';
+import type { BasePaymentSession, CheckoutItem } from '@src/types';
 
 import type { FlowState, SessionDiff, Step, StepId } from '../types';
 import { FLOW_SCHEMA_VERSION } from '../types';
@@ -26,15 +26,8 @@ export function toError(reason: unknown): Error {
   return new Error('Unknown error');
 }
 
-export function isValidSessionResponse(
-  r: unknown
-): r is CheckoutSessionResponse {
-  return (
-    r !== null &&
-    typeof r === 'object' &&
-    typeof (r as CheckoutSessionResponse).clientSecret === 'string' &&
-    typeof (r as CheckoutSessionResponse).publishableKey === 'string'
-  );
+export function isValidSessionResponse(r: unknown): r is BasePaymentSession {
+  return r !== null && typeof r === 'object';
 }
 
 export function extractSessionId(
@@ -45,6 +38,20 @@ export function extractSessionId(
   const idx = clientSecret.indexOf('_secret_');
   if (idx <= 0) return null;
   return clientSecret.slice(0, idx);
+}
+
+export function getSessionIdFromResponse(
+  session: BasePaymentSession,
+  provider: string
+): string | null {
+  if (typeof session.sessionId === 'string' && session.sessionId.length > 0) {
+    return session.sessionId;
+  }
+  if (provider === 'stripe') {
+    const clientSecret = (session as { clientSecret?: unknown }).clientSecret;
+    if (typeof clientSecret === 'string') return extractSessionId(clientSecret);
+  }
+  return null;
 }
 
 function keyOf(item: CheckoutItem): string {

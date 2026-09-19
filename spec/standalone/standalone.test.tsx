@@ -1,12 +1,13 @@
 import cioCheckoutRegistry from '@src/manager/CioCheckoutRegistry';
 import CioCheckout from '@src/standalone';
+import type { StripePaymentSession } from '@src/types';
 
 import {
   DEMO_CLIENT_SECRET,
   DEMO_PUBLISHABLE_KEY,
 } from '../__tests__/constants';
 
-const SESSION = {
+const SESSION: StripePaymentSession = {
   clientSecret: DEMO_CLIENT_SECRET,
   publishableKey: DEMO_PUBLISHABLE_KEY,
 };
@@ -28,10 +29,6 @@ describe('CioCheckout: client', () => {
     expect(CioCheckout.VERSION.length).toBeGreaterThan(0);
   });
 
-  it('exposes the CioCheckoutFlow class', () => {
-    expect(typeof CioCheckout.CioCheckoutFlow).toBe('function');
-  });
-
   it('exposes createCheckoutFlow factory', () => {
     expect(typeof CioCheckout.createCheckoutFlow).toBe('function');
   });
@@ -49,6 +46,7 @@ describe('CioCheckout: client', () => {
 
   it('resume() creates a storage-backed flow, registers it, and hydrates on the next call', async () => {
     const first = CioCheckout.resume({
+      provider: 'stripe',
       steps: [{ id: 'a' }, { id: 'b' }],
       onCreateSession: stubSession,
       storageKey: 'user-standalone',
@@ -61,6 +59,7 @@ describe('CioCheckout: client', () => {
     first.destroy();
 
     const second = CioCheckout.resume({
+      provider: 'stripe',
       steps: [{ id: 'a' }, { id: 'b' }],
       onCreateSession: stubSession,
       storageKey: 'user-standalone',
@@ -71,6 +70,7 @@ describe('CioCheckout: client', () => {
 
   it('reset() clears the registered flow', () => {
     const flow = CioCheckout.resume({
+      provider: 'stripe',
       steps: [{ id: 'a' }],
       onCreateSession: stubSession,
       storageKey: 'user-reset',

@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
 import { CioFlowStep } from '@src/app/components/CioFlowStep';
-import { useCioPayment } from '@src/app/hooks/useCioPayment';
-import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
+import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
+import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 import type { CheckoutFlowConfig } from '@src/core/types';
 
 const stubSession = () =>
@@ -13,6 +13,7 @@ const stubSession = () =>
   });
 
 const baseConfig: CheckoutFlowConfig = {
+  provider: 'stripe',
   steps: [{ id: 'cart' }, { id: 'auth' }, { id: 'pay' }],
   onCreateSession: stubSession,
 };
@@ -21,7 +22,7 @@ describe(`${CioFlowStep.name}: client`, () => {
   it('renders children only when its id matches currentStepId', async () => {
     const user = userEvent.setup();
     function App() {
-      const flow = useCioPayment();
+      const flow = useCioCheckout();
       return (
         <>
           <button
@@ -47,9 +48,9 @@ describe(`${CioFlowStep.name}: client`, () => {
       );
     }
     render(
-      <CioPaymentProvider {...baseConfig}>
+      <CioCheckoutProvider {...baseConfig}>
         <App />
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
     expect(screen.queryByText('cart-view')).not.toBeInTheDocument();
     await user.click(screen.getByText('start'));

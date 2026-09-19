@@ -4,18 +4,19 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Authentication
 
-The checkout flow doesn't own auth — your app does. But two auth scenarios overlap with checkout:
+The checkout flow does not own auth — your app does. Two auth scenarios overlap with checkout:
 
-1. **App-level auth** — user clicks "Sign in" from the nav, or hits a protected route.
-2. **Checkout-driven auth** — the checkout flow enters an `auth` step because the user isn't signed in yet.
+1. **App-level auth** — the user clicks "Sign in" from the nav or hits a protected route.
+2. **Checkout-driven auth** — the checkout flow enters an `auth` step because the user is not signed in.
 
-Both should point at the same `/login` route and the same `<LoginPage>` component. The page decides at sign-in time which flow it's serving.
+Both should point at the same `/login` route and the same `<LoginPage>` component. The page decides at sign-in time which flow it is serving.
 
 ## One page, two entry paths
 
 ```tsx
-// App root — CioPaymentProvider above the router outlet
-<CioPaymentProvider
+// App root — CioCheckoutProvider above the router outlet
+<CioCheckoutProvider
+  provider="stripe"
   steps={[
     { id: 'cart', path: '/cart' },
     { id: 'auth', path: '/login' },              // routed auth step
@@ -31,28 +32,28 @@ Both should point at the same `/login` route and the same `<LoginPage>` componen
     <Route path="/checkout/payment" element={<PaymentPage />} />
     <Route path="/order/confirmed" element={<OrderConfirmed />} />
   </Routes>
-</CioPaymentProvider>
+</CioCheckoutProvider>
 ```
 
 ## LoginPage — checkout-aware, but works standalone
 
 ```tsx
-import { useCioPayment } from '@constructor-io/constructorio-ui-checkout';
+import { useCioCheckout } from '@constructor-io/constructorio-ui-checkout';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 function LoginPage() {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   const navigate = useNavigate();
   const location = useLocation();
 
   const onSignedIn = () => {
-    // Case A: we're here because the checkout flow entered its auth step.
+    // Case A: the checkout flow entered its auth step.
     if (flow.state.currentStepId === 'auth') {
       flow.next();  // continues checkout to /checkout/payment
       return;
     }
 
-    // Case B: normal login flow — return the user to where they came from.
+    // Case B: normal login flow — return to the previous location.
     const state = location.state as { returnTo?: string } | null;
     const returnTo = sanitizeReturnTo(state?.returnTo);
     navigate(returnTo, { replace: true });
@@ -129,7 +130,7 @@ function sanitizeReturnTo(value: string | null | undefined): string {
 
 Guard semantics: `true` allows entry into the step; `false` blocks the transition and the flow stays on the previous step. Guards do **not** auto-skip a step when they pass.
 
-That means the guard goes on the **step after auth** (the one that requires being signed in), not on the auth step itself:
+The guard therefore belongs on the **step after auth** (the one that requires being signed in), not on the auth step itself:
 
 ```tsx
 { id: 'cart' },
@@ -146,14 +147,15 @@ Behavior:
 - User signs in, `LoginPage` calls `flow.next()`.
 - Guard on `stripe` runs — `isSignedIn()` returns `true` → payment step entered.
 
-For a signed-in user who starts checkout, you don't want them to land on `/login` at all. **`optional: true` alone is not enough** — the flow does not auto-skip optional steps on entry; it only permits `next({ skip: true })` from within them. Three patterns, in order of preference:
+A signed-in user starting checkout should not land on `/login` at all. **`optional: true` alone is not enough** — the flow does not auto-skip optional steps on entry; it only permits `next({ skip: true })` from within them. Three patterns, in order of preference:
 
 **1. Omit the auth step from the `steps` list when you know at mount time.** Cleanest — the state machine simply has no auth step to enter.
 
 ```tsx
 const authed = useIsAuthenticated();
 
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   steps={[
     { id: 'cart', path: '/cart' },
     ...(authed ? [] : [{ id: 'auth', path: '/login' }]),
@@ -163,13 +165,13 @@ const authed = useIsAuthenticated();
 />
 ```
 
-Zero flash, no extra `next()` plumbing. Trade-off: the step list is snapshotted at mount — if the user logs out mid-flow, you'd need to remount the provider to add the auth step back. Rare in practice, since a mid-flow logout is usually followed by a full navigation anyway.
+Zero flash, no extra `next()` plumbing. Trade-off: the step list is snapshotted at mount, so a mid-flow logout requires remounting the provider to add the auth step back. Rare in practice — a mid-flow logout usually triggers a full navigation anyway.
 
-**2. Auto-advance from within the auth step.** For cases where auth state is determined async post-mount:
+**2. Auto-advance from within the auth step.** For cases where auth state resolves asynchronously after mount:
 
 ```tsx
 function AuthStepBody() {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   useEffect(() => {
     if (isSignedIn()) flow.next();
   }, [flow.next]);
@@ -196,25 +198,25 @@ if (isSignedIn()) {
 
 Splits the auth decision across the previous step — awkward when multiple steps can precede auth. Prefer 1 or 2.
 
-`isSignedIn()` is a plain function reading your auth store / cookie / token — no context needed.
+`isSignedIn()` is a plain function reading your auth store, cookie, or token — no context needed.
 
 ## Modal instead of routed page
 
-If you'd rather sign-in be a modal over whatever page the user was on (no URL change), give the auth step no `path` and apply the same auto-advance / skip pattern:
+To present sign-in as a modal over the current page (no URL change), give the auth step no `path` and apply the same auto-advance / skip pattern:
 
 ```tsx
 { id: 'auth' }
 ```
 
-Render a `<SignInModal>` inside `<CioFlowStep id="auth">`. The modal only appears during checkout — the `<LoginPage>` at `/login` still handles the nav-triggered case. The tradeoffs: no deep link to auth, no browser-back into auth, but no route change either.
+Render a `<SignInModal>` inside `<CioFlowStep id="auth">`. The modal appears only during checkout; `<LoginPage>` at `/login` still handles the nav-triggered case. Trade-offs: no deep link to auth and no browser-back into auth, but no route change either.
 
 ## Multi-step auth (OTP, 2FA, passkey, MFA)
 
-The checkout flow doesn't care about your auth *strategy* — only about the answer to "is the user signed in yet?" A credentials → OTP → verified sequence happens entirely inside `LoginPage`. Only the final success handler calls `flow.next()`.
+The checkout flow does not care about the auth *strategy* — only about the answer to "is the user signed in yet?" A credentials → OTP → verified sequence happens entirely inside `LoginPage`. Only the final success handler calls `flow.next()`.
 
 ```tsx
 function LoginPage() {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -250,13 +252,13 @@ function AuthWizard({ onSuccess }: { onSuccess: () => void }) {
 }
 ```
 
-`isSignedIn()` (the value the checkout guard reads) only returns `true` once the *final* verification succeeds — not when the user submits credentials and receives an OTP challenge.
+`isSignedIn()` (the value the checkout guard reads) returns `true` only once the *final* verification succeeds — not when the user submits credentials and receives an OTP challenge.
 
 ### Do the OTP substeps need URLs of their own?
 
-**No** — keep OTP as internal component state (the code above). Simplest. Users can't refresh the OTP screen and land on it, but you also can't deep-link into a half-completed auth flow, which is usually what you want for security anyway.
+**No** — keep OTP as internal component state (the code above). Simplest. Users cannot refresh into a mid-OTP screen, and you cannot deep-link into a half-completed auth flow, which is typically the desired security posture.
 
-**Yes** — nest routes *inside* the auth entry route. The checkout `auth` step still owns `/login` as its entry; sub-URLs like `/login/verify` still live "under" the same checkout step:
+**Yes** — nest routes *inside* the auth entry route. The checkout `auth` step still owns `/login` as its entry; sub-URLs like `/login/verify` live under the same checkout step:
 
 ```tsx
 <Route path="/login" element={<LoginPage />}>
@@ -281,4 +283,4 @@ steps={[
 ]}
 ```
 
-This bakes your auth strategy into the checkout state machine. Add SSO / passkey / step-up MFA later and you have to churn the checkout config every time. Keep the checkout flow at a single `auth` gate — auth owns its own internals.
+This bakes the auth strategy into the checkout state machine. Adding SSO, passkey, or step-up MFA later requires churning the checkout config every time. Keep the checkout flow at a single `auth` gate — auth owns its own internals.

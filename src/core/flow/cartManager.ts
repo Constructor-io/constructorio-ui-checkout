@@ -1,11 +1,14 @@
-import type { CheckoutItem, CheckoutSessionResponse } from '@src/types';
+import type { CheckoutItem, PaymentSessionFor } from '@src/types';
 
 import type { FlowContext } from './context';
-import type { SessionManager } from './sessionManager';
+import type { createSessionManager } from './sessionManager';
 
-export function createCartManager<TState>(
-  ctx: FlowContext<TState>,
-  session: SessionManager
+export function createCartManager<
+  TProvider extends string = string,
+  TState = unknown,
+>(
+  ctx: FlowContext<TProvider, TState>,
+  session: ReturnType<typeof createSessionManager<TProvider, TState>>
 ) {
   const { config, store, isDestroyed } = ctx;
   const debounceMs = config.cartDebounceMs ?? 400;
@@ -25,7 +28,7 @@ export function createCartManager<TState>(
 
   const syncCart = (
     items: CheckoutItem[]
-  ): Promise<CheckoutSessionResponse | null> => {
+  ): Promise<PaymentSessionFor<TProvider> | null> => {
     if (isDestroyed()) return Promise.resolve(null);
     clearDebounce();
     if (!session.getSession()) {

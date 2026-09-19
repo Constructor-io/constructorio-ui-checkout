@@ -12,6 +12,7 @@ const stubSession = () =>
 const minimalConfig = (
   overrides: Partial<CheckoutFlowConfig> = {}
 ): CheckoutFlowConfig => ({
+  provider: 'stripe',
   steps: [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
   onCreateSession: stubSession,
   ...overrides,
@@ -29,13 +30,14 @@ describe(`${createCheckoutFlow.name}: client`, () => {
   describe('construction', () => {
     it('throws when steps is empty', () => {
       expect(() =>
-        createCheckoutFlow({ steps: [], onCreateSession: stubSession })
+        createCheckoutFlow({ provider: 'stripe', steps: [], onCreateSession: stubSession })
       ).toThrow(/non-empty array/);
     });
 
     it('throws when a step has no id', () => {
       expect(() =>
         createCheckoutFlow({
+          provider: 'stripe',
           // @ts-expect-error intentional shape violation
           steps: [{}],
           onCreateSession: stubSession,
@@ -46,6 +48,7 @@ describe(`${createCheckoutFlow.name}: client`, () => {
     it('throws on duplicate step ids', () => {
       expect(() =>
         createCheckoutFlow({
+          provider: 'stripe',
           steps: [{ id: 'a' }, { id: 'a' }],
           onCreateSession: stubSession,
         })
@@ -55,7 +58,7 @@ describe(`${createCheckoutFlow.name}: client`, () => {
     it('throws when onCreateSession is missing', () => {
       expect(() =>
         // @ts-expect-error intentional shape violation
-        createCheckoutFlow({ steps: [{ id: 'a' }] })
+        createCheckoutFlow({ provider: 'stripe', steps: [{ id: 'a' }] })
       ).toThrow(/onCreateSession/);
     });
 

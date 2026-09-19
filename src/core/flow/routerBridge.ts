@@ -2,13 +2,16 @@ import type { Step, StepId } from '../types';
 
 import type { FlowContext } from './context';
 import { toError } from './helpers';
-import type { StorageManager } from './storageManager';
+import type { createStorageManager } from './storageManager';
 
 const UNSAFE_SCHEME_RE = /^\s*(?:javascript|data|vbscript|file):/i;
 
-export function createRouterBridge<TState>(
-  ctx: FlowContext<TState>,
-  storage: StorageManager
+export function createRouterBridge<
+  TProvider extends string = string,
+  TState = unknown,
+>(
+  ctx: FlowContext<TProvider, TState>,
+  storage: ReturnType<typeof createStorageManager<TProvider, TState>>
 ) {
   const { config, steps, store, isDestroyed, emitError } = ctx;
   const router = config.router;
@@ -66,7 +69,7 @@ export function createRouterBridge<TState>(
     try {
       routerUnsubscribe();
     } catch {
-      /* adapter unsubscribe should not throw */
+      // Adapter unsubscribe is best-effort; swallow to avoid cascading teardown errors.
     }
     routerUnsubscribe = null;
   };

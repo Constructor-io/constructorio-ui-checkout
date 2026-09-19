@@ -7,7 +7,7 @@ import {
 
 import CheckoutForm from '@src/app/components/CheckoutForm';
 import CheckoutFormElements from '@src/app/components/CheckoutFormElements';
-import { useCioPayment } from '@src/app/hooks/useCioPayment';
+import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
 import checkoutManager from '@src/manager/CheckoutManager';
 import type {
   CheckoutComponentOverrides,
@@ -29,10 +29,6 @@ export interface CioStripePaymentStepProps extends CheckoutStripeOptions {
   onError?: (error: Error) => void;
 }
 
-// Default renderer for the built-in `stripe` step. Auto-creates the session on
-// first render, loads Stripe, wraps in the appropriate provider based on
-// uiMode, and advances the flow on completion / marks it expired if Stripe
-// reports session expiry.
 export function CioStripePaymentStep({
   uiMode = 'form',
   redirectBehavior,
@@ -48,7 +44,12 @@ export function CioStripePaymentStep({
   adaptivePricing,
   syncAddressCheckbox,
 }: CioStripePaymentStepProps) {
-  const flow = useCioPayment();
+  const flow = useCioCheckout<'stripe', unknown>();
+  if (flow.provider !== 'stripe') {
+    throw new Error(
+      `<CioStripePaymentStep> must be rendered inside <CioCheckoutProvider provider="stripe">, received provider="${flow.provider}".`
+    );
+  }
   const session = flow.getSession();
   const sessionStatus = flow.state.sessionStatus;
   const mountedRef = useRef(true);

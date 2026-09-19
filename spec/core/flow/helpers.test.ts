@@ -2,6 +2,7 @@ import {
   computeCartDiff,
   extractSessionId,
   findStepIndex,
+  getSessionIdFromResponse,
   isValidSessionResponse,
   makeInitialState,
   toError,
@@ -68,24 +69,10 @@ describe(`${toError.name}: client`, () => {
 });
 
 describe(`${isValidSessionResponse.name}: client`, () => {
-  it('accepts a valid { clientSecret, publishableKey } object', () => {
-    expect(
-      isValidSessionResponse({ clientSecret: 'cs_x', publishableKey: 'pk_x' })
-    ).toBe(true);
-  });
-
-  it('rejects missing clientSecret', () => {
-    expect(isValidSessionResponse({ publishableKey: 'pk_x' })).toBe(false);
-  });
-
-  it('rejects missing publishableKey', () => {
-    expect(isValidSessionResponse({ clientSecret: 'cs_x' })).toBe(false);
-  });
-
-  it('rejects non-string field types', () => {
-    expect(
-      isValidSessionResponse({ clientSecret: 123, publishableKey: 'pk_x' })
-    ).toBe(false);
+  it('accepts any non-null object', () => {
+    expect(isValidSessionResponse({ clientSecret: 'cs_x' })).toBe(true);
+    expect(isValidSessionResponse({ sessionId: 'sess_abc' })).toBe(true);
+    expect(isValidSessionResponse({})).toBe(true);
   });
 
   it('rejects null', () => {
@@ -96,6 +83,47 @@ describe(`${isValidSessionResponse.name}: client`, () => {
     expect(isValidSessionResponse('a string')).toBe(false);
     expect(isValidSessionResponse(42)).toBe(false);
     expect(isValidSessionResponse(undefined)).toBe(false);
+  });
+});
+
+describe(`${getSessionIdFromResponse.name}: client`, () => {
+  it('returns an explicit sessionId when present', () => {
+    expect(
+      getSessionIdFromResponse({ sessionId: 'sess_abc' }, 'fiserv')
+    ).toBe('sess_abc');
+  });
+
+  it('prefers explicit sessionId over Stripe clientSecret extraction', () => {
+    expect(
+      getSessionIdFromResponse(
+        {
+          sessionId: 'sess_explicit',
+          clientSecret: 'cs_test_abc_secret_xyz',
+          publishableKey: 'pk_test',
+        } as unknown as import('@src/types').StripePaymentSession,
+        'stripe'
+      )
+    ).toBe('sess_explicit');
+  });
+
+  it('falls back to Stripe clientSecret extraction when sessionId is absent', () => {
+    expect(
+      getSessionIdFromResponse(
+        {
+          clientSecret: 'cs_test_abc_secret_xyz',
+          publishableKey: 'pk_test',
+        } as unknown as import('@src/types').StripePaymentSession,
+        'stripe'
+      )
+    ).toBe('cs_test_abc');
+  });
+
+  it('returns null for non-Stripe providers without an explicit sessionId', () => {
+    expect(getSessionIdFromResponse({}, 'fiserv')).toBeNull();
+  });
+
+  it('returns null when sessionId is an empty string', () => {
+    expect(getSessionIdFromResponse({ sessionId: '' }, 'fiserv')).toBeNull();
   });
 });
 

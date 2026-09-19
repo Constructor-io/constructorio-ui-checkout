@@ -4,8 +4,8 @@ import type { Meta, StoryObj } from '@storybook/react';
 
 import { CioFlowStep } from '@src/app/components/CioFlowStep';
 import { CioStripePaymentStep } from '@src/app/components/CioStripePaymentStep';
-import { useCioPayment } from '@src/app/hooks/useCioPayment';
-import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
+import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
+import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 import type { RouterAdapter } from '@src/core/types';
 import { PAYMENT_STEP } from '@src/core/types';
 
@@ -15,17 +15,17 @@ const stubSession = () =>
     publishableKey: 'pk_test_DEMO',
   });
 
-const meta: Meta<typeof CioPaymentProvider> = {
-  title: 'Components/CioPaymentProvider',
-  component: CioPaymentProvider,
+const meta: Meta<typeof CioCheckoutProvider> = {
+  title: 'Components/CioCheckoutProvider',
+  component: CioCheckoutProvider,
   tags: ['autodocs'],
   parameters: { layout: 'padded' },
 };
 export default meta;
-type Story = StoryObj<typeof CioPaymentProvider>;
+type Story = StoryObj<typeof CioCheckoutProvider>;
 
 function DemoStatus() {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   return (
     <div style={{ padding: 16, background: '#f6f6f6', borderRadius: 6 }}>
       <p style={{ margin: 0, fontSize: 13, opacity: 0.7 }}>
@@ -59,13 +59,14 @@ export const Basic: Story = {
       source: {
         language: 'tsx',
         code: `import {
-  CioPaymentProvider,
+  CioCheckoutProvider,
   CioFlowStep,
   CioStripePaymentStep,
   PAYMENT_STEP,
 } from '@constructor-io/constructorio-ui-checkout';
 
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   steps={[{ id: PAYMENT_STEP }]}
   onCreateSession={() =>
     fetch('/api/checkout-session', { method: 'POST' }).then((r) => r.json())
@@ -75,12 +76,13 @@ export const Basic: Story = {
   <CioFlowStep id={PAYMENT_STEP}>
     <CioStripePaymentStep />
   </CioFlowStep>
-</CioPaymentProvider>`,
+</CioCheckoutProvider>`,
       },
     },
   },
   render: () => (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[{ id: PAYMENT_STEP }]}
       onCreateSession={stubSession}
       autoStart
@@ -89,7 +91,7 @@ export const Basic: Story = {
       <CioFlowStep id={PAYMENT_STEP}>
         <CioStripePaymentStep />
       </CioFlowStep>
-    </CioPaymentProvider>
+    </CioCheckoutProvider>
   ),
 };
 
@@ -100,15 +102,16 @@ export const MultiStep: Story = {
       source: {
         language: 'tsx',
         code: `import {
-  CioPaymentProvider,
+  CioCheckoutProvider,
   CioFlowStep,
   CioStripePaymentStep,
   CioFulfillmentStep,
   PAYMENT_STEP,
-  useCioPayment,
+  useCioCheckout,
 } from '@constructor-io/constructorio-ui-checkout';
 
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   steps={[
     { id: 'cart' },
     { id: 'address' },
@@ -128,10 +131,10 @@ export const MultiStep: Story = {
     <CioFulfillmentStep onFulfill={verifyOrder} />
   </CioFlowStep>
   <CioFlowStep id="done"><YourConfirmation /></CioFlowStep>
-</CioPaymentProvider>
+</CioCheckoutProvider>
 
 function StartButton() {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   if (flow.state.currentStepId !== null) return null;
   return <button onClick={() => flow.start()}>Checkout</button>;
 }`,
@@ -139,7 +142,8 @@ function StartButton() {
     },
   },
   render: () => (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[
         { id: 'cart' },
         { id: 'address' },
@@ -153,7 +157,7 @@ function StartButton() {
       <CioFlowStep id={PAYMENT_STEP}>
         <CioStripePaymentStep />
       </CioFlowStep>
-    </CioPaymentProvider>
+    </CioCheckoutProvider>
   ),
 };
 
@@ -164,7 +168,8 @@ function RoutedDemo() {
     [path]
   );
   return (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[
         { id: 'cart', path: '/cart' },
         { id: 'address', path: '/checkout/address' },
@@ -182,7 +187,7 @@ function RoutedDemo() {
       <CioFlowStep id={PAYMENT_STEP}>
         <CioStripePaymentStep />
       </CioFlowStep>
-    </CioPaymentProvider>
+    </CioCheckoutProvider>
   );
 }
 
@@ -193,7 +198,7 @@ export const RoutedMultiStep: Story = {
       source: {
         language: 'tsx',
         code: `import {
-  CioPaymentProvider,
+  CioCheckoutProvider,
   CioFlowStep,
   CioStripePaymentStep,
   PAYMENT_STEP,
@@ -207,7 +212,8 @@ const router: RouterAdapter = {
   subscribe: (cb) => subscribeToLocationChanges(cb),
 };
 
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   steps={[
     { id: 'cart', path: '/cart' },
     { id: 'address', path: '/checkout/address' },
@@ -224,7 +230,7 @@ const router: RouterAdapter = {
     <CioStripePaymentStep />
   </CioFlowStep>
   <CioFlowStep id="done"><YourConfirmation /></CioFlowStep>
-</CioPaymentProvider>`,
+</CioCheckoutProvider>`,
       },
     },
   },
@@ -253,7 +259,8 @@ function RealisticFlowDemo() {
   };
 
   return (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[
         { id: 'cart', path: '/cart' },
         { id: 'auth', guard: () => Promise.resolve(signedIn) },
@@ -342,12 +349,12 @@ function RealisticFlowDemo() {
           <strong>Confirmed</strong> (routed at /order/confirmed)
         </div>
       </CioFlowStep>
-    </CioPaymentProvider>
+    </CioCheckoutProvider>
   );
 }
 
 function NextButton({ label }: { label: string }) {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   return (
     <button
       type="button"
@@ -368,11 +375,11 @@ export const RealisticMixedFlow: Story = {
       source: {
         language: 'tsx',
         code: `import {
-  CioPaymentProvider,
+  CioCheckoutProvider,
   CioFlowStep,
   CioStripePaymentStep,
   PAYMENT_STEP,
-  useCioPayment,
+  useCioCheckout,
 } from '@constructor-io/constructorio-ui-checkout';
 import type { RouterAdapter } from '@constructor-io/constructorio-ui-checkout';
 
@@ -395,7 +402,8 @@ function CheckoutApp() {
     }).then((r) => r.json());
 
   return (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[
         { id: 'cart', path: '/cart' },                       // routed
         { id: 'auth', guard: () => Promise.resolve(signedIn) }, // modal
@@ -420,7 +428,7 @@ function CheckoutApp() {
         <CioStripePaymentStep />
       </CioFlowStep>
       <CioFlowStep id="done"><OrderConfirmation /></CioFlowStep>
-    </CioPaymentProvider>
+    </CioCheckoutProvider>
   );
 }`,
       },

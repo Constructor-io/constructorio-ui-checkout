@@ -4,10 +4,11 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Events
 
-Everything the flow does — starting, transitioning, creating sessions, hitting errors — emits a typed event through the `onEvent` callback. This is where analytics, telemetry, and error reporting hook in.
+Every flow action — starting, transitioning, creating sessions, hitting errors — emits a typed event through the `onEvent` callback. This is where analytics, telemetry, and error reporting hook in.
 
 ```tsx
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   onEvent={(event) => {
     // Route to Segment, GA, Sentry, DataDog — whatever you use.
   }}
@@ -15,7 +16,7 @@ Everything the flow does — starting, transitioning, creating sessions, hitting
 />
 ```
 
-`onEvent` is called synchronously after the state change. Don't do slow work inside it — post to a queue if your analytics client is blocking.
+`onEvent` fires synchronously after the state change. Avoid slow work inside it; post to a queue if the analytics client blocks.
 
 ## Event catalog
 
@@ -47,7 +48,7 @@ type CheckoutError    = { source: CheckoutEventErrorSource; error: Error; retry?
 
 ## Error sources
 
-The `error` event's `source` tells you where the failure happened:
+The `error` event's `source` identifies where the failure originated:
 
 - `'session.create'` — `onCreateSession` threw or rejected
 - `'session.update'` — `onUpdateSession` threw or rejected
@@ -57,11 +58,11 @@ The `error` event's `source` tells you where the failure happened:
 - `'guard'` — a step's `guard` returned `false` or threw
 - `'authenticate'` — the `authenticate` config callback threw
 
-Some errors include a `retry` function that re-runs the failed operation. `session.create`, `session.update`, and `session.recover` are the current retryable sources.
+Some errors include a `retry` function that re-runs the failed operation. `session.create`, `session.update`, and `session.recover` are the retryable sources.
 
 ## `SessionUpdateReason` and `SessionDiff`
 
-`session.updated` events include a `reason` so you can distinguish cart changes from address changes from a manual `updateSession(patch)` call.
+`session.updated` events include a `reason` that distinguishes cart changes from address changes from a manual `updateSession(patch)` call.
 
 ```ts
 type SessionUpdateReason =
@@ -86,12 +87,13 @@ interface SessionDiff {
 }
 ```
 
-Useful for firing `product_added_to_cart` events without diffing yourself.
+Wire this to fire `product_added_to_cart` events without diffing yourself.
 
 ## Analytics wiring — Segment
 
 ```tsx
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   onEvent={(event) => {
     switch (event.type) {
       case 'flow.started':
@@ -138,7 +140,7 @@ onEvent={(event) => {
 }}
 ```
 
-For retryable errors, offer the user a retry button that calls `event.retry?.()`:
+For retryable errors, expose a retry button that calls `event.retry?.()`:
 
 ```tsx
 const [lastError, setLastError] = useState<CheckoutEvent | null>(null);
@@ -157,7 +159,7 @@ onEvent={(event) => {
 
 ## When to use `state.changed`
 
-`state.changed` fires on every `FlowState` mutation — high frequency. It's a debugging hatch, not an analytics primitive. Use the targeted events (`step.entered`, `session.updated`) for user-visible funnels. Reach for `state.changed` only when you need something not covered by the specific events (e.g. observing `sessionStatus` transitions to `'creating'`, which none of the other events emit).
+`state.changed` fires on every `FlowState` mutation. It is a debugging hatch, not an analytics primitive. Use the targeted events (`step.entered`, `session.updated`) for user-visible funnels. Reach for `state.changed` only when you need something the specific events do not cover (e.g. observing `sessionStatus` transitions to `'creating'`).
 
 ## Ordering guarantees
 
@@ -168,4 +170,4 @@ onEvent={(event) => {
 
 ## `onEvent` vs subscribing to state
 
-`onEvent` gives you discrete transitions with rich payloads. `flow.subscribe(listener)` gives you the whole `FlowState` on every change. For most analytics, telemetry, and error use cases, `onEvent` is the right handle — it's typed, filtered, and non-noisy. Use `flow.subscribe` only when you need the imperative store (rare outside custom step components).
+`onEvent` delivers discrete transitions with rich payloads. `flow.subscribe(listener)` delivers the whole `FlowState` on every change. For most analytics, telemetry, and error use cases, `onEvent` is the right handle — typed, filtered, and non-noisy. Use `flow.subscribe` only when the imperative store is required (rare outside custom step components).

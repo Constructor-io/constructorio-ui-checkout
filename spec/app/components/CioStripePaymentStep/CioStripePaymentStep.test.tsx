@@ -3,12 +3,12 @@ import { userEvent } from '@testing-library/user-event';
 
 import { CioFlowStep } from '@src/app/components/CioFlowStep';
 import { CioStripePaymentStep } from '@src/app/components/CioStripePaymentStep';
-import { useCioPayment } from '@src/app/hooks/useCioPayment';
-import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
+import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
+import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 import { PAYMENT_STEP } from '@src/core/types';
-import type { CheckoutSessionResponse } from '@src/types';
+import type { StripePaymentSession } from '@src/types';
 
-const sessionResponse = (id = 'cs_test_abc'): CheckoutSessionResponse => ({
+const sessionResponse = (id = 'cs_test_abc'): StripePaymentSession => ({
   clientSecret: `${id}_secret_xyz`,
   publishableKey: 'pk_test',
 });
@@ -24,7 +24,7 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
   it('auto-creates a session on mount and renders the Stripe provider', async () => {
     function Harness() {
       return (
-        <CioPaymentProvider
+        <CioCheckoutProvider provider="stripe"
           steps={[{ id: PAYMENT_STEP }]}
           onCreateSession={stubSession}
           autoStart
@@ -32,7 +32,7 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
           <CioFlowStep id={PAYMENT_STEP}>
             <CioStripePaymentStep />
           </CioFlowStep>
-        </CioPaymentProvider>
+        </CioCheckoutProvider>
       );
     }
     render(<Harness />);
@@ -42,7 +42,7 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
 
   it('renders form mode (CheckoutForm) by default', async () => {
     render(
-      <CioPaymentProvider
+      <CioCheckoutProvider provider="stripe"
         steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={stubSession}
         autoStart
@@ -50,7 +50,7 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
         <CioFlowStep id={PAYMENT_STEP}>
           <CioStripePaymentStep />
         </CioFlowStep>
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
     expect(
       await screen.findByTestId('stripe-checkout-form')
@@ -59,7 +59,7 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
 
   it('renders elements mode when uiMode="elements"', async () => {
     render(
-      <CioPaymentProvider
+      <CioCheckoutProvider provider="stripe"
         steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={stubSession}
         autoStart
@@ -67,7 +67,7 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
         <CioFlowStep id={PAYMENT_STEP}>
           <CioStripePaymentStep uiMode="elements" />
         </CioFlowStep>
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
     expect(
       await screen.findByTestId('stripe-payment-element')
@@ -77,7 +77,7 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
   it('advances the flow on payment completion', async () => {
     const events: string[] = [];
     function Harness() {
-      const flow = useCioPayment();
+      const flow = useCioCheckout();
       events.push(String(flow.state.currentStepId));
       return (
         <CioFlowStep id={PAYMENT_STEP}>
@@ -86,13 +86,13 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
       );
     }
     render(
-      <CioPaymentProvider
+      <CioCheckoutProvider provider="stripe"
         steps={[{ id: PAYMENT_STEP }, { id: 'done' }]}
         onCreateSession={stubSession}
         autoStart
       >
         <Harness />
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
     const user = userEvent.setup();
     await user.click(await screen.findByTestId('stripe-checkout-form'));
@@ -103,15 +103,15 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
 
   it('renders nothing while session is being created', async () => {
     render(
-      <CioPaymentProvider
+      <CioCheckoutProvider provider="stripe"
         steps={[{ id: PAYMENT_STEP }]}
-        onCreateSession={() => new Promise(() => undefined)}
+        onCreateSession={() => new Promise<StripePaymentSession>(() => undefined)}
         autoStart
       >
         <CioFlowStep id={PAYMENT_STEP}>
           <CioStripePaymentStep />
         </CioFlowStep>
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
     await waitFor(() => {
       expect(screen.queryByTestId('stripe-provider')).not.toBeInTheDocument();
@@ -127,7 +127,7 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
     });
     const onError = vi.fn();
     render(
-      <CioPaymentProvider
+      <CioCheckoutProvider provider="stripe"
         steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={onCreateSession}
         autoStart
@@ -135,7 +135,7 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
         <CioFlowStep id={PAYMENT_STEP}>
           <CioStripePaymentStep onError={onError} />
         </CioFlowStep>
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
     const retryBtn = await screen.findByRole('button', { name: /retry/i });
     expect(retryBtn).toBeInTheDocument();
@@ -152,14 +152,14 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
       firstResolved = true;
       return Promise.resolve(sessionResponse(id));
     });
-    let flowRef!: ReturnType<typeof useCioPayment>;
+    let flowRef!: ReturnType<typeof useCioCheckout>;
     function Grabber() {
-      const f = useCioPayment();
+      const f = useCioCheckout();
       flowRef = f;
       return null;
     }
     render(
-      <CioPaymentProvider
+      <CioCheckoutProvider provider="stripe"
         steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={onCreateSession}
         autoStart
@@ -168,7 +168,7 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
         <CioFlowStep id={PAYMENT_STEP}>
           <CioStripePaymentStep />
         </CioFlowStep>
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
     await screen.findByTestId('stripe-provider');
     expect(onCreateSession).toHaveBeenCalledTimes(1);

@@ -6,8 +6,8 @@ import {
   type CioFulfillmentResult,
   CioFulfillmentStep,
 } from '@src/app/components/CioFulfillmentStep';
-import { useCioPayment } from '@src/app/hooks/useCioPayment';
-import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
+import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
+import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 
 const stubSession = () =>
   Promise.resolve({
@@ -26,7 +26,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
     );
 
     render(
-      <CioPaymentProvider
+      <CioCheckoutProvider provider="stripe"
         steps={[{ id: 'fulfill' }]}
         onCreateSession={stubSession}
         autoStart
@@ -34,7 +34,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
         <CioFlowStep id="fulfill">
           <CioFulfillmentStep onFulfill={onFulfill} />
         </CioFlowStep>
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
 
     await waitFor(() => {
@@ -51,13 +51,13 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
   it('advances the flow on success by default', async () => {
     const events: string[] = [];
     function Probe() {
-      const flow = useCioPayment();
+      const flow = useCioCheckout();
       events.push(String(flow.state.currentStepId));
       return null;
     }
 
     render(
-      <CioPaymentProvider
+      <CioCheckoutProvider provider="stripe"
         steps={[{ id: 'fulfill' }, { id: 'done' }]}
         onCreateSession={stubSession}
         autoStart
@@ -70,7 +70,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
             }
           />
         </CioFlowStep>
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
 
     await waitFor(() => {
@@ -90,7 +90,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
     });
 
     render(
-      <CioPaymentProvider
+      <CioCheckoutProvider provider="stripe"
         steps={[{ id: 'fulfill' }, { id: 'done' }]}
         onCreateSession={stubSession}
         autoStart
@@ -98,7 +98,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
         <CioFlowStep id="fulfill">
           <CioFulfillmentStep advanceOnSuccess={false} onFulfill={onFulfill} />
         </CioFlowStep>
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
 
     expect(await screen.findByText('Verification failed')).toBeInTheDocument();
@@ -115,13 +115,13 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
   it('respects advanceOnSuccess=false — does not advance on success', async () => {
     const events: string[] = [];
     function Probe() {
-      const flow = useCioPayment();
+      const flow = useCioCheckout();
       events.push(String(flow.state.currentStepId));
       return null;
     }
 
     render(
-      <CioPaymentProvider
+      <CioCheckoutProvider provider="stripe"
         steps={[{ id: 'fulfill' }, { id: 'done' }]}
         onCreateSession={stubSession}
         autoStart
@@ -133,7 +133,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
             onFulfill={() => Promise.resolve({ success: true })}
           />
         </CioFlowStep>
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
 
     expect(await screen.findByText('Order confirmed')).toBeInTheDocument();
@@ -142,7 +142,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
 
   it('supports a custom render prop', async () => {
     render(
-      <CioPaymentProvider
+      <CioCheckoutProvider provider="stripe"
         steps={[{ id: 'fulfill' }]}
         onCreateSession={stubSession}
         autoStart
@@ -159,7 +159,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
             )}
           />
         </CioFlowStep>
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
 
     await waitFor(() =>
@@ -171,7 +171,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
 
   it('handles a throwing onFulfill as a failure', async () => {
     render(
-      <CioPaymentProvider
+      <CioCheckoutProvider provider="stripe"
         steps={[{ id: 'fulfill' }]}
         onCreateSession={stubSession}
         autoStart
@@ -181,7 +181,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
             onFulfill={() => Promise.reject(new Error('server down'))}
           />
         </CioFlowStep>
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
     expect(await screen.findByText('server down')).toBeInTheDocument();
   });

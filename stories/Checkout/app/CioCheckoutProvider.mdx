@@ -8,8 +8,8 @@ Headless primitives for building multi-step checkout on top of Stripe. The libra
 
 ## Three integration paths, one core
 
-- **React** — `<CioPaymentProvider>` + `useCioPayment()` + `<CioFlowStep>` + `<CioStripePaymentStep>` / `<CioFulfillmentStep>`
-- **Vanilla JS (npm)** — `new CioCheckoutFlow(config)` from `@constructor-io/constructorio-ui-checkout`
+- **React** — `<CioCheckoutProvider provider="stripe">` + `useCioCheckout()` + `<CioFlowStep>` + `<CioStripePaymentStep>` / `<CioFulfillmentStep>`
+- **Vanilla JS (npm)** — `createCheckoutFlow(config)` from `@constructor-io/constructorio-ui-checkout`
 - **Standalone bundle** — `<script>` tag exposes `window.CioCheckout` with the same class
 
 All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
@@ -18,17 +18,18 @@ All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
 
 ```tsx
 import {
-  CioPaymentProvider,
+  CioCheckoutProvider,
   CioFlowStep,
   CioStripePaymentStep,
   CioFulfillmentStep,
   PAYMENT_STEP,
-  useCioPayment,
+  useCioCheckout,
 } from '@constructor-io/constructorio-ui-checkout';
 
 function App() {
   return (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[
         { id: 'cart' },
         { id: 'address' },
@@ -51,12 +52,12 @@ function App() {
         />
       </CioFlowStep>
       <CioFlowStep id="done"><MyConfirmation /></CioFlowStep>
-    </CioPaymentProvider>
+    </CioCheckoutProvider>
   );
 }
 
 function StartButton() {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   if (flow.state.currentStepId !== null) return null;
   return <button onClick={() => flow.start()}>Checkout</button>;
 }
@@ -64,11 +65,11 @@ function StartButton() {
 
 ## When to show the trigger
 
-The old library shipped `<CheckoutTrigger>`, `trigger`, `triggerLabel`, `triggerWhen`. In the new design you own the button — put it wherever, style it however, and gate it on any state:
+The old library shipped `<CheckoutTrigger>`, `trigger`, `triggerLabel`, and `triggerWhen`. The new design leaves the button to you — place it anywhere, style it any way, and gate it on any state:
 
 ```tsx
 function BuyButton() {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   const cart = useMyCartStore();
   if (cart.items.length === 0) return null;
   if (flow.state.sessionStatus === 'creating') return <Spinner />;
@@ -78,7 +79,7 @@ function BuyButton() {
 
 ## Modal vs. inline
 
-There's no `displayMode` prop — you wrap the `stripe` step in your own modal or render it inline:
+There is no `displayMode` prop — wrap the `stripe` step in your own modal or render it inline:
 
 ```tsx
 <CioFlowStep id={PAYMENT_STEP}>
@@ -90,10 +91,11 @@ There's no `displayMode` prop — you wrap the `stripe` step in your own modal o
 
 ## Routed multi-step
 
-Pass a `router` adapter and give each step a `path`. The library keeps URL and state in sync, so browser back / refresh / deep links all work:
+Pass a `router` adapter and give each step a `path`. The library keeps URL and state in sync, so browser back, refresh, and deep links all work:
 
 ```tsx
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   steps={[
     { id: 'cart', path: '/cart' },
     { id: 'address', path: '/checkout/address' },
@@ -107,17 +109,18 @@ Pass a `router` adapter and give each step a `path`. The library keeps URL and s
   onCreateSession={...}
 >
   ...
-</CioPaymentProvider>
+</CioCheckoutProvider>
 ```
 
 Steps with a `path` participate in URL sync; steps without one render inline/modal.
 
 ## Persistence and resume
 
-Pass a `storage` adapter and `storageKey` to auto-save state and hydrate on the next mount. The default `createSessionStorageAdapter()` survives page reloads in the same tab. For B2B pause/resume (approver on a different device) provide a custom async adapter that hits your backend.
+Pass a `storage` adapter and `storageKey` to auto-save state and hydrate on the next mount. The default `createSessionStorageAdapter()` survives page reloads in the same tab. For B2B pause/resume (approver on a different device), supply a custom async adapter backed by your server.
 
 ```tsx
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   storage={createSessionStorageAdapter()}
   storageKey={`user-${userId}`}
   ...
@@ -134,9 +137,10 @@ Two options, both funnel through `onUpdateSession`:
 ## Vanilla JS
 
 ```js
-import { CioCheckoutFlow } from '@constructor-io/constructorio-ui-checkout';
+import { createCheckoutFlow } from '@constructor-io/constructorio-ui-checkout';
 
-const flow = new CioCheckoutFlow({
+const flow = createCheckoutFlow({
+  provider: 'stripe',
   steps: [{ id: 'createSession' }, { id: 'payment' }],
   onCreateSession: () => fetch('/api/session').then(r => r.json()),
 });
@@ -151,6 +155,7 @@ await flow.start();
 <script src="/path/to/constructorio-ui-checkout.standalone.js"></script>
 <script>
   const flow = CioCheckout.resume({
+    provider: 'stripe',
     steps: [{ id: 'cart', path: '/cart' }, { id: 'payment', path: '/pay' }],
     onCreateSession: () => fetch('/api/session').then(r => r.json()),
     router: {
@@ -163,11 +168,11 @@ await flow.start();
 </script>
 ```
 
-`resume()` creates a flow with a sessionStorage adapter and registers it globally — the flow rehydrates on every page load automatically.
+`resume()` creates a flow with a sessionStorage adapter and registers it globally — the flow rehydrates automatically on every page load.
 
 ## Events
 
-Subscribe via `onEvent`:
+Subscribe through `onEvent`:
 
 - `flow.started`, `flow.completed`
 - `step.entered` / `step.exited`
@@ -177,4 +182,4 @@ Subscribe via `onEvent`:
 
 ## Migration from 1.x
 
-The 2.0 rewrite removes the prescriptive UI components (`CioCheckout`, `useCheckoutSession`, `CheckoutTrigger`, `CheckoutOverlay`, `CheckoutInline`, `CheckoutStatus`) in favor of headless primitives. Every 1.x feature has an equivalent — mostly by writing normal React with the new hook.
+The 2.0 rewrite removes the prescriptive UI components (`CioCheckout`, `useCheckoutSession`, `CheckoutTrigger`, `CheckoutOverlay`, `CheckoutInline`, `CheckoutStatus`) in favor of headless primitives. Every 1.x feature has an equivalent, mostly expressed through normal React with the new hook.

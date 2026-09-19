@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
-import { CioPaymentContext } from '@src/app/providers/CioPaymentContext';
+import { CioCheckoutContext } from '@src/app/providers/CioCheckoutContext';
 import { createCheckoutFlow } from '@src/core/createCheckoutFlow';
 import type {
   CheckoutFlowConfig,
@@ -9,28 +9,28 @@ import type {
   RouterAdapter,
   Step,
 } from '@src/core/types';
+import type { BuiltInPaymentProvider } from '@src/types';
 
 import '@src/styles.css';
 
-export interface CioPaymentProviderProps<
+export interface CioCheckoutProviderProps<
+  TProvider extends string = BuiltInPaymentProvider,
   TState = unknown,
-> extends CheckoutFlowConfig<TState> {
+> extends CheckoutFlowConfig<TProvider, TState> {
   children?: React.ReactNode;
 }
 
-export function CioPaymentProvider<TState = unknown>(
-  props: CioPaymentProviderProps<TState>
-): React.ReactElement {
+export function CioCheckoutProvider<
+  TProvider extends string = BuiltInPaymentProvider,
+  TState = unknown,
+>(props: CioCheckoutProviderProps<TProvider, TState>): React.ReactElement {
   const { children, cart } = props;
   const propsRef = useRef(props);
   propsRef.current = props;
 
-  const flowRef = useRef<CheckoutFlowCore<TState> | null>(null);
+  const flowRef = useRef<CheckoutFlowCore<TProvider, TState> | null>(null);
 
   if (flowRef.current === null) {
-    // Wrap step guards and callbacks so merchants can change them across
-    // rerenders without recreating the flow. Each shim reads the current prop
-    // through propsRef at call time; presence at mount decides shape.
     const wrappedSteps: Step[] = props.steps.map((step) => ({
       ...step,
       guard: step.guard
@@ -52,7 +52,7 @@ export function CioPaymentProvider<TState = unknown>(
         }
       : undefined;
 
-    flowRef.current = createCheckoutFlow<TState>(
+    flowRef.current = createCheckoutFlow<TProvider, TState>(
       {
         ...props,
         steps: wrappedSteps,
@@ -88,8 +88,10 @@ export function CioPaymentProvider<TState = unknown>(
   }, [cart, flow]);
 
   return (
-    <CioPaymentContext.Provider value={flow as CheckoutFlowCore<unknown>}>
+    <CioCheckoutContext.Provider
+      value={flow as unknown as CheckoutFlowCore<string, unknown>}
+    >
       {children}
-    </CioPaymentContext.Provider>
+    </CioCheckoutContext.Provider>
   );
 }

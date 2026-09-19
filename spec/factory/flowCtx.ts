@@ -11,7 +11,7 @@ import type {
 
 export interface MakeCtxOptions<TState = unknown> {
   steps?: Step[];
-  config?: Partial<CheckoutFlowConfig<TState>>;
+  config?: Partial<CheckoutFlowConfig<'stripe', TState>>;
   destroyed?: boolean;
 }
 
@@ -23,7 +23,8 @@ export function makeCtx<TState = unknown>(
   const captured: CheckoutEvent[] = [];
   events.on((e) => captured.push(e));
   const store = createStore<FlowState>(makeInitialState());
-  const config: CheckoutFlowConfig<TState> = {
+  const config: CheckoutFlowConfig<'stripe', TState> = {
+    provider: 'stripe',
     steps,
     onCreateSession: () =>
       Promise.resolve({
@@ -33,7 +34,7 @@ export function makeCtx<TState = unknown>(
     ...options.config,
   };
   let destroyed = options.destroyed ?? false;
-  const ctx: FlowContext<TState> = {
+  const ctx: FlowContext<'stripe', TState> = {
     config,
     steps,
     store,

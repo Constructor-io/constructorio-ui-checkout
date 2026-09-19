@@ -17,10 +17,13 @@ import type {
   StepId,
 } from './types';
 
-export function createCheckoutFlow<TState = unknown>(
-  config: CheckoutFlowConfig<TState>,
+export function createCheckoutFlow<
+  TProvider extends string = string,
+  TState = unknown,
+>(
+  config: CheckoutFlowConfig<TProvider, TState>,
   options?: CreateCheckoutFlowOptions
-): CheckoutFlowCore<TState> {
+): CheckoutFlowCore<TProvider, TState> {
   if (!Array.isArray(config.steps) || config.steps.length === 0) {
     throw new Error('createCheckoutFlow: `steps` must be a non-empty array');
   }
@@ -62,7 +65,7 @@ export function createCheckoutFlow<TState = unknown>(
 
   const isDead = (): boolean => destroyed;
 
-  const ctx: FlowContext<TState> = {
+  const ctx: FlowContext<TProvider, TState> = {
     config,
     steps,
     store,
@@ -169,6 +172,7 @@ export function createCheckoutFlow<TState = unknown>(
   if (!options?.deferMount) mount();
 
   return {
+    provider: config.provider,
     getState: () => store.getState(),
     subscribe: (listener) => store.subscribe(listener),
     mount,

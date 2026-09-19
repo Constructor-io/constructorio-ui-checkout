@@ -1,4 +1,8 @@
-import type { CheckoutItem, CheckoutSessionResponse } from '@src/types';
+import type {
+  BuiltInPaymentProvider,
+  CheckoutItem,
+  PaymentSessionFor,
+} from '@src/types';
 
 export type StepId = string;
 
@@ -23,9 +27,8 @@ export interface FlowState {
   sessionId: string | null;
   sessionStatus: SessionStatus;
   /**
-   * Persisted verbatim by the configured `storage` adapter (sessionStorage by
-   * default). Do not put PII here unless you supply your own `storage` that
-   * encrypts or omits it.
+   * Persisted verbatim by the configured `storage` adapter. Do not place PII
+   * here unless the adapter encrypts or omits it.
    */
   metadata: Record<string, unknown>;
   schemaVersion: 1;
@@ -104,22 +107,22 @@ export interface AuthResult {
   [key: string]: unknown;
 }
 
-export interface CheckoutFlowConfig<TState = unknown> {
+export interface CheckoutFlowConfig<
+  TProvider extends string = BuiltInPaymentProvider,
+  TState = unknown,
+> {
+  provider: TProvider;
   steps: Step[];
   storageKey?: string;
-  /**
-   * Where FlowState (including `metadata` and `cartSnapshot`) is persisted.
-   * Defaults to sessionStorage — per-tab, cleared on tab close. Supply your
-   * own adapter to persist elsewhere, encrypt at rest, or disable persistence
-   * entirely (e.g. `{ load: async () => null, save: async () => {}, clear: async () => {} }`).
-   */
   storage?: StorageAdapter;
   router?: RouterAdapter;
   authenticate?: () => Promise<AuthResult | null>;
-  onCreateSession: (state: FlowState) => Promise<CheckoutSessionResponse>;
+  onCreateSession: (
+    state: FlowState
+  ) => Promise<PaymentSessionFor<TProvider>>;
   onUpdateSession?: (
     patch: SessionUpdatePatch
-  ) => Promise<CheckoutSessionResponse>;
+  ) => Promise<PaymentSessionFor<TProvider>>;
   onEvent?: (event: CheckoutEvent) => void;
   cart?: CheckoutItem[];
   cartDebounceMs?: number;
@@ -133,7 +136,11 @@ export interface CreateCheckoutFlowOptions {
   deferMount?: boolean;
 }
 
-export interface CheckoutFlowCore<TState = unknown> {
+export interface CheckoutFlowCore<
+  TProvider extends string = BuiltInPaymentProvider,
+  TState = unknown,
+> {
+  readonly provider: TProvider;
   getState(): FlowState;
   subscribe(listener: (state: FlowState) => void): () => void;
   mount(): void;
@@ -147,14 +154,16 @@ export interface CheckoutFlowCore<TState = unknown> {
   clearState(): Promise<void>;
   getIntegratorState(): TState;
   setIntegratorState(updater: (prev: TState) => TState): void;
-  getSession(): CheckoutSessionResponse | null;
-  createSession(): Promise<CheckoutSessionResponse | null>;
+  getSession(): PaymentSessionFor<TProvider> | null;
+  createSession(): Promise<PaymentSessionFor<TProvider> | null>;
   updateSession(
     patch: SessionUpdatePatch
-  ): Promise<CheckoutSessionResponse | null>;
-  recreate(): Promise<CheckoutSessionResponse | null>;
+  ): Promise<PaymentSessionFor<TProvider> | null>;
+  recreate(): Promise<PaymentSessionFor<TProvider> | null>;
   markExpired(): void;
-  syncCart(items: CheckoutItem[]): Promise<CheckoutSessionResponse | null>;
+  syncCart(
+    items: CheckoutItem[]
+  ): Promise<PaymentSessionFor<TProvider> | null>;
   setCart(items: CheckoutItem[]): void;
   destroy(): void;
 }

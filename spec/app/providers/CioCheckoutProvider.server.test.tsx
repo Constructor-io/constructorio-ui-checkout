@@ -1,6 +1,6 @@
 import { renderToString } from 'react-dom/server';
 
-import { CioFlowStep } from '@src/app/components/CioFlowStep';
+import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
 import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
 import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 
@@ -24,16 +24,16 @@ describe(`${CioCheckoutProvider.name}: server`, () => {
     expect(view).toContain('child');
   });
 
-  it('CioFlowStep renders nothing on the server when the flow has not started', () => {
+  it('CioCheckoutStep renders nothing on the server when the flow has not started', () => {
     const view = renderToString(
       <CioCheckoutProvider
         provider="stripe"
         steps={[{ id: 'cart' }]}
         onCreateSession={stubSession}
       >
-        <CioFlowStep id="cart">
+        <CioCheckoutStep id="cart">
           <span data-testid="cart">cart</span>
-        </CioFlowStep>
+        </CioCheckoutStep>
       </CioCheckoutProvider>
     );
     expect(view).not.toContain('data-testid="cart"');

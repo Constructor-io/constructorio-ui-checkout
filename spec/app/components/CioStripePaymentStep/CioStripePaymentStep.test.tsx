@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
-import { CioFlowStep } from '@src/app/components/CioFlowStep';
+import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
 import { CioStripePaymentStep } from '@src/app/components/CioStripePaymentStep';
 import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
 import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
@@ -30,9 +30,9 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
           onCreateSession={stubSession}
           autoStart
         >
-          <CioFlowStep id={PAYMENT_STEP}>
+          <CioCheckoutStep id={PAYMENT_STEP}>
             <CioStripePaymentStep />
-          </CioFlowStep>
+          </CioCheckoutStep>
         </CioCheckoutProvider>
       );
     }
@@ -49,9 +49,9 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
         onCreateSession={stubSession}
         autoStart
       >
-        <CioFlowStep id={PAYMENT_STEP}>
+        <CioCheckoutStep id={PAYMENT_STEP}>
           <CioStripePaymentStep />
-        </CioFlowStep>
+        </CioCheckoutStep>
       </CioCheckoutProvider>
     );
     expect(
@@ -67,9 +67,9 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
         onCreateSession={stubSession}
         autoStart
       >
-        <CioFlowStep id={PAYMENT_STEP}>
+        <CioCheckoutStep id={PAYMENT_STEP}>
           <CioStripePaymentStep uiMode="elements" />
-        </CioFlowStep>
+        </CioCheckoutStep>
       </CioCheckoutProvider>
     );
     expect(
@@ -83,9 +83,9 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
       const flow = useCioCheckout();
       events.push(String(flow.state.currentStepId));
       return (
-        <CioFlowStep id={PAYMENT_STEP}>
+        <CioCheckoutStep id={PAYMENT_STEP}>
           <CioStripePaymentStep />
-        </CioFlowStep>
+        </CioCheckoutStep>
       );
     }
     render(
@@ -115,9 +115,9 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
         }
         autoStart
       >
-        <CioFlowStep id={PAYMENT_STEP}>
+        <CioCheckoutStep id={PAYMENT_STEP}>
           <CioStripePaymentStep />
-        </CioFlowStep>
+        </CioCheckoutStep>
       </CioCheckoutProvider>
     );
     await waitFor(() => {
@@ -140,9 +140,9 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
         onCreateSession={onCreateSession}
         autoStart
       >
-        <CioFlowStep id={PAYMENT_STEP}>
+        <CioCheckoutStep id={PAYMENT_STEP}>
           <CioStripePaymentStep onError={onError} />
-        </CioFlowStep>
+        </CioCheckoutStep>
       </CioCheckoutProvider>
     );
     const retryBtn = await screen.findByRole('button', { name: /retry/i });
@@ -174,9 +174,9 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
         autoStart
       >
         <Grabber />
-        <CioFlowStep id={PAYMENT_STEP}>
+        <CioCheckoutStep id={PAYMENT_STEP}>
           <CioStripePaymentStep />
-        </CioFlowStep>
+        </CioCheckoutStep>
       </CioCheckoutProvider>
     );
     await screen.findByTestId('stripe-provider');

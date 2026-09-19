@@ -25,8 +25,8 @@ export {
 } from './core/types';
 
 // React adapter
-export type { CioFlowStepProps } from './app/components/CioFlowStep';
-export { CioFlowStep } from './app/components/CioFlowStep';
+export type { CioCheckoutStepProps } from './app/components/CioCheckoutStep';
+export { CioCheckoutStep } from './app/components/CioCheckoutStep';
 export type {
   CioFulfillmentRenderProps,
   CioFulfillmentResult,

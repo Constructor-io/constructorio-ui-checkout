@@ -31,7 +31,7 @@ All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
 ```tsx
 import {
   CioCheckoutProvider,
-  CioFlowStep,
+  CioCheckoutStep,
   CioStripePaymentStep,
   CioFulfillmentStep,
   PAYMENT_STEP,
@@ -56,17 +56,17 @@ function App() {
       onEvent={(event) => console.log(event)}
     >
       <StartButton />
-      <CioFlowStep id="cart"><MyCart /></CioFlowStep>
-      <CioFlowStep id="address"><MyAddressForm /></CioFlowStep>
-      <CioFlowStep id={PAYMENT_STEP}>
+      <CioCheckoutStep id="cart"><MyCart /></CioCheckoutStep>
+      <CioCheckoutStep id="address"><MyAddressForm /></CioCheckoutStep>
+      <CioCheckoutStep id={PAYMENT_STEP}>
         <CioStripePaymentStep uiMode="form" />
-      </CioFlowStep>
-      <CioFlowStep id="fulfill">
+      </CioCheckoutStep>
+      <CioCheckoutStep id="fulfill">
         <CioFulfillmentStep
           onFulfill={() => fetch('/api/verify').then((r) => r.json())}
         />
-      </CioFlowStep>
-      <CioFlowStep id="done"><MyConfirmation /></CioFlowStep>
+      </CioCheckoutStep>
+      <CioCheckoutStep id="done"><MyConfirmation /></CioCheckoutStep>
     </CioCheckoutProvider>
   );
 }

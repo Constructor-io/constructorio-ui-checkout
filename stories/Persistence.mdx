@@ -15,7 +15,7 @@ import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   CioCheckoutProvider,
-  CioFlowStep,
+  CioCheckoutStep,
   CioStripePaymentStep,
   PAYMENT_STEP,
   useCioCheckout,
@@ -89,14 +89,14 @@ function CheckoutApp() {
       }}
       autoStart
     >
-      <CioFlowStep id="cart"><CartView /></CioFlowStep>
-      <CioFlowStep id="approval"><ApprovalGate /></CioFlowStep>
-      <CioFlowStep id={PAYMENT_STEP}>
+      <CioCheckoutStep id="cart"><CartView /></CioCheckoutStep>
+      <CioCheckoutStep id="approval"><ApprovalGate /></CioCheckoutStep>
+      <CioCheckoutStep id={PAYMENT_STEP}>
         <CioStripePaymentStep />
-      </CioFlowStep>
-      <CioFlowStep id="done">
+      </CioCheckoutStep>
+      <CioCheckoutStep id="done">
         <OrderConfirmed />
-      </CioFlowStep>
+      </CioCheckoutStep>
     </CioCheckoutProvider>
   );
 }

@@ -178,7 +178,7 @@ function AuthStepBody() {
   return isSignedIn() ? null : <SignInForm />;
 }
 
-<CioFlowStep id="auth"><AuthStepBody /></CioFlowStep>
+<CioCheckoutStep id="auth"><AuthStepBody /></CioCheckoutStep>
 ```
 
 Brief render of `null` before the transition. Add a loading state if the flash is visible.
@@ -208,7 +208,7 @@ To present sign-in as a modal over the current page (no URL change), give the au
 { id: 'auth' }
 ```
 
-Render a `<SignInModal>` inside `<CioFlowStep id="auth">`. The modal appears only during checkout; `<LoginPage>` at `/login` still handles the nav-triggered case. Trade-offs: no deep link to auth and no browser-back into auth, but no route change either.
+Render a `<SignInModal>` inside `<CioCheckoutStep id="auth">`. The modal appears only during checkout; `<LoginPage>` at `/login` still handles the nav-triggered case. Trade-offs: no deep link to auth and no browser-back into auth, but no route change either.
 
 ## Multi-step auth (OTP, 2FA, passkey, MFA)
 

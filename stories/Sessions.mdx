@@ -15,7 +15,7 @@ End-to-end wiring with create, update, expiry, error handling, and analytics —
 ```tsx
 import {
   CioCheckoutProvider,
-  CioFlowStep,
+  CioCheckoutStep,
   CioStripePaymentStep,
   PAYMENT_STEP,
   useCioCheckout,
@@ -88,11 +88,11 @@ function CheckoutApp() {
         }
       }}
     >
-      <CioFlowStep id={PAYMENT_STEP}>
+      <CioCheckoutStep id={PAYMENT_STEP}>
         <CioStripePaymentStep
           onError={(err) => reportToSentry(err)}
         />
-      </CioFlowStep>
+      </CioCheckoutStep>
     </CioCheckoutProvider>
   );
 }

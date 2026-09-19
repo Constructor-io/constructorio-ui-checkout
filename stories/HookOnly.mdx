@@ -4,7 +4,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Hook-only composition
 
-`useCioCheckout()` is the primitive. `CioFlowStep`, `CioStripePaymentStep`,
+`useCioCheckout()` is the primitive. `CioCheckoutStep`, `CioStripePaymentStep`,
 and `CioFulfillmentStep` are conveniences that read from the same hook. When
 the built-in components don't fit — a Stripe surface split across multiple
 pages, a PSP the library doesn't ship UI for, or an unusual render tree —
@@ -12,7 +12,7 @@ drive the flow from the hook directly.
 
 ## What each built-in does
 
-- **`<CioFlowStep id="x">`** — three lines. Returns `null` unless
+- **`<CioCheckoutStep id="x">`** — three lines. Returns `null` unless
   `state.currentStepId === 'x'`. Any gate does the same job.
 - **`<CioStripePaymentStep>`** — kicks off `flow.createSession()` on mount,
   wraps children in `CheckoutFormProvider` or `CheckoutElementsProvider`, and
@@ -254,9 +254,9 @@ dedicated component — the same reason the library ships
 - Standard Stripe surface (`PaymentElement` or `CheckoutForm`) with no
   unusual wrapping — `<CioStripePaymentStep>` saves the boilerplate.
 - Steps that map 1:1 to component trees with no routing subtleties —
-  `<CioFlowStep>` is a clean gate.
+  `<CioCheckoutStep>` is a clean gate.
 - Fulfillment poll matching the default shape — `<CioFulfillmentStep>`
   handles the retry/timeout logic.
 
-Mix and match freely: keep `<CioFlowStep>` for gating and swap only
+Mix and match freely: keep `<CioCheckoutStep>` for gating and swap only
 `<CioStripePaymentStep>` for a hook-driven wrapper, or vice versa.

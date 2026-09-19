@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
-import { CioFlowStep } from '@src/app/components/CioFlowStep';
+import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
 import {
   type CioFulfillmentResult,
   CioFulfillmentStep,
@@ -32,9 +32,9 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
         onCreateSession={stubSession}
         autoStart
       >
-        <CioFlowStep id="fulfill">
+        <CioCheckoutStep id="fulfill">
           <CioFulfillmentStep onFulfill={onFulfill} />
-        </CioFlowStep>
+        </CioCheckoutStep>
       </CioCheckoutProvider>
     );
 
@@ -65,13 +65,13 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
         autoStart
       >
         <Probe />
-        <CioFlowStep id="fulfill">
+        <CioCheckoutStep id="fulfill">
           <CioFulfillmentStep
             onFulfill={() =>
               Promise.resolve({ success: true, message: 'Order #123' })
             }
           />
-        </CioFlowStep>
+        </CioCheckoutStep>
       </CioCheckoutProvider>
     );
 
@@ -98,9 +98,9 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
         onCreateSession={stubSession}
         autoStart
       >
-        <CioFlowStep id="fulfill">
+        <CioCheckoutStep id="fulfill">
           <CioFulfillmentStep advanceOnSuccess={false} onFulfill={onFulfill} />
-        </CioFlowStep>
+        </CioCheckoutStep>
       </CioCheckoutProvider>
     );
 
@@ -131,12 +131,12 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
         autoStart
       >
         <Probe />
-        <CioFlowStep id="fulfill">
+        <CioCheckoutStep id="fulfill">
           <CioFulfillmentStep
             advanceOnSuccess={false}
             onFulfill={() => Promise.resolve({ success: true })}
           />
-        </CioFlowStep>
+        </CioCheckoutStep>
       </CioCheckoutProvider>
     );
 
@@ -152,7 +152,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
         onCreateSession={stubSession}
         autoStart
       >
-        <CioFlowStep id="fulfill">
+        <CioCheckoutStep id="fulfill">
           <CioFulfillmentStep
             onFulfill={() =>
               Promise.resolve({ success: true, message: 'Custom rendered' })
@@ -163,7 +163,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
               </div>
             )}
           />
-        </CioFlowStep>
+        </CioCheckoutStep>
       </CioCheckoutProvider>
     );
 
@@ -182,11 +182,11 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
         onCreateSession={stubSession}
         autoStart
       >
-        <CioFlowStep id="fulfill">
+        <CioCheckoutStep id="fulfill">
           <CioFulfillmentStep
             onFulfill={() => Promise.reject(new Error('server down'))}
           />
-        </CioFlowStep>
+        </CioCheckoutStep>
       </CioCheckoutProvider>
     );
     expect(await screen.findByText('server down')).toBeInTheDocument();

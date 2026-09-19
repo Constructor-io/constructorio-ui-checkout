@@ -17,7 +17,7 @@ interface Step {
 }
 ```
 
-That is the entire surface. Nothing else on the step defines rendering — that happens via `<CioFlowStep id="x">` or a custom gate that reads `state.currentStepId`.
+That is the entire surface. Nothing else on the step defines rendering — that happens via `<CioCheckoutStep id="x">` or a custom gate that reads `state.currentStepId`.
 
 ## Two built-in step IDs
 
@@ -141,23 +141,23 @@ Use conditional rendering inside a step when:
 - The step runs either way, only with different UI.
 
 ```tsx
-<CioFlowStep id="checkout">
+<CioCheckoutStep id="checkout">
   {loggedIn ? <ExpressCheckout /> : <GuestCheckoutForm />}
-</CioFlowStep>
+</CioCheckoutStep>
 ```
 
 Registering two separate steps for "guest" and "loggedIn" is almost always the wrong shape — it splits the state machine on a runtime toggle rather than on flow position.
 
 ## Custom step components
 
-`<CioFlowStep>` is a three-line convenience — a gate that renders children when `state.currentStepId` matches. Replace it with any gate that reads the hook. See [Hook-only composition](./?path=/docs/getting-started-hook-only-composition--docs) for the escape-hatch pattern.
+`<CioCheckoutStep>` is a three-line convenience — a gate that renders children when `state.currentStepId` matches. Replace it with any gate that reads the hook. See [Hook-only composition](./?path=/docs/getting-started-hook-only-composition--docs) for the escape-hatch pattern.
 
 For steps that own their side effects (auto-creating a session, polling fulfillment), pair a gate with a hook-driven component:
 
 ```tsx
-<CioFlowStep id="fulfill">
+<CioCheckoutStep id="fulfill">
   <MyFulfillmentPoll />
-</CioFlowStep>
+</CioCheckoutStep>
 
 function MyFulfillmentPoll() {
   const flow = useCioCheckout();

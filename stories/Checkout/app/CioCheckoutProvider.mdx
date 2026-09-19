@@ -8,7 +8,7 @@ Headless primitives for building multi-step checkout on top of Stripe. The libra
 
 ## Three integration paths, one core
 
-- **React** — `<CioCheckoutProvider provider="stripe">` + `useCioCheckout()` + `<CioFlowStep>` + `<CioStripePaymentStep>` / `<CioFulfillmentStep>`
+- **React** — `<CioCheckoutProvider provider="stripe">` + `useCioCheckout()` + `<CioCheckoutStep>` + `<CioStripePaymentStep>` / `<CioFulfillmentStep>`
 - **Vanilla JS (npm)** — `createCheckoutFlow(config)` from `@constructor-io/constructorio-ui-checkout`
 - **Standalone bundle** — `<script>` tag exposes `window.CioCheckout` with the same class
 
@@ -19,7 +19,7 @@ All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
 ```tsx
 import {
   CioCheckoutProvider,
-  CioFlowStep,
+  CioCheckoutStep,
   CioStripePaymentStep,
   CioFulfillmentStep,
   PAYMENT_STEP,
@@ -41,17 +41,17 @@ function App() {
       onEvent={(event) => console.log(event)}
     >
       <StartButton />
-      <CioFlowStep id="cart"><MyCart /></CioFlowStep>
-      <CioFlowStep id="address"><MyAddressForm /></CioFlowStep>
-      <CioFlowStep id={PAYMENT_STEP}>
+      <CioCheckoutStep id="cart"><MyCart /></CioCheckoutStep>
+      <CioCheckoutStep id="address"><MyAddressForm /></CioCheckoutStep>
+      <CioCheckoutStep id={PAYMENT_STEP}>
         <CioStripePaymentStep uiMode="form" />
-      </CioFlowStep>
-      <CioFlowStep id="fulfill">
+      </CioCheckoutStep>
+      <CioCheckoutStep id="fulfill">
         <CioFulfillmentStep
           onFulfill={() => fetch('/api/verify').then(r => r.json())}
         />
-      </CioFlowStep>
-      <CioFlowStep id="done"><MyConfirmation /></CioFlowStep>
+      </CioCheckoutStep>
+      <CioCheckoutStep id="done"><MyConfirmation /></CioCheckoutStep>
     </CioCheckoutProvider>
   );
 }
@@ -82,11 +82,11 @@ function BuyButton() {
 There is no `displayMode` prop — wrap the `stripe` step in your own modal or render it inline:
 
 ```tsx
-<CioFlowStep id={PAYMENT_STEP}>
+<CioCheckoutStep id={PAYMENT_STEP}>
   <MyModal open>
     <CioStripePaymentStep />
   </MyModal>
-</CioFlowStep>
+</CioCheckoutStep>
 ```
 
 ## Routed multi-step

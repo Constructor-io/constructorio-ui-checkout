@@ -1,6 +1,6 @@
 import { renderToString } from 'react-dom/server';
 
-import { CioFlowStep } from '@src/app/components/CioFlowStep';
+import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
 import {
   type CioFulfillmentResult,
   CioFulfillmentStep,
@@ -25,9 +25,9 @@ describe(`${CioFulfillmentStep.name}: server`, () => {
           steps={[{ id: 'fulfill' }]}
           onCreateSession={stubSession}
         >
-          <CioFlowStep id="fulfill">
+          <CioCheckoutStep id="fulfill">
             <CioFulfillmentStep onFulfill={onFulfill} />
-          </CioFlowStep>
+          </CioCheckoutStep>
         </CioCheckoutProvider>
       )
     ).not.toThrow();
@@ -40,9 +40,9 @@ describe(`${CioFulfillmentStep.name}: server`, () => {
         steps={[{ id: 'fulfill' }]}
         onCreateSession={stubSession}
       >
-        <CioFlowStep id="fulfill">
+        <CioCheckoutStep id="fulfill">
           <CioFulfillmentStep onFulfill={onFulfill} />
-        </CioFlowStep>
+        </CioCheckoutStep>
       </CioCheckoutProvider>
     );
     expect(view).not.toContain('cio-checkout-fulfillment');

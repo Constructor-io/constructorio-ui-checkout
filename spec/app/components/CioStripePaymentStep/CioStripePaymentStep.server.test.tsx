@@ -1,6 +1,6 @@
 import { renderToString } from 'react-dom/server';
 
-import { CioFlowStep } from '@src/app/components/CioFlowStep';
+import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
 import { CioStripePaymentStep } from '@src/app/components/CioStripePaymentStep';
 import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 import { PAYMENT_STEP } from '@src/core/types';
@@ -20,9 +20,9 @@ describe(`${CioStripePaymentStep.name}: server`, () => {
           steps={[{ id: PAYMENT_STEP }]}
           onCreateSession={stubSession}
         >
-          <CioFlowStep id={PAYMENT_STEP}>
+          <CioCheckoutStep id={PAYMENT_STEP}>
             <CioStripePaymentStep />
-          </CioFlowStep>
+          </CioCheckoutStep>
         </CioCheckoutProvider>
       )
     ).not.toThrow();
@@ -35,9 +35,9 @@ describe(`${CioStripePaymentStep.name}: server`, () => {
         steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={stubSession}
       >
-        <CioFlowStep id={PAYMENT_STEP}>
+        <CioCheckoutStep id={PAYMENT_STEP}>
           <CioStripePaymentStep />
-        </CioFlowStep>
+        </CioCheckoutStep>
       </CioCheckoutProvider>
     );
     expect(view).not.toContain('stripe-provider');

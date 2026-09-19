@@ -3,7 +3,7 @@ import React from 'react';
 import { act, render, renderHook, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
-import { CioFlowStep } from '@src/app/components/CioFlowStep';
+import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
 import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
 import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 import type { CheckoutFlowConfig } from '@src/core/types';
@@ -91,8 +91,8 @@ describe(`${CioCheckoutProvider.name}: client`, () => {
           >
             <>
               <TriggerNext />
-              <CioFlowStep id="a">a-view</CioFlowStep>
-              <CioFlowStep id="b">b-view</CioFlowStep>
+              <CioCheckoutStep id="a">a-view</CioCheckoutStep>
+              <CioCheckoutStep id="b">b-view</CioCheckoutStep>
             </>
           </CioCheckoutProvider>
         );
@@ -185,8 +185,8 @@ describe(`${CioCheckoutProvider.name}: client`, () => {
             router={router}
             autoStart
           >
-            <CioFlowStep id="a">a-view</CioFlowStep>
-            <CioFlowStep id="b">b-view</CioFlowStep>
+            <CioCheckoutStep id="a">a-view</CioCheckoutStep>
+            <CioCheckoutStep id="b">b-view</CioCheckoutStep>
           </CioCheckoutProvider>
         );
       }

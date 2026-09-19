@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
-import { CioFlowStep } from '@src/app/components/CioFlowStep';
+import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
 import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
 import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 import type { CheckoutFlowConfig } from '@src/core/types';
@@ -18,7 +18,7 @@ const baseConfig: CheckoutFlowConfig = {
   onCreateSession: stubSession,
 };
 
-describe(`${CioFlowStep.name}: client`, () => {
+describe(`${CioCheckoutStep.name}: client`, () => {
   it('renders children only when its id matches currentStepId', async () => {
     const user = userEvent.setup();
     function App() {
@@ -41,9 +41,9 @@ describe(`${CioFlowStep.name}: client`, () => {
           >
             next
           </button>
-          <CioFlowStep id="cart">cart-view</CioFlowStep>
-          <CioFlowStep id="auth">auth-view</CioFlowStep>
-          <CioFlowStep id="pay">pay-view</CioFlowStep>
+          <CioCheckoutStep id="cart">cart-view</CioCheckoutStep>
+          <CioCheckoutStep id="auth">auth-view</CioCheckoutStep>
+          <CioCheckoutStep id="pay">pay-view</CioCheckoutStep>
         </>
       );
     }

@@ -28,9 +28,9 @@ mounted.
     return res.json(); // typed as StripePaymentSession
   }}
 >
-  <CioFlowStep id={PAYMENT_STEP}>
+  <CioCheckoutStep id={PAYMENT_STEP}>
     <CioStripePaymentStep uiMode="form" />
-  </CioFlowStep>
+  </CioCheckoutStep>
 </CioCheckoutProvider>
 ```
 
@@ -53,9 +53,9 @@ in-house, sandbox), you own the payment UI and drive the flow through
     return res.json();
   }}
 >
-  <CioFlowStep id={PAYMENT_STEP}>
+  <CioCheckoutStep id={PAYMENT_STEP}>
     <MyPspStep />
-  </CioFlowStep>
+  </CioCheckoutStep>
 </CioCheckoutProvider>
 ```
 

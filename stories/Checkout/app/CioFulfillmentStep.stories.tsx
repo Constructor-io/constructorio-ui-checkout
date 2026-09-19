@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/react';
 
-import { CioFlowStep } from '@src/app/components/CioFlowStep';
+import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
 import {
   type CioFulfillmentResult,
   CioFulfillmentStep,
@@ -70,7 +70,7 @@ export const Success: Story = {
       onCreateSession={stubSession}
     >
       <StepShell>
-        <CioFlowStep id="fulfill">
+        <CioCheckoutStep id="fulfill">
           <CioFulfillmentStep
             onFulfill={() =>
               delay<CioFulfillmentResult>({
@@ -79,12 +79,12 @@ export const Success: Story = {
               })
             }
           />
-        </CioFlowStep>
-        <CioFlowStep id="done">
+        </CioCheckoutStep>
+        <CioCheckoutStep id="done">
           <div style={{ padding: 12, background: '#e8f6ee', borderRadius: 6 }}>
             <strong>Done</strong> — flow advanced.
           </div>
-        </CioFlowStep>
+        </CioCheckoutStep>
       </StepShell>
     </CioCheckoutProvider>
   ),
@@ -107,7 +107,7 @@ export const Failure: Story = {
       onCreateSession={stubSession}
     >
       <StepShell>
-        <CioFlowStep id="fulfill">
+        <CioCheckoutStep id="fulfill">
           <CioFulfillmentStep
             onFulfill={() =>
               delay<CioFulfillmentResult>({
@@ -116,7 +116,7 @@ export const Failure: Story = {
               })
             }
           />
-        </CioFlowStep>
+        </CioCheckoutStep>
       </StepShell>
     </CioCheckoutProvider>
   ),
@@ -139,7 +139,7 @@ export const CustomRender: Story = {
       onCreateSession={stubSession}
     >
       <StepShell>
-        <CioFlowStep id="fulfill">
+        <CioCheckoutStep id="fulfill">
           <CioFulfillmentStep
             advanceOnSuccess={false}
             onFulfill={() =>
@@ -177,12 +177,12 @@ export const CustomRender: Story = {
               </div>
             )}
           />
-        </CioFlowStep>
-        <CioFlowStep id="done">
+        </CioCheckoutStep>
+        <CioCheckoutStep id="done">
           <div style={{ padding: 12, background: '#e8f6ee', borderRadius: 6 }}>
             <strong>Done</strong>
           </div>
-        </CioFlowStep>
+        </CioCheckoutStep>
       </StepShell>
     </CioCheckoutProvider>
   ),
@@ -197,7 +197,7 @@ function FlakyDemo() {
       onCreateSession={stubSession}
     >
       <StepShell>
-        <CioFlowStep id="fulfill">
+        <CioCheckoutStep id="fulfill">
           <CioFulfillmentStep
             onFulfill={() => {
               const next = attempt + 1;
@@ -211,12 +211,12 @@ function FlakyDemo() {
               });
             }}
           />
-        </CioFlowStep>
-        <CioFlowStep id="done">
+        </CioCheckoutStep>
+        <CioCheckoutStep id="done">
           <div style={{ padding: 12, background: '#e8f6ee', borderRadius: 6 }}>
             <strong>Done</strong>
           </div>
-        </CioFlowStep>
+        </CioCheckoutStep>
       </StepShell>
     </CioCheckoutProvider>
   );

@@ -10,7 +10,7 @@ import {
 import { userEvent } from '@testing-library/user-event';
 import type React from 'react';
 
-import { CioFlowStep } from '@src/app/components/CioFlowStep';
+import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
 import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
 import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 import type { CheckoutFlowConfig } from '@src/core/types';
@@ -118,15 +118,15 @@ describe(`${useCioCheckout.name}: client`, () => {
           onCreateSession={customSession}
           autoStart
         >
-          <CioFlowStep id="cart">
+          <CioCheckoutStep id="cart">
             <CustomCartStep />
-          </CioFlowStep>
-          <CioFlowStep id="pay">
+          </CioCheckoutStep>
+          <CioCheckoutStep id="pay">
             <CustomPaymentStep />
-          </CioFlowStep>
-          <CioFlowStep id="done">
+          </CioCheckoutStep>
+          <CioCheckoutStep id="done">
             <CustomDoneStep />
-          </CioFlowStep>
+          </CioCheckoutStep>
         </CioCheckoutProvider>
       );
 

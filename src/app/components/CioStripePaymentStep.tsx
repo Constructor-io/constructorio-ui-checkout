@@ -10,11 +10,11 @@ import CheckoutFormElements from '@src/app/components/CheckoutFormElements';
 import { useCioPayment } from '@src/app/hooks/useCioPayment';
 import checkoutManager from '@src/manager/CheckoutManager';
 import type {
+  CheckoutComponentOverrides,
   CheckoutLayout,
   CheckoutRedirectBehavior,
   CheckoutStripeOptions,
   CheckoutUiMode,
-  CheckoutComponentOverrides,
   Translations,
 } from '@src/types';
 

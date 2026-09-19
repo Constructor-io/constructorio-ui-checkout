@@ -12,8 +12,8 @@ import {
 import type { StripePaymentElementChangeEvent } from '@stripe/stripe-js';
 
 import type {
-  CheckoutRedirectBehavior,
   CheckoutComponentOverrides,
+  CheckoutRedirectBehavior,
   PayButtonRenderProps,
   Translations,
 } from '@src/types';

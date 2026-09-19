@@ -1,7 +1,7 @@
+import { CioCheckoutFlow } from '@src/manager/CioCheckoutFlow';
 import cioCheckoutRegistry, {
   CioCheckoutRegistry,
 } from '@src/manager/CioCheckoutRegistry';
-import { CioCheckoutFlow } from '@src/manager/CioCheckoutFlow';
 
 import {
   DEMO_CLIENT_SECRET,

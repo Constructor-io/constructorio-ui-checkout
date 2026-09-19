@@ -1,4 +1,6 @@
-import type { Step } from '../types';
+import type { BaseCartItem } from '@src/types';
+
+import type { CheckoutStep } from '../types';
 
 import type { FlowContext } from './context';
 import { toError } from './helpers';
@@ -6,8 +8,9 @@ import { toError } from './helpers';
 export function createGuards<
   TProvider extends string = string,
   TState = unknown,
->(ctx: FlowContext<TProvider, TState>) {
-  const runGuard = async (step: Step): Promise<boolean> => {
+  TItem = BaseCartItem,
+>(ctx: FlowContext<TProvider, TState, TItem>) {
+  const runGuard = async (step: CheckoutStep<TItem>): Promise<boolean> => {
     if (!step.guard) return true;
     try {
       return await step.guard(ctx.store.getState());

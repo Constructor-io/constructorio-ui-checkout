@@ -1,23 +1,26 @@
 import { makeCtx } from '@spec/factory/flowCtx';
 
 import { createStorageManager } from '@src/core/flow/storageManager';
-import type { FlowState, StorageAdapter } from '@src/core/types';
+import type {
+  CheckoutFlowState,
+  CheckoutStorageAdapter,
+} from '@src/core/types';
 
 function makeAdapter(): {
-  adapter: StorageAdapter;
-  saved: FlowState[];
+  adapter: CheckoutStorageAdapter;
+  saved: CheckoutFlowState[];
   cleared: number;
   resolveSave: () => void;
   rejectSave: (r: unknown) => void;
-  setLoadResult: (r: FlowState | null) => void;
+  setLoadResult: (r: CheckoutFlowState | null) => void;
 } {
-  const saved: FlowState[] = [];
+  const saved: CheckoutFlowState[] = [];
   let cleared = 0;
   let saveResolve: () => void = () => {};
   let saveReject: (r: unknown) => void = () => {};
   const saveMode: 'immediate' | 'pending' = 'immediate';
-  let loadResult: FlowState | null = null;
-  const adapter: StorageAdapter = {
+  let loadResult: CheckoutFlowState | null = null;
+  const adapter: CheckoutStorageAdapter = {
     load: () => Promise.resolve(loadResult),
     save: (_, state) => {
       saved.push(state);
@@ -40,7 +43,7 @@ function makeAdapter(): {
     },
     resolveSave: () => saveResolve(),
     rejectSave: (r: unknown) => saveReject(r),
-    setLoadResult: (r: FlowState | null) => {
+    setLoadResult: (r: CheckoutFlowState | null) => {
       loadResult = r;
     },
   } as unknown as ReturnType<typeof makeAdapter>;
@@ -115,7 +118,7 @@ describe(`${createStorageManager.name}: client`, () => {
     });
 
     it('emits storage error when save rejects', async () => {
-      const rejecting: StorageAdapter = {
+      const rejecting: CheckoutStorageAdapter = {
         load: () => Promise.resolve(null),
         save: () => Promise.reject(new Error('quota')),
         clear: () => Promise.resolve(),
@@ -151,6 +154,7 @@ describe(`${createStorageManager.name}: client`, () => {
         currentStepId: 'b',
         completedStepIds: ['a'],
         cartSnapshot: [],
+        currency: null,
         sessionId: null,
         sessionStatus: 'idle',
         metadata: {},
@@ -178,10 +182,11 @@ describe(`${createStorageManager.name}: client`, () => {
 
     it('calls hydrate and returns true when loaded state has a currentStepId', async () => {
       const { adapter, setLoadResult } = makeAdapter();
-      const stored: FlowState = {
+      const stored: CheckoutFlowState = {
         currentStepId: 'b',
         completedStepIds: ['a'],
         cartSnapshot: [],
+        currency: null,
         sessionId: null,
         sessionStatus: 'idle',
         metadata: {},
@@ -191,7 +196,7 @@ describe(`${createStorageManager.name}: client`, () => {
       const { ctx } = makeCtx({
         config: { storage: adapter, storageKey: 'k' },
       });
-      const hydrate = vi.fn((state: FlowState) => {
+      const hydrate = vi.fn((state: CheckoutFlowState) => {
         ctx.store.setState(() => state);
       });
       const sm = createStorageManager(ctx, { hydrate });
@@ -201,7 +206,7 @@ describe(`${createStorageManager.name}: client`, () => {
     });
 
     it('emits storage error when adapter.load throws', async () => {
-      const throwing: StorageAdapter = {
+      const throwing: CheckoutStorageAdapter = {
         load: () => Promise.reject(new Error('read fail')),
         save: () => Promise.resolve(),
         clear: () => Promise.resolve(),
@@ -226,7 +231,7 @@ describe(`${createStorageManager.name}: client`, () => {
 
     it('calls adapter.clear', async () => {
       const cleared = vi.fn(() => Promise.resolve());
-      const adapter: StorageAdapter = {
+      const adapter: CheckoutStorageAdapter = {
         load: () => Promise.resolve(null),
         save: () => Promise.resolve(),
         clear: cleared,
@@ -240,7 +245,7 @@ describe(`${createStorageManager.name}: client`, () => {
     });
 
     it('emits storage error when adapter.clear rejects', async () => {
-      const adapter: StorageAdapter = {
+      const adapter: CheckoutStorageAdapter = {
         load: () => Promise.resolve(null),
         save: () => Promise.resolve(),
         clear: () => Promise.reject(new Error('clear fail')),

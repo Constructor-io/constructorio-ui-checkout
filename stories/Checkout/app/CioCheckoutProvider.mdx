@@ -37,21 +37,27 @@ function App() {
         { id: 'fulfill' },
         { id: 'done' },
       ]}
-      onCreateSession={() => fetch('/api/checkout').then(r => r.json())}
+      onCreateSession={() => fetch('/api/checkout').then((r) => r.json())}
       onEvent={(event) => console.log(event)}
     >
       <StartButton />
-      <CioCheckoutStep id="cart"><MyCart /></CioCheckoutStep>
-      <CioCheckoutStep id="address"><MyAddressForm /></CioCheckoutStep>
+      <CioCheckoutStep id="cart">
+        <MyCart />
+      </CioCheckoutStep>
+      <CioCheckoutStep id="address">
+        <MyAddressForm />
+      </CioCheckoutStep>
       <CioCheckoutStep id={PAYMENT_STEP}>
         <CioStripePaymentStep uiMode="form" />
       </CioCheckoutStep>
       <CioCheckoutStep id="fulfill">
         <CioFulfillmentStep
-          onFulfill={() => fetch('/api/verify').then(r => r.json())}
+          onFulfill={() => fetch('/api/verify').then((r) => r.json())}
         />
       </CioCheckoutStep>
-      <CioCheckoutStep id="done"><MyConfirmation /></CioCheckoutStep>
+      <CioCheckoutStep id="done">
+        <MyConfirmation />
+      </CioCheckoutStep>
     </CioCheckoutProvider>
   );
 }
@@ -142,7 +148,7 @@ import { createCheckoutFlow } from '@constructor-io/constructorio-ui-checkout';
 const flow = createCheckoutFlow({
   provider: 'stripe',
   steps: [{ id: 'createSession' }, { id: 'payment' }],
-  onCreateSession: () => fetch('/api/session').then(r => r.json()),
+  onCreateSession: () => fetch('/api/session').then((r) => r.json()),
 });
 
 flow.subscribe((state) => renderMyUI(state));
@@ -156,8 +162,11 @@ await flow.start();
 <script>
   const flow = CioCheckout.resume({
     provider: 'stripe',
-    steps: [{ id: 'cart', path: '/cart' }, { id: 'payment', path: '/pay' }],
-    onCreateSession: () => fetch('/api/session').then(r => r.json()),
+    steps: [
+      { id: 'cart', path: '/cart' },
+      { id: 'payment', path: '/pay' },
+    ],
+    onCreateSession: () => fetch('/api/session').then((r) => r.json()),
     router: {
       push: (p) => (window.location.href = p),
       getCurrentPath: () => window.location.pathname,

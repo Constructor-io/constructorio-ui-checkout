@@ -1,16 +1,22 @@
-import type { FlowState } from '../types';
+import type { BaseCartItem } from '@src/types';
+
+import type { CheckoutFlowState } from '../types';
 
 import type { FlowContext } from './context';
 import { toError } from './helpers';
 
-export interface StorageManagerOptions {
-  hydrate: (state: FlowState) => void;
+export interface StorageManagerOptions<TItem = BaseCartItem> {
+  hydrate: (state: CheckoutFlowState<TItem>) => void;
 }
 
 export function createStorageManager<
   TProvider extends string = string,
   TState = unknown,
->(ctx: FlowContext<TProvider, TState>, opts: StorageManagerOptions) {
+  TItem = BaseCartItem,
+>(
+  ctx: FlowContext<TProvider, TState, TItem>,
+  opts: StorageManagerOptions<TItem>
+) {
   const { config, store, isDestroyed, emitError } = ctx;
   const storage = config.storage;
   const storageKey = config.storageKey;

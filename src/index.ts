@@ -2,21 +2,21 @@
 export { createCheckoutFlow } from './core/createCheckoutFlow';
 export { createSessionStorageAdapter } from './core/storage/sessionStorageAdapter';
 export type {
-  AuthResult,
+  CheckoutAuthResult,
   CheckoutEvent,
   CheckoutEventErrorSource,
   CheckoutEventType,
   CheckoutFlowConfig,
   CheckoutFlowCore,
-  FlowState,
-  RouterAdapter,
-  SessionDiff,
-  SessionStatus,
-  SessionUpdatePatch,
-  SessionUpdateReason,
-  Step,
-  StepId,
-  StorageAdapter,
+  CheckoutFlowState,
+  CheckoutRouterAdapter,
+  CheckoutSessionDiff,
+  CheckoutSessionStatus,
+  CheckoutSessionUpdatePatch,
+  CheckoutSessionUpdateReason,
+  CheckoutStep,
+  CheckoutStepId,
+  CheckoutStorageAdapter,
 } from './core/types';
 export {
   CREATE_SESSION_STEP,
@@ -51,7 +51,7 @@ export {
 // i18n helpers
 export { defaultTranslations, t } from './utils/translate';
 
-// Payment session types (returned by onCreateSession)
+// Payment session
 export type {
   BasePaymentSession,
   BuiltInPaymentProvider,
@@ -61,10 +61,12 @@ export type {
   StripePaymentSession,
 } from './types';
 
+// Cart item
+export type { BaseCartItem, CartItemAccessors } from './types';
+
 // Render / SDK types
 export type {
   CheckoutComponentOverrides,
-  CheckoutItem,
   CheckoutLayout,
   CheckoutRedirectBehavior,
   CheckoutStripeOptions,

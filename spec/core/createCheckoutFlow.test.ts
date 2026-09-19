@@ -2,7 +2,7 @@ import { createCheckoutFlow } from '@src/core/createCheckoutFlow';
 import type {
   CheckoutEvent,
   CheckoutFlowConfig,
-  FlowState,
+  CheckoutFlowState,
 } from '@src/core/types';
 import { FLOW_SCHEMA_VERSION } from '@src/core/types';
 
@@ -100,10 +100,11 @@ describe(`${createCheckoutFlow.name}: client`, () => {
   });
 
   describe('hydrate & validate', () => {
-    const validState = (): FlowState => ({
+    const validState = (): CheckoutFlowState => ({
       currentStepId: 'b',
       completedStepIds: ['a'],
       cartSnapshot: [],
+      currency: null,
       sessionId: 'cs_test_1',
       sessionStatus: 'active',
       metadata: {},
@@ -150,7 +151,7 @@ describe(`${createCheckoutFlow.name}: client`, () => {
   describe('subscribe wiring', () => {
     it('notifies subscribers on state changes and unsubscribes cleanly', async () => {
       const flow = createCheckoutFlow(minimalConfig());
-      const states: FlowState[] = [];
+      const states: CheckoutFlowState[] = [];
       const unsubscribe = flow.subscribe((s) => states.push(s));
       await flow.start();
       await flow.next();
@@ -162,7 +163,7 @@ describe(`${createCheckoutFlow.name}: client`, () => {
 
     it('a throwing listener does not break other listeners', async () => {
       const flow = createCheckoutFlow(minimalConfig());
-      const good: FlowState[] = [];
+      const good: CheckoutFlowState[] = [];
       flow.subscribe(() => {
         throw new Error('bad listener');
       });

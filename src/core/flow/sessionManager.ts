@@ -1,6 +1,6 @@
-import type { PaymentSessionFor } from '@src/types';
+import type { BaseCartItem, PaymentSessionFor } from '@src/types';
 
-import type { SessionUpdatePatch } from '../types';
+import type { CheckoutSessionUpdatePatch } from '../types';
 
 import type { FlowContext } from './context';
 import {
@@ -17,13 +17,14 @@ export interface SessionManagerOptions {
 export function createSessionManager<
   TProvider extends string = string,
   TState = unknown,
->(ctx: FlowContext<TProvider, TState>, opts: SessionManagerOptions) {
-  const { config, store, isDestroyed, events, emitError } = ctx;
+  TItem = BaseCartItem,
+>(ctx: FlowContext<TProvider, TState, TItem>, opts: SessionManagerOptions) {
+  const { config, store, isDestroyed, events, emitError, accessors } = ctx;
 
   type Session = PaymentSessionFor<TProvider>;
 
   interface QueuedUpdate {
-    patch: SessionUpdatePatch;
+    patch: CheckoutSessionUpdatePatch<TItem>;
     resolve: (value: Session | null) => void;
   }
 
@@ -92,7 +93,7 @@ export function createSessionManager<
   };
 
   const runUpdate = async (
-    patch: SessionUpdatePatch
+    patch: CheckoutSessionUpdatePatch<TItem>
   ): Promise<Session | null> => {
     if (!config.onUpdateSession) {
       emitError(
@@ -128,7 +129,9 @@ export function createSessionManager<
           type: 'session.updated',
           sessionId,
           reason: patch.reason ?? 'manual',
-          diff: patch.items ? computeCartDiff(before, patch.items) : {},
+          diff: patch.items
+            ? computeCartDiff(before, patch.items, accessors)
+            : {},
         });
       }
       return response;
@@ -155,7 +158,7 @@ export function createSessionManager<
   };
 
   const updateSession = (
-    patch: SessionUpdatePatch
+    patch: CheckoutSessionUpdatePatch<TItem>
   ): Promise<Session | null> => {
     if (isDestroyed()) return Promise.resolve(null);
     return new Promise((resolve) => {

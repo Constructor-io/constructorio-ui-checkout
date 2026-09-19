@@ -1,7 +1,7 @@
 import { makeCtx } from '@spec/factory/flowCtx';
 
 import { createSessionManager } from '@src/core/flow/sessionManager';
-import type { SessionUpdatePatch } from '@src/core/types';
+import type { CheckoutSessionUpdatePatch } from '@src/core/types';
 import type { StripePaymentSession } from '@src/types';
 
 const goodResponse = (id = 'cs_test_abc'): StripePaymentSession => ({
@@ -122,7 +122,7 @@ describe(`${createSessionManager.name}: client`, () => {
 
     it('serializes queued updates in FIFO order', async () => {
       const calls: string[] = [];
-      const onUpdateSession = vi.fn((patch: SessionUpdatePatch) => {
+      const onUpdateSession = vi.fn((patch: CheckoutSessionUpdatePatch) => {
         calls.push((patch.metadata?.tag as string | undefined) ?? '');
         return Promise.resolve(goodResponse());
       });
@@ -149,7 +149,7 @@ describe(`${createSessionManager.name}: client`, () => {
       });
       await sm.createSession();
       await sm.updateSession({
-        items: [{ name: 'X', amount: 10 }],
+        items: [{ id: 'x', name: 'X', unitAmount: 10, quantity: 1 }],
         reason: 'items',
       });
       expect(events).toContainEqual(

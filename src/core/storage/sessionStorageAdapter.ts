@@ -1,5 +1,9 @@
 import { validateFlowState } from '@src/core/schema';
-import type { FlowState, StorageAdapter } from '@src/core/types';
+import type {
+  CheckoutFlowState,
+  CheckoutStorageAdapter,
+} from '@src/core/types';
+import type { BaseCartItem } from '@src/types';
 
 const STORAGE_KEY_PREFIX = 'cio-checkout-flow:';
 const PROBE_KEY = `${STORAGE_KEY_PREFIX}__probe__`;
@@ -20,7 +24,9 @@ const hasSessionStorage = (): boolean => {
 
 const namespacedKey = (key: string): string => `${STORAGE_KEY_PREFIX}${key}`;
 
-export function createSessionStorageAdapter(): StorageAdapter {
+export function createSessionStorageAdapter<
+  TItem = BaseCartItem,
+>(): CheckoutStorageAdapter<TItem> {
   return {
     load: (key) => {
       if (!hasSessionStorage()) return Promise.resolve(null);
@@ -29,7 +35,7 @@ export function createSessionStorageAdapter(): StorageAdapter {
         const raw = globalThis.sessionStorage.getItem(namespaced);
         if (raw === null) return Promise.resolve(null);
         const parsed: unknown = JSON.parse(raw);
-        const validated = validateFlowState(parsed);
+        const validated = validateFlowState<TItem>(parsed);
         if (!validated) {
           globalThis.sessionStorage.removeItem(namespaced);
           return Promise.resolve(null);
@@ -74,6 +80,6 @@ export function getStorageKeyPrefix(): string {
   return STORAGE_KEY_PREFIX;
 }
 
-export function isFlowStateShape(value: unknown): value is FlowState {
+export function isFlowStateShape(value: unknown): value is CheckoutFlowState {
   return validateFlowState(value) !== null;
 }

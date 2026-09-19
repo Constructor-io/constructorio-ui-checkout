@@ -4,7 +4,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Persistence & Resume
 
-By default the flow is in-memory only. Pass a `storage` adapter and `storageKey` and the library serializes `FlowState` on every change (debounced) and hydrates on the next mount. This powers refresh survival, deep-link resume, B2B pause/resume, and emailed abandoned-cart links.
+By default the flow is in-memory only. Pass a `storage` adapter and `storageKey` and the library serializes `CheckoutFlowState` on every change (debounced) and hydrates on the next mount. This powers refresh survival, deep-link resume, B2B pause/resume, and emailed abandoned-cart links.
 
 ## Full example
 
@@ -20,10 +20,10 @@ import {
   PAYMENT_STEP,
   useCioCheckout,
 } from '@constructor-io/constructorio-ui-checkout';
-import type { StorageAdapter } from '@constructor-io/constructorio-ui-checkout';
+import type { CheckoutStorageAdapter } from '@constructor-io/constructorio-ui-checkout';
 import { getAuthToken, getUserId } from './lib/auth';
 
-const backendStorage: StorageAdapter = {
+const backendStorage: CheckoutStorageAdapter = {
   save: (key, state) =>
     fetch(`/api/checkout/${encodeURIComponent(key)}`, {
       method: 'PUT',
@@ -89,8 +89,12 @@ function CheckoutApp() {
       }}
       autoStart
     >
-      <CioCheckoutStep id="cart"><CartView /></CioCheckoutStep>
-      <CioCheckoutStep id="approval"><ApprovalGate /></CioCheckoutStep>
+      <CioCheckoutStep id="cart">
+        <CartView />
+      </CioCheckoutStep>
+      <CioCheckoutStep id="approval">
+        <ApprovalGate />
+      </CioCheckoutStep>
       <CioCheckoutStep id={PAYMENT_STEP}>
         <CioStripePaymentStep />
       </CioCheckoutStep>
@@ -138,9 +142,9 @@ Nothing else changes about your integration. State auto-saves on every mutation,
 ## Adapter shape
 
 ```ts
-interface StorageAdapter {
-  load(key: string): Promise<FlowState | null>;
-  save(key: string, state: FlowState): Promise<void>;
+interface CheckoutStorageAdapter {
+  load(key: string): Promise<CheckoutFlowState | null>;
+  save(key: string, state: CheckoutFlowState): Promise<void>;
   clear(key: string): Promise<void>;
 }
 ```
@@ -152,7 +156,7 @@ All three methods are async. The built-in `createSessionStorageAdapter()` is a t
 For B2B pause/resume — buyer starts on a laptop, an approver finishes on a phone — state belongs on your server, not in the browser:
 
 ```ts
-const backendStorage: StorageAdapter = {
+const backendStorage: CheckoutStorageAdapter = {
   save: (key, state) =>
     fetch(`/api/checkout/${key}`, {
       method: 'PUT',
@@ -198,7 +202,7 @@ The key namespaces the persisted entry. Two rules:
 
 ## What gets saved
 
-Everything in `FlowState`:
+Everything in `CheckoutFlowState`:
 
 - `currentStepId` — where the user was
 - `completedStepIds` — which steps they finished
@@ -214,6 +218,7 @@ Everything in `FlowState`:
 When both storage and a `router` are configured, storage wins on hydration. If a persisted state exists, `start()` restores it and pushes the stored step's path — the stored step overrides the current URL. An emailed link to `/checkout/payment` where the persisted state points at `cart` resumes at `cart`.
 
 To let deep links override storage, either:
+
 - Call `flow.clearState()` before mounting the provider, or
 - Skip `storage` on the checkout landing page and pass it only on interior pages.
 
@@ -222,6 +227,7 @@ To let deep links override storage, either:
 Common pattern: buyer partially fills the flow, closes the tab, receives an emailed link a day later, clicks it, and lands back on the payment step with the cart hydrated.
 
 Sequence:
+
 1. Flow runs; `storage.save()` writes state on every change.
 2. User closes the tab. State sits in sessionStorage (survives that tab's session) or your backend (survives everything).
 3. User clicks the emailed link at the same URL.
@@ -249,11 +255,11 @@ Two APIs — pick based on intent:
 
 **`flow.reset()`** — clears in-memory state only. Does not touch storage.
 
-**`flow.clearState()`** — clears in-memory state *and* the stored entry. Awaits pending saves, then calls `storage.clear(key)`. Use on "start over" or after successful checkout completion.
+**`flow.clearState()`** — clears in-memory state _and_ the stored entry. Awaits pending saves, then calls `storage.clear(key)`. Use on "start over" or after successful checkout completion.
 
 ```tsx
 async function onOrderConfirmed() {
-  await flow.clearState();   // removes the stored entry
+  await flow.clearState(); // removes the stored entry
   navigate('/');
 }
 ```
@@ -268,7 +274,7 @@ onEvent: (event) => {
     reportToSentry(event.error);
     // The flow keeps running with in-memory state.
   }
-}
+};
 ```
 
 The built-in `createSessionStorageAdapter()` behaves differently across operations:
@@ -280,13 +286,13 @@ To distinguish "storage disabled" from "storage failed", wrap the adapter and pr
 
 ## Schema versioning
 
-`FlowState.schemaVersion` is currently `1`. When the library bumps it, entries saved under the old version are dropped on load — buyers start fresh instead of hydrating into a broken shape.
+`CheckoutFlowState.schemaVersion` is currently `1`. When the library bumps it, entries saved under the old version are dropped on load — buyers start fresh instead of hydrating into a broken shape.
 
-When extending `FlowState` through `metadata` or `integratorState` and later changing that schema, apply the same rule: bump `storageKey` to invalidate old entries.
+When extending `CheckoutFlowState` through `metadata` or `integratorState` and later changing that schema, apply the same rule: bump `storageKey` to invalidate old entries.
 
 ## Security
 
-Persisted `FlowState` is plain JSON, readable by any script running on the
+Persisted `CheckoutFlowState` is plain JSON, readable by any script running on the
 same origin.
 
 ### What is persisted
@@ -296,10 +302,14 @@ same origin.
 - `sessionId` — the session's public identifier (e.g. Stripe's
   `cs_test_abc…`). A handle for reconnecting the flow; cannot charge on its
   own.
-- `cartSnapshot` — product `name`, `amount`, `quantity`, `priceId`,
-  `imageUrl`. Not PII, but discloses what a shopper is buying and at what
-  price. Use an encrypted or backend adapter if that itself is sensitive
-  (regulated goods, personalized pricing, B2B contracts).
+- `cartSnapshot` — items in whatever shape you passed to the Provider
+  (`BaseCartItem` fields `id`, `name`, `unitAmount`, `quantity` at minimum,
+  plus any extra fields on your custom `TItem`). Not PII, but discloses what a
+  shopper is buying and at what price. Use an encrypted or backend adapter if
+  that itself is sensitive (regulated goods, personalized pricing, B2B
+  contracts).
+- `currency` — the currency code passed to the Provider (or `null` if
+  unset).
 - `metadata` — merchant-owned, serialized verbatim. See "PII in metadata"
   below.
 
@@ -333,17 +343,17 @@ Three options if PII must move across steps:
 
 ### Threat model
 
-| Threat              | sessionStorage default                                                              |
-| ------------------- | ----------------------------------------------------------------------------------- |
-| Tab close           | Cleared automatically                                                               |
-| Private browsing    | Cleared with the session; some browsers disable storage entirely (the adapter no-ops) |
-| Cross-origin site   | Isolated per origin by the browser                                                  |
-| Network sniffing    | Never transmitted unless your code sends it                                         |
-| XSS on your origin  | Readable — but the same attacker already reads React state and issues authenticated fetches |
-| Session ID replay   | `sessionId` alone cannot charge; the PSP token / `clientSecret` stays in memory     |
+| Threat             | sessionStorage default                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| Tab close          | Cleared automatically                                                                       |
+| Private browsing   | Cleared with the session; some browsers disable storage entirely (the adapter no-ops)       |
+| Cross-origin site  | Isolated per origin by the browser                                                          |
+| Network sniffing   | Never transmitted unless your code sends it                                                 |
+| XSS on your origin | Readable — but the same attacker already reads React state and issues authenticated fetches |
+| Session ID replay  | `sessionId` alone cannot charge; the PSP token / `clientSecret` stays in memory             |
 
 For B2B, regulated (HIPAA, PCI beyond the PSP's scope), or high-value flows,
-use a backend `StorageAdapter` and guard it with your existing auth.
+use a backend `CheckoutStorageAdapter` and guard it with your existing auth.
 
 ## What isn't the library's problem
 

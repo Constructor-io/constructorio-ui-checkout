@@ -22,13 +22,13 @@ describe(`${createCartManager.name}: client`, () => {
       });
       ctx.store.setState((prev) => ({
         ...prev,
-        cartSnapshot: [{ name: 'A', amount: 10 }],
+        cartSnapshot: [{ id: 'a', name: 'A', unitAmount: 10, quantity: 1 }],
       }));
       const session = createSessionManager(ctx, {
         onSessionActive: () => undefined,
       });
       const cart = createCartManager(ctx, session);
-      cart.setCart([{ name: 'A', amount: 10 }]);
+      cart.setCart([{ id: 'a', name: 'A', unitAmount: 10, quantity: 1 }]);
       expect(cart.hasPending()).toBe(false);
       vi.useRealTimers();
     });
@@ -48,10 +48,10 @@ describe(`${createCartManager.name}: client`, () => {
       });
       await session.createSession();
       const cart = createCartManager(ctx, session);
-      cart.setCart([{ name: 'A', amount: 1 }]);
+      cart.setCart([{ id: 'a', name: 'A', unitAmount: 1, quantity: 1 }]);
       cart.setCart([
-        { name: 'A', amount: 1 },
-        { name: 'B', amount: 2 },
+        { id: 'a', name: 'A', unitAmount: 1, quantity: 1 },
+        { id: 'b', name: 'B', unitAmount: 2, quantity: 1 },
       ]);
       await vi.advanceTimersByTimeAsync(150);
       expect(onUpdateSession).toHaveBeenCalledTimes(1);
@@ -72,7 +72,7 @@ describe(`${createCartManager.name}: client`, () => {
       });
       await session.createSession();
       const cart = createCartManager(ctx, session);
-      cart.setCart([{ name: 'X', amount: 1 }]);
+      cart.setCart([{ id: 'x', name: 'X', unitAmount: 1, quantity: 1 }]);
       await Promise.resolve();
       expect(onUpdateSession).toHaveBeenCalled();
     });
@@ -85,10 +85,12 @@ describe(`${createCartManager.name}: client`, () => {
         onSessionActive: () => undefined,
       });
       const cart = createCartManager(ctx, session);
-      const result = await cart.syncCart([{ name: 'A', amount: 5 }]);
+      const result = await cart.syncCart([
+        { id: 'a', name: 'A', unitAmount: 5, quantity: 1 },
+      ]);
       expect(result).toBeNull();
       expect(ctx.store.getState().cartSnapshot).toEqual([
-        { name: 'A', amount: 5 },
+        { id: 'a', name: 'A', unitAmount: 5, quantity: 1 },
       ]);
     });
 
@@ -111,11 +113,15 @@ describe(`${createCartManager.name}: client`, () => {
       });
       const cart = createCartManager(ctx, session);
       void session.createSession();
-      const p = cart.syncCart([{ name: 'X', amount: 1 }]);
+      const p = cart.syncCart([
+        { id: 'x', name: 'X', unitAmount: 1, quantity: 1 },
+      ]);
       resolveCreate(goodResponse('cs_test_new'));
       await p;
       expect(onUpdateSession).toHaveBeenCalledWith(
-        expect.objectContaining({ items: [{ name: 'X', amount: 1 }] })
+        expect.objectContaining({
+          items: [{ id: 'x', name: 'X', unitAmount: 1, quantity: 1 }],
+        })
       );
     });
 
@@ -134,9 +140,11 @@ describe(`${createCartManager.name}: client`, () => {
       });
       await session.createSession();
       const cart = createCartManager(ctx, session);
-      await cart.syncCart([{ name: 'X', amount: 1 }]);
+      await cart.syncCart([{ id: 'x', name: 'X', unitAmount: 1, quantity: 1 }]);
       expect(onUpdateSession).toHaveBeenCalledWith(
-        expect.objectContaining({ items: [{ name: 'X', amount: 1 }] })
+        expect.objectContaining({
+          items: [{ id: 'x', name: 'X', unitAmount: 1, quantity: 1 }],
+        })
       );
     });
   });
@@ -156,7 +164,7 @@ describe(`${createCartManager.name}: client`, () => {
         onSessionActive: () => undefined,
       });
       const cart = createCartManager(ctx, session);
-      cart.setCart([{ name: 'A', amount: 1 }]);
+      cart.setCart([{ id: 'a', name: 'A', unitAmount: 1, quantity: 1 }]);
       expect(cart.hasPending()).toBe(true);
       cart.cancel();
       expect(cart.hasPending()).toBe(false);

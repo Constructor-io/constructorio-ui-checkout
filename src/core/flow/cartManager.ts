@@ -1,4 +1,4 @@
-import type { CheckoutItem, PaymentSessionFor } from '@src/types';
+import type { BaseCartItem, PaymentSessionFor } from '@src/types';
 
 import type { FlowContext } from './context';
 import type { createSessionManager } from './sessionManager';
@@ -6,15 +6,16 @@ import type { createSessionManager } from './sessionManager';
 export function createCartManager<
   TProvider extends string = string,
   TState = unknown,
+  TItem = BaseCartItem,
 >(
-  ctx: FlowContext<TProvider, TState>,
-  session: ReturnType<typeof createSessionManager<TProvider, TState>>
+  ctx: FlowContext<TProvider, TState, TItem>,
+  session: ReturnType<typeof createSessionManager<TProvider, TState, TItem>>
 ) {
   const { config, store, isDestroyed } = ctx;
   const debounceMs = config.cartDebounceMs ?? 400;
 
   let timer: ReturnType<typeof setTimeout> | null = null;
-  let pending: CheckoutItem[] | null = null;
+  let pending: TItem[] | null = null;
 
   const clearDebounce = (): void => {
     if (timer !== null) {
@@ -27,7 +28,7 @@ export function createCartManager<
   const hasPending = (): boolean => pending !== null;
 
   const syncCart = (
-    items: CheckoutItem[]
+    items: TItem[]
   ): Promise<PaymentSessionFor<TProvider> | null> => {
     if (isDestroyed()) return Promise.resolve(null);
     clearDebounce();
@@ -53,7 +54,7 @@ export function createCartManager<
     void syncCart(items);
   };
 
-  const setCart = (items: CheckoutItem[]): void => {
+  const setCart = (items: TItem[]): void => {
     if (isDestroyed()) return;
     const nextSerialized = JSON.stringify(items);
     const comparisonBase = pending ?? store.getState().cartSnapshot;

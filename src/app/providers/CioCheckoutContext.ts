@@ -1,8 +1,8 @@
 import { createContext } from 'react';
 
-import type { CheckoutFlowCore } from '@src/core/types';
+import type { CheckoutFlowCoreBase } from '@src/core/types';
 
-export const CioCheckoutContext = createContext<CheckoutFlowCore<
+export const CioCheckoutContext = createContext<CheckoutFlowCoreBase<
   string,
   unknown
 > | null>(null);

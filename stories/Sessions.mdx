@@ -89,9 +89,7 @@ function CheckoutApp() {
       }}
     >
       <CioCheckoutStep id={PAYMENT_STEP}>
-        <CioStripePaymentStep
-          onError={(err) => reportToSentry(err)}
-        />
+        <CioStripePaymentStep onError={(err) => reportToSentry(err)} />
       </CioCheckoutStep>
     </CioCheckoutProvider>
   );
@@ -124,7 +122,7 @@ Never write to `sessionStatus` directly. Call the methods; the status updates.
 
 ## `onCreateSession` contract
 
-The library calls `onCreateSession(state)` with the current `FlowState` (cart, metadata, etc.). Return a `Promise` that resolves with:
+The library calls `onCreateSession(state)` with the current `CheckoutFlowState` (cart, metadata, etc.). Return a `Promise` that resolves with:
 
 ```ts
 {
@@ -142,7 +140,7 @@ const onCreateSession = async () => {
     body: JSON.stringify({ items: getCart() }),
   });
   if (!res.ok) throw new Error(`Session create failed: ${res.status}`);
-  return res.json();  // must be { clientSecret, publishableKey }
+  return res.json(); // must be { clientSecret, publishableKey }
 };
 ```
 
@@ -154,9 +152,9 @@ Optional. Called whenever `updateSession()` or `syncCart()` fires. Same shape in
 const onUpdateSession = async (patch) => {
   const res = await fetch('/api/checkout/session', {
     method: 'PATCH',
-    body: JSON.stringify(patch),  // { items?, metadata?, reason? }
+    body: JSON.stringify(patch), // { items?, metadata?, reason? }
   });
-  return res.json();  // must return { clientSecret, publishableKey }
+  return res.json(); // must return { clientSecret, publishableKey }
 };
 ```
 
@@ -176,7 +174,7 @@ Either way, recovery is one call:
 await flow.recreate();
 ```
 
-`recreate()` invalidates the old session, runs `onCreateSession` again with the *current* state (so any cart mutations since expiry are included), and emits `session.recreated` with both old and new session IDs — useful when analytics is keyed by session id.
+`recreate()` invalidates the old session, runs `onCreateSession` again with the _current_ state (so any cart mutations since expiry are included), and emits `session.recreated` with both old and new session IDs — useful when analytics is keyed by session id.
 
 ## Handling creation errors
 
@@ -228,7 +226,7 @@ onEvent: (event) => {
     // button that calls `flow.recreate()`. For other sources, wire your
     // own retry (e.g. `flow.recreate()`, `flow.syncCart(...)`).
   }
-}
+};
 ```
 
 ## Late-response protection
@@ -242,7 +240,7 @@ In practice: if the server takes 5 seconds to return a session and the user clos
 Two protections against double-charging if `onCreateSession` runs twice:
 
 1. **The flow coalesces concurrent creates.** Multiple simultaneous `createSession()` calls return the same in-flight promise. Only one HTTP request goes out.
-2. **Send an idempotency key server-side as well.** Stripe supports this natively. Use a stable **pre-existing** identifier — cart id, order id, or a checkout-attempt id generated on the client. Do *not* use the session id: it is returned *by* the create call, so it does not exist at request time. The [full example above](#full-example) uses `getCartId()` as the `Idempotency-Key` header for this reason.
+2. **Send an idempotency key server-side as well.** Stripe supports this natively. Use a stable **pre-existing** identifier — cart id, order id, or a checkout-attempt id generated on the client. Do _not_ use the session id: it is returned _by_ the create call, so it does not exist at request time. The [full example above](#full-example) uses `getCartId()` as the `Idempotency-Key` header for this reason.
 
 ## Sessions and persistence
 

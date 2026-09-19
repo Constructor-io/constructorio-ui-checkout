@@ -27,7 +27,7 @@ render tree.
 The built-in `<CioStripePaymentStep>` renders address, payment, and pay
 button in one place. When Stripe's `AddressElement` lives on
 `/checkout/address` and `PaymentElement` on `/checkout/payment`, both must
-live inside the *same* `<CheckoutFormProvider>` — one Stripe session, one
+live inside the _same_ `<CheckoutFormProvider>` — one Stripe session, one
 `clientSecret`, elements split across routes.
 
 Pattern: mount `CheckoutFormProvider` above the router, render Stripe
@@ -197,7 +197,7 @@ function App() {
 
 function MyPspPaymentStep() {
   const flow = useCioCheckout<'my-psp'>();
-  const session = flow.getSession();      // MyPspSession | null
+  const session = flow.getSession(); // MyPspSession | null
   const status = flow.state.sessionStatus;
 
   useEffect(() => {
@@ -240,14 +240,14 @@ dedicated component — the same reason the library ships
 
 ## What the hook covers regardless of PSP
 
-| Concern                | Managed by the library                                                              |
-| ---------------------- | ----------------------------------------------------------------------------------- |
-| Navigation             | `flow.start()`, `flow.next()`, `flow.back()`, `flow.goTo()`, guards, optional steps |
-| Session lifecycle      | `flow.createSession()`, `flow.updateSession()`, `flow.recreate()`, `flow.markExpired()` |
-| Cart                   | `flow.setCart()`, `flow.syncCart()` — debounced, serialized against session updates |
-| Persistence            | Any `StorageAdapter` — sessionStorage default, or your own backend adapter          |
-| Routing                | Any `RouterAdapter` — React Router, Next.js, TanStack, plain `window.location`      |
-| Observability          | `onEvent` — `session.*`, `flow.*`, `step.*`, `state.changed`, `error`               |
+| Concern           | Managed by the library                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| Navigation        | `flow.start()`, `flow.next()`, `flow.back()`, `flow.goTo()`, guards, optional steps     |
+| Session lifecycle | `flow.createSession()`, `flow.updateSession()`, `flow.recreate()`, `flow.markExpired()` |
+| Cart              | `flow.setCart()`, `flow.syncCart()` — debounced, serialized against session updates     |
+| Persistence       | Any `CheckoutStorageAdapter` — sessionStorage default, or your own backend adapter      |
+| Routing           | Any `CheckoutRouterAdapter` — React Router, Next.js, TanStack, plain `window.location`  |
+| Observability     | `onEvent` — `session.*`, `flow.*`, `step.*`, `state.changed`, `error`                   |
 
 ## When to keep the built-ins
 

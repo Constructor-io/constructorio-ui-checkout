@@ -18,11 +18,11 @@ Headless primitives for building multi-step checkout on top of Stripe. The libra
 
 ## Three integration paths, one core
 
-| Path | Best for | Entry |
-|---|---|---|
-| React | React apps with the full flow | `<CioCheckoutProvider provider="stripe">` + `useCioCheckout()` |
-| Vanilla JS (npm) | Non-React SPAs or custom UIs | `createCheckoutFlow(config)` |
-| Standalone bundle | Server-rendered sites, `<script>` tags | `window.CioCheckout.resume(config)` |
+| Path              | Best for                               | Entry                                                          |
+| ----------------- | -------------------------------------- | -------------------------------------------------------------- |
+| React             | React apps with the full flow          | `<CioCheckoutProvider provider="stripe">` + `useCioCheckout()` |
+| Vanilla JS (npm)  | Non-React SPAs or custom UIs           | `createCheckoutFlow(config)`                                   |
+| Standalone bundle | Server-rendered sites, `<script>` tags | `window.CioCheckout.resume(config)`                            |
 
 All three wrap the same framework-agnostic `createCheckoutFlow(config)` core.
 

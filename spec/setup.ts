@@ -13,9 +13,7 @@ beforeEach(() => {
   ) {
     this.setAttribute('open', '');
   });
-  HTMLDialogElement.prototype.close = vi.fn(function (
-    this: HTMLDialogElement
-  ) {
+  HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
     this.removeAttribute('open');
   });
 });

@@ -18,13 +18,23 @@ export interface Translations {
   'CioCheckout.checkout.payButtonLoadingLabel'?: string;
 }
 
-export interface CheckoutItem {
+export interface BaseCartItem {
+  id: string;
   name: string;
-  amount: number;
-  currencySign?: string;
-  quantity?: number;
-  priceId?: string;
-  imageUrl?: string;
+  unitAmount: number;
+  quantity: number;
+}
+
+export type KeyOfType<T, R> = {
+  [K in keyof T]-?: T[K] extends R ? K : never;
+}[keyof T] &
+  string;
+
+export interface CartItemAccessors<TItem> {
+  id: KeyOfType<TItem, string> | ((item: TItem) => string);
+  quantity: KeyOfType<TItem, number> | ((item: TItem) => number);
+  unitAmount: KeyOfType<TItem, number> | ((item: TItem) => number);
+  name?: KeyOfType<TItem, string> | ((item: TItem) => string);
 }
 
 export interface BasePaymentSession {
@@ -36,10 +46,6 @@ export interface StripePaymentSession extends BasePaymentSession {
   publishableKey: string;
 }
 
-// Extend via module augmentation to add custom PSPs:
-//   declare module '@constructor-io/constructorio-ui-checkout' {
-//     interface PaymentSessionMap { myPsp: MyPspSession }
-//   }
 export interface PaymentSessionMap {
   stripe: StripePaymentSession;
 }

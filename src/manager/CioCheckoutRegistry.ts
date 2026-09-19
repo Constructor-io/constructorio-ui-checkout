@@ -1,26 +1,30 @@
 import { createCheckoutFlow } from '@src/core/createCheckoutFlow';
 import { createSessionStorageAdapter } from '@src/core/storage/sessionStorageAdapter';
-import type { CheckoutFlowConfig, CheckoutFlowCore } from '@src/core/types';
-import type { BuiltInPaymentProvider } from '@src/types';
+import type {
+  CheckoutFlowConfig,
+  CheckoutFlowCore,
+  CheckoutFlowCoreBase,
+} from '@src/core/types';
+import type { BaseCartItem, BuiltInPaymentProvider } from '@src/types';
 
 class CioCheckoutRegistry {
-  private flow: CheckoutFlowCore<string, unknown> | null = null;
+  private flow: CheckoutFlowCoreBase<string, unknown> | null = null;
 
-  register<TProvider extends string, TState>(
-    flow: CheckoutFlowCore<TProvider, TState>
+  register<TProvider extends string, TState, TItem = BaseCartItem>(
+    flow: CheckoutFlowCore<TProvider, TState, TItem>
   ): void {
-    const erased = flow as unknown as CheckoutFlowCore<string, unknown>;
-    if (this.flow && this.flow !== erased) {
+    if (this.flow && this.flow !== flow) {
       this.flow.destroy();
     }
-    this.flow = erased;
+    this.flow = flow;
   }
 
   getFlow<
     TProvider extends string = BuiltInPaymentProvider,
     TState = unknown,
-  >(): CheckoutFlowCore<TProvider, TState> | null {
-    return this.flow as unknown as CheckoutFlowCore<TProvider, TState> | null;
+    TItem = BaseCartItem,
+  >(): CheckoutFlowCore<TProvider, TState, TItem> | null {
+    return this.flow as CheckoutFlowCore<TProvider, TState, TItem> | null;
   }
 
   hasFlow(): boolean {
@@ -34,11 +38,18 @@ class CioCheckoutRegistry {
     }
   }
 
-  resume<TProvider extends string = BuiltInPaymentProvider, TState = unknown>(
-    config: CheckoutFlowConfig<TProvider, TState>
-  ): CheckoutFlowCore<TProvider, TState> {
-    const storage = config.storage ?? createSessionStorageAdapter();
-    const flow = createCheckoutFlow<TProvider, TState>({ ...config, storage });
+  resume<
+    TProvider extends string = BuiltInPaymentProvider,
+    TState = unknown,
+    TItem = BaseCartItem,
+  >(
+    config: CheckoutFlowConfig<TProvider, TState, TItem>
+  ): CheckoutFlowCore<TProvider, TState, TItem> {
+    const storage = config.storage ?? createSessionStorageAdapter<TItem>();
+    const flow = createCheckoutFlow<TProvider, TState, TItem>({
+      ...config,
+      storage,
+    });
     this.register(flow);
     return flow;
   }

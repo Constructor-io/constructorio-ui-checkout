@@ -3,9 +3,11 @@ import { makeCtx } from '@spec/factory/flowCtx';
 import { createNavigator } from '@src/core/flow/navigator';
 import { createRouterBridge } from '@src/core/flow/routerBridge';
 import { createStorageManager } from '@src/core/flow/storageManager';
-import type { RouterAdapter, Step } from '@src/core/types';
+import type { CheckoutRouterAdapter, CheckoutStep } from '@src/core/types';
 
-function wire(options: { steps?: Step[]; router?: RouterAdapter } = {}) {
+function wire(
+  options: { steps?: CheckoutStep[]; router?: CheckoutRouterAdapter } = {}
+) {
   const ctxWrap = makeCtx({
     steps: options.steps,
     config: options.router ? { router: options.router } : undefined,
@@ -105,7 +107,7 @@ describe(`${createNavigator.name}: client`, () => {
 
     it('with router: enters the URL-matched step after guards pass', async () => {
       let current = '/b';
-      const router: RouterAdapter = {
+      const router: CheckoutRouterAdapter = {
         push: (p) => {
           current = p;
         },
@@ -124,7 +126,7 @@ describe(`${createNavigator.name}: client`, () => {
 
     it('with router: emits guard error naming failing prerequisite', async () => {
       let current = '/c';
-      const router: RouterAdapter = {
+      const router: CheckoutRouterAdapter = {
         push: (p) => {
           current = p;
         },
@@ -358,6 +360,7 @@ describe(`${createNavigator.name}: client`, () => {
                 currentStepId: 'c',
                 completedStepIds: ['a', 'b'],
                 cartSnapshot: [],
+                currency: null,
                 sessionId: null,
                 sessionStatus: 'idle',
                 metadata: {},

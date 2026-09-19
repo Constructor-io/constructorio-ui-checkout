@@ -1,11 +1,12 @@
 import { createSessionStorageAdapter } from '@src/core/storage/sessionStorageAdapter';
-import type { FlowState } from '@src/core/types';
+import type { CheckoutFlowState } from '@src/core/types';
 import { FLOW_SCHEMA_VERSION } from '@src/core/types';
 
-const valid = (): FlowState => ({
+const valid = (): CheckoutFlowState => ({
   currentStepId: 'a',
   completedStepIds: [],
   cartSnapshot: [],
+  currency: null,
   sessionId: null,
   sessionStatus: 'idle',
   metadata: {},

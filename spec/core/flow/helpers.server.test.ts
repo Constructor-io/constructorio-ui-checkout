@@ -1,4 +1,5 @@
 import {
+  compileCartItemAccessors,
   computeCartDiff,
   extractSessionId,
   findStepIndex,
@@ -7,6 +8,7 @@ import {
   makeInitialState,
   toError,
 } from '@src/core/flow/helpers';
+import type { BaseCartItem } from '@src/types';
 
 describe(`${makeInitialState.name}: server`, () => {
   it('runs server-side without any browser globals', () => {
@@ -48,13 +50,10 @@ describe(`${extractSessionId.name}: server`, () => {
 
 describe(`${computeCartDiff.name}: server`, () => {
   it('runs server-side without any browser globals', () => {
-    const diff = computeCartDiff(
-      [{ name: 'A', amount: 10 }],
-      [
-        { name: 'A', amount: 10 },
-        { name: 'B', amount: 5 },
-      ]
-    );
-    expect(diff.added).toEqual([{ name: 'B', amount: 5 }]);
+    const accessors = compileCartItemAccessors<BaseCartItem>(undefined);
+    const a: BaseCartItem = { id: 'a', name: 'A', unitAmount: 10, quantity: 1 };
+    const b: BaseCartItem = { id: 'b', name: 'B', unitAmount: 5, quantity: 1 };
+    const diff = computeCartDiff([a], [a, b], accessors);
+    expect(diff.added).toEqual([b]);
   });
 });

@@ -5,6 +5,7 @@ const validState = () => ({
   currentStepId: 'a' as string | null,
   completedStepIds: [] as string[],
   cartSnapshot: [] as unknown[],
+  currency: null as string | null,
   sessionId: null as string | null,
   sessionStatus: 'idle',
   metadata: {},
@@ -35,6 +36,12 @@ describe(`${validateFlowState.name}: client`, () => {
         s.sessionStatus = status;
         expect(validateFlowState(s)).not.toBeNull();
       }
+    });
+
+    it('accepts a currency string', () => {
+      const s = validState();
+      s.currency = 'USD';
+      expect(validateFlowState(s)).not.toBeNull();
     });
   });
 
@@ -87,62 +94,36 @@ describe(`${validateFlowState.name}: client`, () => {
       (s as unknown as Record<string, unknown>).sessionId = 42;
       expect(validateFlowState(s)).toBeNull();
     });
+
+    it('rejects currency that is neither string nor null', () => {
+      const s = validState();
+      (s as unknown as Record<string, unknown>).currency = 42;
+      expect(validateFlowState(s)).toBeNull();
+    });
   });
 
   describe('cart item validation', () => {
-    it('accepts a valid cart item', () => {
+    it('accepts items that are plain objects', () => {
       const s = validState();
-      s.cartSnapshot = [{ name: 'A', amount: 10, quantity: 1 }];
+      s.cartSnapshot = [{ id: 'a', name: 'A', unitAmount: 10, quantity: 1 }];
       expect(validateFlowState(s)).not.toBeNull();
     });
 
-    it('accepts items with optional string fields', () => {
+    it('accepts any plain-object shape (consumer owns item shape)', () => {
       const s = validState();
-      s.cartSnapshot = [
-        {
-          name: 'A',
-          amount: 10,
-          currencySign: '$',
-          priceId: 'price_x',
-          imageUrl: 'https://x/y.png',
-        },
-      ];
+      s.cartSnapshot = [{ sku: 'x', title: 'X', priceCents: 100, qty: 2 }];
       expect(validateFlowState(s)).not.toBeNull();
     });
 
-    it('rejects a cart item missing name', () => {
+    it('rejects when an item is not a plain object', () => {
       const s = validState();
-      s.cartSnapshot = [{ amount: 10 }];
+      s.cartSnapshot = [null, { id: 'b' }];
       expect(validateFlowState(s)).toBeNull();
     });
 
-    it('rejects a cart item missing amount', () => {
+    it('rejects when an item is an array', () => {
       const s = validState();
-      s.cartSnapshot = [{ name: 'A' }];
-      expect(validateFlowState(s)).toBeNull();
-    });
-
-    it('rejects a cart item with non-finite amount (NaN)', () => {
-      const s = validState();
-      s.cartSnapshot = [{ name: 'A', amount: NaN }];
-      expect(validateFlowState(s)).toBeNull();
-    });
-
-    it('rejects a cart item with non-finite quantity', () => {
-      const s = validState();
-      s.cartSnapshot = [{ name: 'A', amount: 10, quantity: Infinity }];
-      expect(validateFlowState(s)).toBeNull();
-    });
-
-    it('rejects a cart item with a non-string optional field', () => {
-      const s = validState();
-      s.cartSnapshot = [{ name: 'A', amount: 10, priceId: 42 }];
-      expect(validateFlowState(s)).toBeNull();
-    });
-
-    it('rejects when any single item fails validation', () => {
-      const s = validState();
-      s.cartSnapshot = [{ name: 'A', amount: 10 }, { name: 'B' }];
+      s.cartSnapshot = [['a', 'b']];
       expect(validateFlowState(s)).toBeNull();
     });
   });

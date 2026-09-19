@@ -1,10 +1,10 @@
 import React from 'react';
 
 import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
-import type { StepId } from '@src/core/types';
+import type { CheckoutStepId } from '@src/core/types';
 
 export interface CioCheckoutStepProps {
-  id: StepId;
+  id: CheckoutStepId;
   children?: React.ReactNode;
 }
 

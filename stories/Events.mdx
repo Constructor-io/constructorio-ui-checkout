@@ -22,28 +22,36 @@ Every flow action — starting, transitioning, creating sessions, hitting errors
 
 `CheckoutEvent` is a discriminated union on `type`.
 
-| Event                 | Payload            | When                                                                               |
-| --------------------- | ------------------ | ---------------------------------------------------------------------------------- |
-| `flow.started`        | —                  | `flow.start()` succeeds (guard passes, first step entered)                         |
-| `flow.completed`      | —                  | `flow.complete()` called or `flow.next()` past the final step                      |
-| `step.entered`        | `StepTransition`   | Any transition into a step (start / next / back / goTo / resume)                   |
-| `step.exited`         | `StepTransition`   | Paired with `step.entered` on transition                                           |
-| `session.created`     | `SessionRef`       | `onCreateSession` resolves                                                         |
-| `session.updated`     | `SessionUpdate`    | `onUpdateSession` resolves (cart change, address, tax, shipping, coupon, …)        |
-| `session.expired`     | `SessionRef`       | Stripe reports session expiry, or `flow.markExpired()` is called                   |
-| `session.recreated`   | `SessionRecreated` | `flow.recreate()` succeeds after expiry                                            |
-| `state.changed`       | `StateChanged`     | Any mutation to `FlowState` — high-frequency, prefer targeted events for most uses |
-| `error`               | `CheckoutError`    | Any failure — see error sources below                                              |
+| Event               | Payload            | When                                                                                       |
+| ------------------- | ------------------ | ------------------------------------------------------------------------------------------ |
+| `flow.started`      | —                  | `flow.start()` succeeds (guard passes, first step entered)                                 |
+| `flow.completed`    | —                  | `flow.complete()` called or `flow.next()` past the final step                              |
+| `step.entered`      | `StepTransition`   | Any transition into a step (start / next / back / goTo / resume)                           |
+| `step.exited`       | `StepTransition`   | Paired with `step.entered` on transition                                                   |
+| `session.created`   | `SessionRef`       | `onCreateSession` resolves                                                                 |
+| `session.updated`   | `SessionUpdate`    | `onUpdateSession` resolves (cart change, address, tax, shipping, coupon, …)                |
+| `session.expired`   | `SessionRef`       | Stripe reports session expiry, or `flow.markExpired()` is called                           |
+| `session.recreated` | `SessionRecreated` | `flow.recreate()` succeeds after expiry                                                    |
+| `state.changed`     | `StateChanged`     | Any mutation to `CheckoutFlowState` — high-frequency, prefer targeted events for most uses |
+| `error`             | `CheckoutError`    | Any failure — see error sources below                                                      |
 
 Payload shapes:
 
 ```ts
-type StepTransition   = { stepId: StepId; from: StepId | null };  // step.exited uses `to` instead
-type SessionRef       = { sessionId: string };
-type SessionUpdate    = { sessionId: string; reason: SessionUpdateReason; diff: SessionDiff };
+type StepTransition = { stepId: CheckoutStepId; from: CheckoutStepId | null }; // step.exited uses `to` instead
+type SessionRef = { sessionId: string };
+type SessionUpdate = {
+  sessionId: string;
+  reason: CheckoutSessionUpdateReason;
+  diff: CheckoutSessionDiff;
+};
 type SessionRecreated = { oldSessionId: string; newSessionId: string };
-type StateChanged     = { state: FlowState };
-type CheckoutError    = { source: CheckoutEventErrorSource; error: Error; retry?: () => Promise<void> };
+type StateChanged = { state: CheckoutFlowState };
+type CheckoutError = {
+  source: CheckoutEventErrorSource;
+  error: Error;
+  retry?: () => Promise<void>;
+};
 ```
 
 ## Error sources
@@ -60,28 +68,28 @@ The `error` event's `source` identifies where the failure originated:
 
 Some errors include a `retry` function that re-runs the failed operation. `session.create`, `session.update`, and `session.recover` are the retryable sources.
 
-## `SessionUpdateReason` and `SessionDiff`
+## `CheckoutSessionUpdateReason` and `CheckoutSessionDiff`
 
 `session.updated` events include a `reason` that distinguishes cart changes from address changes from a manual `updateSession(patch)` call.
 
 ```ts
-type SessionUpdateReason =
-  | 'items'      // syncCart / setCart
+type CheckoutSessionUpdateReason =
+  | 'items' // syncCart / setCart
   | 'address'
   | 'tax'
   | 'shipping'
   | 'coupon'
   | 'stock'
   | 'price'
-  | 'manual';    // updateSession(patch) without a reason
+  | 'manual'; // updateSession(patch) without a reason
 ```
 
-`SessionDiff` describes what changed on `items`-flavored updates:
+`CheckoutSessionDiff<TItem>` describes what changed on `items`-flavored updates. `TItem` is your cart item type (`BaseCartItem` by default, or your custom shape when using `cartItemFields`):
 
 ```ts
-interface SessionDiff {
-  added?: CheckoutItem[];
-  removed?: CheckoutItem[];
+interface CheckoutSessionDiff<TItem = BaseCartItem> {
+  added?: TItem[];
+  removed?: TItem[];
   quantityChanges?: { id: string; from: number; to: number }[];
   totalChange?: { from: number; to: number };
 }
@@ -105,7 +113,7 @@ Wire this to fire `product_added_to_cart` events without diffing yourself.
       case 'session.updated':
         if (event.reason === 'items') {
           event.diff.added?.forEach((item) =>
-            analytics.track('Product Added', { name: item.name, price: item.amount })
+            analytics.track('Product Added', { name: item.name, price: item.unitAmount })
           );
           event.diff.removed?.forEach((item) =>
             analytics.track('Product Removed', { name: item.name })
@@ -159,15 +167,15 @@ onEvent={(event) => {
 
 ## When to use `state.changed`
 
-`state.changed` fires on every `FlowState` mutation. It is a debugging hatch, not an analytics primitive. Use the targeted events (`step.entered`, `session.updated`) for user-visible funnels. Reach for `state.changed` only when you need something the specific events do not cover (e.g. observing `sessionStatus` transitions to `'creating'`).
+`state.changed` fires on every `CheckoutFlowState` mutation. It is a debugging hatch, not an analytics primitive. Use the targeted events (`step.entered`, `session.updated`) for user-visible funnels. Reach for `state.changed` only when you need something the specific events do not cover (e.g. observing `sessionStatus` transitions to `'creating'`).
 
 ## Ordering guarantees
 
 - `step.exited` always fires before `step.entered` on a transition.
 - `session.created` fires before `step.entered` on the payment step when `<CioStripePaymentStep>` auto-creates the session.
 - `flow.completed` fires after the last `step.entered` for the terminal step.
-- `error` events fire *instead of* the success event for the failed operation — a failed `onCreateSession` emits `error` with `source: 'session.create'`, not `session.created`.
+- `error` events fire _instead of_ the success event for the failed operation — a failed `onCreateSession` emits `error` with `source: 'session.create'`, not `session.created`.
 
 ## `onEvent` vs subscribing to state
 
-`onEvent` delivers discrete transitions with rich payloads. `flow.subscribe(listener)` delivers the whole `FlowState` on every change. For most analytics, telemetry, and error use cases, `onEvent` is the right handle — typed, filtered, and non-noisy. Use `flow.subscribe` only when the imperative store is required (rare outside custom step components).
+`onEvent` delivers discrete transitions with rich payloads. `flow.subscribe(listener)` delivers the whole `CheckoutFlowState` on every change. For most analytics, telemetry, and error use cases, `onEvent` is the right handle — typed, filtered, and non-noisy. Use `flow.subscribe` only when the imperative store is required (rare outside custom step components).

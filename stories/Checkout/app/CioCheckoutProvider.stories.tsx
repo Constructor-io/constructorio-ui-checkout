@@ -6,7 +6,7 @@ import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
 import { CioStripePaymentStep } from '@src/app/components/CioStripePaymentStep';
 import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
 import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
-import type { RouterAdapter } from '@src/core/types';
+import type { CheckoutRouterAdapter } from '@src/core/types';
 import { PAYMENT_STEP } from '@src/core/types';
 
 const stubSession = () =>
@@ -163,7 +163,7 @@ function StartButton() {
 
 function RoutedDemo() {
   const [path, setPath] = useState('/cart');
-  const router: RouterAdapter = useMemo(
+  const router: CheckoutRouterAdapter = useMemo(
     () => ({ push: setPath, getCurrentPath: () => path }),
     [path]
   );
@@ -203,10 +203,10 @@ export const RoutedMultiStep: Story = {
   CioStripePaymentStep,
   PAYMENT_STEP,
 } from '@constructor-io/constructorio-ui-checkout';
-import type { RouterAdapter } from '@constructor-io/constructorio-ui-checkout';
+import type { CheckoutRouterAdapter } from '@constructor-io/constructorio-ui-checkout';
 
-// Adapt your router (react-router, next/router, etc.) to RouterAdapter.
-const router: RouterAdapter = {
+// Adapt your router (react-router, next/router, etc.) to CheckoutRouterAdapter.
+const router: CheckoutRouterAdapter = {
   push: (path) => navigate(path),
   getCurrentPath: () => location.pathname,
   subscribe: (cb) => subscribeToLocationChanges(cb),
@@ -244,7 +244,7 @@ const getAuthToken = () => 'demo-token';
 function RealisticFlowDemo() {
   const [path, setPath] = useState('/cart');
   const [signedIn, setSignedIn] = useState(false);
-  const router: RouterAdapter = useMemo(
+  const router: CheckoutRouterAdapter = useMemo(
     () => ({ push: setPath, getCurrentPath: () => path }),
     [path]
   );
@@ -381,14 +381,14 @@ export const RealisticMixedFlow: Story = {
   PAYMENT_STEP,
   useCioCheckout,
 } from '@constructor-io/constructorio-ui-checkout';
-import type { RouterAdapter } from '@constructor-io/constructorio-ui-checkout';
+import type { CheckoutRouterAdapter } from '@constructor-io/constructorio-ui-checkout';
 
 import { getCart } from './lib/cart';        // plain function, module-scoped
 import { getAuthToken } from './lib/auth';   // plain function, module-scoped
 import { useAppRouter } from './hooks/useAppRouter';
 
 function CheckoutApp() {
-  const router: RouterAdapter = useAppRouter();
+  const router: CheckoutRouterAdapter = useAppRouter();
   const [signedIn, setSignedIn] = useState(false);
 
   // Reads cart + auth via plain functions at call time.

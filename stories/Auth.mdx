@@ -19,7 +19,7 @@ Both should point at the same `/login` route and the same `<LoginPage>` componen
   provider="stripe"
   steps={[
     { id: 'cart', path: '/cart' },
-    { id: 'auth', path: '/login' },              // routed auth step
+    { id: 'auth', path: '/login' }, // routed auth step
     { id: PAYMENT_STEP, path: '/checkout/payment' },
     { id: 'done', path: '/order/confirmed' },
   ]}
@@ -49,7 +49,7 @@ function LoginPage() {
   const onSignedIn = () => {
     // Case A: the checkout flow entered its auth step.
     if (flow.state.currentStepId === 'auth') {
-      flow.next();  // continues checkout to /checkout/payment
+      flow.next(); // continues checkout to /checkout/payment
       return;
     }
 
@@ -70,7 +70,9 @@ React Router's `state` (survives a route transition, not a reload):
 ```tsx
 <button
   onClick={() =>
-    navigate('/login', { state: { returnTo: location.pathname + location.search } })
+    navigate('/login', {
+      state: { returnTo: location.pathname + location.search },
+    })
   }
 >
   Sign in
@@ -97,9 +99,9 @@ Never trust `returnTo` — an unvalidated redirect is an open-redirect vulnerabi
 ```tsx
 function sanitizeReturnTo(value: string | null | undefined): string {
   if (!value) return '/account';
-  if (!value.startsWith('/')) return '/account';   // reject absolute URLs
-  if (value.startsWith('//')) return '/account';   // reject protocol-relative
-  if (value.includes('\\')) return '/account';     // reject backslash — browsers treat \\evil as //evil
+  if (!value.startsWith('/')) return '/account'; // reject absolute URLs
+  if (value.startsWith('//')) return '/account'; // reject protocol-relative
+  if (value.includes('\\')) return '/account'; // reject backslash — browsers treat \\evil as //evil
   return value;
 }
 ```
@@ -107,22 +109,27 @@ function sanitizeReturnTo(value: string | null | undefined): string {
 ## Decision matrix
 
 **User clicks "Sign in" from the nav.**
+
 - `flow.state.currentStepId` — `null`
 - After sign-in — `navigate(returnTo)`
 
 **User hits a protected route while logged out.**
+
 - `flow.state.currentStepId` — `null`
 - After sign-in — `navigate(returnTo)` (pointed at that route)
 
 **User starts checkout without being signed in.**
+
 - `flow.state.currentStepId` — `'auth'` (flow pushed `/login`)
 - After sign-in — `flow.next()` continues to `/checkout/payment`
 
 **Signed-in user starts checkout.**
+
 - `flow.state.currentStepId` — never enters auth (guard passes)
 - After sign-in — n/a; flow goes straight from cart to payment
 
 **Deep link to `/checkout/payment` while logged out.**
+
 - `flow.state.currentStepId` — flow hydrates toward stripe, guard blocks, pushes `/login` (`currentStepId` becomes `'auth'`)
 - After sign-in — `flow.next()` continues to `/checkout/payment`
 
@@ -143,6 +150,7 @@ The guard therefore belongs on the **step after auth** (the one that requires be
 ```
 
 Behavior:
+
 - User advances from `cart` → flow enters `auth` (routed to `/login`).
 - User signs in, `LoginPage` calls `flow.next()`.
 - Guard on `stripe` runs — `isSignedIn()` returns `true` → payment step entered.
@@ -178,7 +186,9 @@ function AuthStepBody() {
   return isSignedIn() ? null : <SignInForm />;
 }
 
-<CioCheckoutStep id="auth"><AuthStepBody /></CioCheckoutStep>
+<CioCheckoutStep id="auth">
+  <AuthStepBody />
+</CioCheckoutStep>;
 ```
 
 Brief render of `null` before the transition. Add a loading state if the flash is visible.
@@ -205,14 +215,16 @@ Splits the auth decision across the previous step — awkward when multiple step
 To present sign-in as a modal over the current page (no URL change), give the auth step no `path` and apply the same auto-advance / skip pattern:
 
 ```tsx
-{ id: 'auth' }
+{
+  id: 'auth';
+}
 ```
 
 Render a `<SignInModal>` inside `<CioCheckoutStep id="auth">`. The modal appears only during checkout; `<LoginPage>` at `/login` still handles the nav-triggered case. Trade-offs: no deep link to auth and no browser-back into auth, but no route change either.
 
 ## Multi-step auth (OTP, 2FA, passkey, MFA)
 
-The checkout flow does not care about the auth *strategy* — only about the answer to "is the user signed in yet?" A credentials → OTP → verified sequence happens entirely inside `LoginPage`. Only the final success handler calls `flow.next()`.
+The checkout flow does not care about the auth _strategy_ — only about the answer to "is the user signed in yet?" A credentials → OTP → verified sequence happens entirely inside `LoginPage`. Only the final success handler calls `flow.next()`.
 
 ```tsx
 function LoginPage() {
@@ -222,7 +234,7 @@ function LoginPage() {
 
   const onFullySignedIn = () => {
     if (flow.state.currentStepId === 'auth') {
-      flow.next();  // one call, at the very end of the auth wizard
+      flow.next(); // one call, at the very end of the auth wizard
       return;
     }
     const returnTo = sanitizeReturnTo(
@@ -252,13 +264,13 @@ function AuthWizard({ onSuccess }: { onSuccess: () => void }) {
 }
 ```
 
-`isSignedIn()` (the value the checkout guard reads) returns `true` only once the *final* verification succeeds — not when the user submits credentials and receives an OTP challenge.
+`isSignedIn()` (the value the checkout guard reads) returns `true` only once the _final_ verification succeeds — not when the user submits credentials and receives an OTP challenge.
 
 ### Do the OTP substeps need URLs of their own?
 
 **No** — keep OTP as internal component state (the code above). Simplest. Users cannot refresh into a mid-OTP screen, and you cannot deep-link into a half-completed auth flow, which is typically the desired security posture.
 
-**Yes** — nest routes *inside* the auth entry route. The checkout `auth` step still owns `/login` as its entry; sub-URLs like `/login/verify` live under the same checkout step:
+**Yes** — nest routes _inside_ the auth entry route. The checkout `auth` step still owns `/login` as its entry; sub-URLs like `/login/verify` live under the same checkout step:
 
 ```tsx
 <Route path="/login" element={<LoginPage />}>

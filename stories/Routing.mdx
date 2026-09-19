@@ -9,7 +9,7 @@ The `router` prop is an adapter — plug in your app's router so the checkout fl
 ## Router adapter shape
 
 ```ts
-interface RouterAdapter {
+interface CheckoutRouterAdapter {
   push(path: string): void;
   getCurrentPath(): string;
   subscribe?(cb: (path: string) => void): () => void;
@@ -128,10 +128,10 @@ Server-rendered sites (Shopify Liquid, WooCommerce, Rails, plain PHP) navigate t
 const flow = CioCheckout.resume({
   provider: 'stripe',
   steps: [
-    { id: 'cart',   path: '/cart' },
+    { id: 'cart', path: '/cart' },
     { id: 'payment', path: '/checkout/payment' },
   ],
-  onCreateSession: () => fetch('/api/session').then(r => r.json()),
+  onCreateSession: () => fetch('/api/session').then((r) => r.json()),
   storageKey: 'user-123',
   router: {
     push: (path) => (window.location.href = path),

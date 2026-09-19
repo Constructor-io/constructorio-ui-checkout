@@ -6,14 +6,14 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 A step is the smallest unit the flow tracks. The step list defines the state machine — the library manages `currentStepId`, transitions, guards, and URL sync; you own what renders inside each step.
 
-## `Step` shape
+## `CheckoutStep` shape
 
 ```ts
-interface Step {
-  id: StepId;           // any string; must be unique in the list
-  path?: string;        // URL path — required if you're using a router adapter
-  optional?: boolean;   // skippable via flow.next({ skip: true })
-  guard?: (state: FlowState) => boolean | Promise<boolean>;
+interface CheckoutStep {
+  id: CheckoutStepId; // any string; must be unique in the list
+  path?: string; // URL path — required if you're using a router adapter
+  optional?: boolean; // skippable via flow.next({ skip: true })
+  guard?: (state: CheckoutFlowState) => boolean | Promise<boolean>;
 }
 ```
 
@@ -22,7 +22,10 @@ That is the entire surface. Nothing else on the step defines rendering — that 
 ## Two built-in step IDs
 
 ```ts
-import { CREATE_SESSION_STEP, PAYMENT_STEP } from '@constructor-io/constructorio-ui-checkout';
+import {
+  CREATE_SESSION_STEP,
+  PAYMENT_STEP,
+} from '@constructor-io/constructorio-ui-checkout';
 ```
 
 - **`PAYMENT_STEP`** (`'stripe'`) — the ID the built-in `<CioStripePaymentStep>` looks for. Use the constant rather than the literal string so future renames stay backwards-compatible.
@@ -32,7 +35,7 @@ All other step IDs are merchant-defined.
 
 ## Designing your step list
 
-Pick step IDs by intent, not by component. `'cart'`, `'address'`, and `'review'` describe *what the user is doing*; `'CartPage'` couples the flow to a component name that may move.
+Pick step IDs by intent, not by component. `'cart'`, `'address'`, and `'review'` describe _what the user is doing_; `'CartPage'` couples the flow to a component name that may move.
 
 Typical B2C flow:
 
@@ -64,7 +67,7 @@ steps: [
 
 ## Optional steps
 
-`optional: true` *permits* `next({ skip: true })` from within the step without marking it completed. Common uses: gift-wrap prompt, marketing opt-in, promo-code entry.
+`optional: true` _permits_ `next({ skip: true })` from within the step without marking it completed. Common uses: gift-wrap prompt, marketing opt-in, promo-code entry.
 
 ```tsx
 { id: 'giftWrap', optional: true }
@@ -90,7 +93,7 @@ Do not use `optional` for A/B branching — that is a guard concern, not an opti
 
 ## Guards
 
-`guard` runs before a transition *into* the step. Return `false` (or reject) to block the transition; the flow stays put and emits an `error` event with `source: 'guard'`.
+`guard` runs before a transition _into_ the step. Return `false` (or reject) to block the transition; the flow stays put and emits an `error` event with `source: 'guard'`.
 
 **Auth gate:**
 
@@ -130,13 +133,15 @@ Guards can be sync or async. Async guards should return quickly — the flow ren
 
 ## Guard vs branch inside a step
 
-Guards gate entry. Conditional rendering *inside* the step handles branching after entry.
+Guards gate entry. Conditional rendering _inside_ the step handles branching after entry.
 
 Use a guard when:
+
 - The gate is external to the step (auth, inventory, backend approval).
 - Failure should keep the user on the previous step.
 
 Use conditional rendering inside a step when:
+
 - The variant depends on user input (guest vs sign-in on the same page).
 - The step runs either way, only with different UI.
 
@@ -157,7 +162,7 @@ For steps that own their side effects (auto-creating a session, polling fulfillm
 ```tsx
 <CioCheckoutStep id="fulfill">
   <MyFulfillmentPoll />
-</CioCheckoutStep>
+</CioCheckoutStep>;
 
 function MyFulfillmentPoll() {
   const flow = useCioCheckout();

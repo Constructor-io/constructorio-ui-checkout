@@ -48,10 +48,10 @@ describe(`${CioCheckoutProvider.name}: client`, () => {
     });
 
     it('reactive cart prop updates the snapshot on rerender', async () => {
-      const cartV1 = [{ name: 'A', amount: 10 }];
+      const cartV1 = [{ id: 'a', name: 'A', unitAmount: 10, quantity: 1 }];
       const cartV2 = [
-        { name: 'A', amount: 10 },
-        { name: 'B', amount: 5 },
+        { id: 'a', name: 'A', unitAmount: 10, quantity: 1 },
+        { id: 'b', name: 'B', unitAmount: 5, quantity: 1 },
       ];
       const snapshots: number[] = [];
 

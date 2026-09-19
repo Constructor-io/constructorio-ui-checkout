@@ -18,6 +18,8 @@ describe(`${createCartManager.name}: server`, () => {
       onSessionActive: () => undefined,
     });
     const cart = createCartManager(ctx, session);
-    expect(() => cart.setCart([{ name: 'X', amount: 1 }])).not.toThrow();
+    expect(() =>
+      cart.setCart([{ id: 'x', name: 'X', unitAmount: 1, quantity: 1 }])
+    ).not.toThrow();
   });
 });

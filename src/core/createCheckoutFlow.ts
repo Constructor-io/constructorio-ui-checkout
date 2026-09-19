@@ -1,6 +1,12 @@
+import type { BaseCartItem } from '@src/types';
+
 import { createCartManager } from './flow/cartManager';
 import type { FlowContext } from './flow/context';
-import { findStepIndex, makeInitialState } from './flow/helpers';
+import {
+  compileCartItemAccessors,
+  findStepIndex,
+  makeInitialState,
+} from './flow/helpers';
 import { createNavigator } from './flow/navigator';
 import { createRouterBridge } from './flow/routerBridge';
 import { createSessionManager } from './flow/sessionManager';
@@ -12,23 +18,24 @@ import type {
   CheckoutEventErrorSource,
   CheckoutFlowConfig,
   CheckoutFlowCore,
+  CheckoutFlowState,
+  CheckoutStepId,
   CreateCheckoutFlowOptions,
-  FlowState,
-  StepId,
 } from './types';
 
 export function createCheckoutFlow<
   TProvider extends string = string,
   TState = unknown,
+  TItem = BaseCartItem,
 >(
-  config: CheckoutFlowConfig<TProvider, TState>,
+  config: CheckoutFlowConfig<TProvider, TState, TItem>,
   options?: CreateCheckoutFlowOptions
-): CheckoutFlowCore<TProvider, TState> {
+): CheckoutFlowCore<TProvider, TState, TItem> {
   if (!Array.isArray(config.steps) || config.steps.length === 0) {
     throw new Error('createCheckoutFlow: `steps` must be a non-empty array');
   }
 
-  const seen = new Set<StepId>();
+  const seen = new Set<CheckoutStepId>();
   for (const step of config.steps) {
     if (!step || typeof step.id !== 'string' || step.id.length === 0) {
       throw new Error('createCheckoutFlow: every step needs a non-empty `id`');
@@ -43,11 +50,13 @@ export function createCheckoutFlow<
     throw new Error('createCheckoutFlow: `onCreateSession` is required');
   }
 
-  const initialState = makeInitialState();
+  const initialState = makeInitialState<TItem>();
   if (config.cart) initialState.cartSnapshot = config.cart.slice();
-  const store = createStore<FlowState>(initialState);
-  const events = createEmitter();
+  if (config.currency !== undefined) initialState.currency = config.currency;
+  const store = createStore<CheckoutFlowState<TItem>>(initialState);
+  const events = createEmitter<TItem>();
   const steps = config.steps.slice();
+  const accessors = compileCartItemAccessors<TItem>(config.cartItemFields);
   let integratorState = config.initialState ?? ({} as TState);
   let destroyed = false;
 
@@ -65,11 +74,12 @@ export function createCheckoutFlow<
 
   const isDead = (): boolean => destroyed;
 
-  const ctx: FlowContext<TProvider, TState> = {
+  const ctx: FlowContext<TProvider, TState, TItem> = {
     config,
     steps,
     store,
     events,
+    accessors,
     isDestroyed: isDead,
     emitError,
   };
@@ -109,11 +119,14 @@ export function createCheckoutFlow<
     }
   };
 
-  const hydrate = (input: FlowState): void => {
+  const hydrate = (input: CheckoutFlowState<TItem>): void => {
     if (isDead()) return;
-    const validated = validateFlowState(input);
+    const validated = validateFlowState<TItem>(input);
     if (!validated) {
-      emitError('storage', new Error('hydrate: invalid FlowState shape'));
+      emitError(
+        'storage',
+        new Error('hydrate: invalid CheckoutFlowState shape')
+      );
       return;
     }
     if (
@@ -151,7 +164,7 @@ export function createCheckoutFlow<
     if (isDead()) return;
     sessionManager.reset();
     cartManager.clearDebounce();
-    store.setState(() => makeInitialState());
+    store.setState(() => makeInitialState<TItem>());
   };
 
   const clearState = async (): Promise<void> => {

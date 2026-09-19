@@ -28,10 +28,10 @@ export {
 export type { CioFlowStepProps } from './app/components/CioFlowStep';
 export { CioFlowStep } from './app/components/CioFlowStep';
 export type {
-  CioFulfillmentStepProps,
   CioFulfillmentRenderProps,
   CioFulfillmentResult,
   CioFulfillmentStatus,
+  CioFulfillmentStepProps,
 } from './app/components/CioFulfillmentStep';
 export { CioFulfillmentStep } from './app/components/CioFulfillmentStep';
 export type { CioStripePaymentStepProps } from './app/components/CioStripePaymentStep';

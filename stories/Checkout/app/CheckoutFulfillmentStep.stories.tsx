@@ -4,8 +4,8 @@ import type { Meta, StoryObj } from '@storybook/react';
 
 import { CioFlowStep } from '@src/app/components/CioFlowStep';
 import {
-  CioFulfillmentStep,
   type CioFulfillmentResult,
+  CioFulfillmentStep,
 } from '@src/app/components/CioFulfillmentStep';
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
 import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';

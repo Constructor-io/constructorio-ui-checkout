@@ -2,8 +2,8 @@ import { renderToString } from 'react-dom/server';
 
 import { CioFlowStep } from '@src/app/components/CioFlowStep';
 import {
-  CioFulfillmentStep,
   type CioFulfillmentResult,
+  CioFulfillmentStep,
 } from '@src/app/components/CioFulfillmentStep';
 import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 

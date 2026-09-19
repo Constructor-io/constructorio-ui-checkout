@@ -3,8 +3,8 @@ import { userEvent } from '@testing-library/user-event';
 
 import { CioFlowStep } from '@src/app/components/CioFlowStep';
 import {
-  CioFulfillmentStep,
   type CioFulfillmentResult,
+  CioFulfillmentStep,
 } from '@src/app/components/CioFulfillmentStep';
 import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
 import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
@@ -96,10 +96,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
         autoStart
       >
         <CioFlowStep id="fulfill">
-          <CioFulfillmentStep
-            advanceOnSuccess={false}
-            onFulfill={onFulfill}
-          />
+          <CioFulfillmentStep advanceOnSuccess={false} onFulfill={onFulfill} />
         </CioFlowStep>
       </CioPaymentProvider>
     );

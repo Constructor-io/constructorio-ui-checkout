@@ -20,7 +20,7 @@ npm i @constructor-io/constructorio-ui-checkout
 
 | Path              | Best for                          | Entry                                          |
 | ----------------- | --------------------------------- | ---------------------------------------------- |
-| React             | React apps with the full flow     | `<CioPaymentProvider>` + `useCheckoutFlow()` |
+| React             | React apps with the full flow     | `<CioPaymentProvider>` + `useCioPayment()` |
 | Vanilla JS (npm)  | Non-React SPAs or custom UIs      | `new CioCheckoutFlow(config)`                     |
 | Standalone bundle | Server-rendered sites, `<script>` | `window.CioCheckout.resume(config)`            |
 
@@ -34,8 +34,8 @@ import {
   CioFlowStep,
   CioStripePaymentStep,
   CioFulfillmentStep,
-  STRIPE_STEP,
-  useCheckoutFlow,
+  PAYMENT_STEP,
+  useCioPayment,
 } from '@constructor-io/constructorio-ui-checkout';
 import '@constructor-io/constructorio-ui-checkout/styles.css';
 
@@ -45,7 +45,7 @@ function App() {
       steps={[
         { id: 'cart' },
         { id: 'address' },
-        { id: STRIPE_STEP },
+        { id: PAYMENT_STEP },
         { id: 'fulfill' },
         { id: 'done' },
       ]}
@@ -58,7 +58,7 @@ function App() {
       <StartButton />
       <CioFlowStep id="cart"><MyCart /></CioFlowStep>
       <CioFlowStep id="address"><MyAddressForm /></CioFlowStep>
-      <CioFlowStep id={STRIPE_STEP}>
+      <CioFlowStep id={PAYMENT_STEP}>
         <CioStripePaymentStep uiMode="form" />
       </CioFlowStep>
       <CioFlowStep id="fulfill">
@@ -72,7 +72,7 @@ function App() {
 }
 
 function StartButton() {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   if (flow.state.currentStepId !== null) return null;
   return <button onClick={() => flow.start()}>Checkout</button>;
 }
@@ -82,13 +82,13 @@ You own the button, the layout, and every non-Stripe step. See the [Integration 
 
 ## Standalone bundle
 
-For non-React SPAs or `<script>`-tag integrations. The bundle exposes `window.CioCheckout` — a state-only namespace; you drive your own DOM.
+A framework-agnostic bundle for non-React SPAs, server-rendered sites, or `<script>`-tag integrations. The bundle exposes `window.CioCheckout` — a state-only namespace; you drive your own DOM.
 
 ```html
-<script src="https://unpkg.com/@constructor-io/constructorio-ui-checkout/dist/standalone/constructorio-ui-checkout.standalone.js"></script>
+<script src="/path/to/constructorio-ui-checkout.standalone.js"></script>
 <script>
   const flow = CioCheckout.resume({
-    steps: [{ id: 'cart' }, { id: 'stripe' }, { id: 'done' }],
+    steps: [{ id: 'cart' }, { id: 'payment' }, { id: 'done' }],
     onCreateSession: () =>
       fetch('/api/checkout-session', { method: 'POST' }).then((r) => r.json()),
     onEvent: (e) => console.log(e),
@@ -96,6 +96,12 @@ For non-React SPAs or `<script>`-tag integrations. The bundle exposes `window.Ci
 
   flow.start();
 </script>
+```
+
+Consuming through a bundler? Import the same bundle via subpath — same `CioCheckout` surface:
+
+```js
+import CioCheckout from '@constructor-io/constructorio-ui-checkout/constructorio-ui-checkout-standalone';
 ```
 
 `CioCheckout.resume(config)` creates a `CioCheckoutFlow` backed by a `sessionStorage` adapter (auto-hydrates on page load) and registers it as the active flow so any other CIO library on the page can reach it.
@@ -110,7 +116,7 @@ For non-React SPAs or `<script>`-tag integrations. The bundle exposes `window.Ci
 | `CioCheckout.createSessionStorageAdapter` | Default sessionStorage-backed `StorageAdapter`                             |
 | `CioCheckout.resume(config)`       | Creates + registers a `CioCheckoutFlow` with the sessionStorage adapter injected     |
 | `CioCheckout.reset()`              | Destroys the registered flow                                                      |
-| `CioCheckout.checkoutRegistry`     | Singleton registry — `register(flow)`, `getFlow()`, `hasFlow()`, `clear()`        |
+| `CioCheckout.cioCheckoutRegistry`     | Singleton registry — `register(flow)`, `getFlow()`, `hasFlow()`, `clear()`        |
 
 ## Registry pattern
 
@@ -119,14 +125,14 @@ For multi-library setups where another CIO library (e.g. `pia`) needs to reach t
 ```ts
 import {
   CioCheckoutFlow,
-  checkoutRegistry,
+  cioCheckoutRegistry,
 } from '@constructor-io/constructorio-ui-checkout';
 
 const flow = new CioCheckoutFlow({ steps, onCreateSession, ... });
-checkoutRegistry.register(flow);
+cioCheckoutRegistry.register(flow);
 
 // Elsewhere:
-const active = checkoutRegistry.getFlow();
+const active = cioCheckoutRegistry.getFlow();
 active?.syncCart(newItems);
 ```
 

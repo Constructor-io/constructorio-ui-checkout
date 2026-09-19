@@ -3,9 +3,9 @@ import { userEvent } from '@testing-library/user-event';
 
 import { CioFlowStep } from '@src/app/components/CioFlowStep';
 import { CioStripePaymentStep } from '@src/app/components/CioStripePaymentStep';
-import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
+import { useCioPayment } from '@src/app/hooks/useCioPayment';
 import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
-import { STRIPE_STEP } from '@src/core/types';
+import { PAYMENT_STEP } from '@src/core/types';
 import type { CheckoutSessionResponse } from '@src/types';
 
 const sessionResponse = (id = 'cs_test_abc'): CheckoutSessionResponse => ({
@@ -25,11 +25,11 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
     function Harness() {
       return (
         <CioPaymentProvider
-          steps={[{ id: STRIPE_STEP }]}
+          steps={[{ id: PAYMENT_STEP }]}
           onCreateSession={stubSession}
           autoStart
         >
-          <CioFlowStep id={STRIPE_STEP}>
+          <CioFlowStep id={PAYMENT_STEP}>
             <CioStripePaymentStep />
           </CioFlowStep>
         </CioPaymentProvider>
@@ -43,11 +43,11 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
   it('renders form mode (CheckoutForm) by default', async () => {
     render(
       <CioPaymentProvider
-        steps={[{ id: STRIPE_STEP }]}
+        steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={stubSession}
         autoStart
       >
-        <CioFlowStep id={STRIPE_STEP}>
+        <CioFlowStep id={PAYMENT_STEP}>
           <CioStripePaymentStep />
         </CioFlowStep>
       </CioPaymentProvider>
@@ -60,11 +60,11 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
   it('renders elements mode when uiMode="elements"', async () => {
     render(
       <CioPaymentProvider
-        steps={[{ id: STRIPE_STEP }]}
+        steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={stubSession}
         autoStart
       >
-        <CioFlowStep id={STRIPE_STEP}>
+        <CioFlowStep id={PAYMENT_STEP}>
           <CioStripePaymentStep uiMode="elements" />
         </CioFlowStep>
       </CioPaymentProvider>
@@ -77,17 +77,17 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
   it('advances the flow on payment completion', async () => {
     const events: string[] = [];
     function Harness() {
-      const flow = useCheckoutFlow();
+      const flow = useCioPayment();
       events.push(String(flow.state.currentStepId));
       return (
-        <CioFlowStep id={STRIPE_STEP}>
+        <CioFlowStep id={PAYMENT_STEP}>
           <CioStripePaymentStep />
         </CioFlowStep>
       );
     }
     render(
       <CioPaymentProvider
-        steps={[{ id: STRIPE_STEP }, { id: 'done' }]}
+        steps={[{ id: PAYMENT_STEP }, { id: 'done' }]}
         onCreateSession={stubSession}
         autoStart
       >
@@ -104,11 +104,11 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
   it('renders nothing while session is being created', async () => {
     render(
       <CioPaymentProvider
-        steps={[{ id: STRIPE_STEP }]}
+        steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={() => new Promise(() => undefined)}
         autoStart
       >
-        <CioFlowStep id={STRIPE_STEP}>
+        <CioFlowStep id={PAYMENT_STEP}>
           <CioStripePaymentStep />
         </CioFlowStep>
       </CioPaymentProvider>
@@ -128,11 +128,11 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
     const onError = vi.fn();
     render(
       <CioPaymentProvider
-        steps={[{ id: STRIPE_STEP }]}
+        steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={onCreateSession}
         autoStart
       >
-        <CioFlowStep id={STRIPE_STEP}>
+        <CioFlowStep id={PAYMENT_STEP}>
           <CioStripePaymentStep onError={onError} />
         </CioFlowStep>
       </CioPaymentProvider>
@@ -152,20 +152,20 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
       firstResolved = true;
       return Promise.resolve(sessionResponse(id));
     });
-    let flowRef!: ReturnType<typeof useCheckoutFlow>;
+    let flowRef!: ReturnType<typeof useCioPayment>;
     function Grabber() {
-      const f = useCheckoutFlow();
+      const f = useCioPayment();
       flowRef = f;
       return null;
     }
     render(
       <CioPaymentProvider
-        steps={[{ id: STRIPE_STEP }]}
+        steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={onCreateSession}
         autoStart
       >
         <Grabber />
-        <CioFlowStep id={STRIPE_STEP}>
+        <CioFlowStep id={PAYMENT_STEP}>
           <CioStripePaymentStep />
         </CioFlowStep>
       </CioPaymentProvider>

@@ -8,7 +8,7 @@ import { CioCheckoutFlow } from '@src/manager/CioCheckoutFlow';
 // flow with the default sessionStorage adapter, registers it, and returns it.
 // Stored as `CioCheckoutFlow<unknown>` for type erasure — the merchant asserts
 // TState on read via getFlow/resume generics.
-class CheckoutRegistry {
+class CioCheckoutRegistry {
   private flow: CioCheckoutFlow<unknown> | null = null;
 
   register<TState>(flow: CioCheckoutFlow<TState>): void {
@@ -44,6 +44,6 @@ class CheckoutRegistry {
   }
 }
 
-const checkoutRegistry = new CheckoutRegistry();
-export default checkoutRegistry;
-export { CheckoutRegistry };
+const cioCheckoutRegistry = new CioCheckoutRegistry();
+export default cioCheckoutRegistry;
+export { CioCheckoutRegistry };

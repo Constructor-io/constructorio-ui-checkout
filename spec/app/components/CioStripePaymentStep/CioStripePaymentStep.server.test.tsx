@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { CioFlowStep } from '@src/app/components/CioFlowStep';
 import { CioStripePaymentStep } from '@src/app/components/CioStripePaymentStep';
 import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
-import { STRIPE_STEP } from '@src/core/types';
+import { PAYMENT_STEP } from '@src/core/types';
 
 const stubSession = () =>
   Promise.resolve({
@@ -16,10 +16,10 @@ describe(`${CioStripePaymentStep.name}: server`, () => {
     expect(() =>
       renderToString(
         <CioPaymentProvider
-          steps={[{ id: STRIPE_STEP }]}
+          steps={[{ id: PAYMENT_STEP }]}
           onCreateSession={stubSession}
         >
-          <CioFlowStep id={STRIPE_STEP}>
+          <CioFlowStep id={PAYMENT_STEP}>
             <CioStripePaymentStep />
           </CioFlowStep>
         </CioPaymentProvider>
@@ -30,10 +30,10 @@ describe(`${CioStripePaymentStep.name}: server`, () => {
   it('renders nothing before the flow enters the stripe step', () => {
     const view = renderToString(
       <CioPaymentProvider
-        steps={[{ id: STRIPE_STEP }]}
+        steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={stubSession}
       >
-        <CioFlowStep id={STRIPE_STEP}>
+        <CioFlowStep id={PAYMENT_STEP}>
           <CioStripePaymentStep />
         </CioFlowStep>
       </CioPaymentProvider>

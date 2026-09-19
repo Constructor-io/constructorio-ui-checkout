@@ -1,7 +1,7 @@
+import cioCheckoutRegistry, {
+  CioCheckoutRegistry,
+} from '@src/manager/CioCheckoutRegistry';
 import { CioCheckoutFlow } from '@src/manager/CioCheckoutFlow';
-import checkoutRegistry, {
-  CheckoutRegistry,
-} from '@src/manager/CheckoutRegistry';
 
 import {
   DEMO_CLIENT_SECRET,
@@ -14,19 +14,19 @@ const stubSession = () =>
     publishableKey: DEMO_PUBLISHABLE_KEY,
   });
 
-describe(`${CheckoutRegistry.name}: client`, () => {
+describe(`${CioCheckoutRegistry.name}: client`, () => {
   beforeEach(() => {
     globalThis.sessionStorage.clear();
   });
 
   afterEach(() => {
-    checkoutRegistry.clear();
+    cioCheckoutRegistry.clear();
     globalThis.sessionStorage.clear();
   });
 
   it('starts with no flow registered', () => {
-    expect(checkoutRegistry.hasFlow()).toBe(false);
-    expect(checkoutRegistry.getFlow()).toBeNull();
+    expect(cioCheckoutRegistry.hasFlow()).toBe(false);
+    expect(cioCheckoutRegistry.getFlow()).toBeNull();
   });
 
   it('register stores an existing flow instance', () => {
@@ -34,9 +34,9 @@ describe(`${CheckoutRegistry.name}: client`, () => {
       steps: [{ id: 'a' }],
       onCreateSession: stubSession,
     });
-    checkoutRegistry.register(flow);
-    expect(checkoutRegistry.hasFlow()).toBe(true);
-    expect(checkoutRegistry.getFlow()).toBe(flow);
+    cioCheckoutRegistry.register(flow);
+    expect(cioCheckoutRegistry.hasFlow()).toBe(true);
+    expect(cioCheckoutRegistry.getFlow()).toBe(flow);
   });
 
   it('register destroys the previous flow when replacing', () => {
@@ -45,16 +45,16 @@ describe(`${CheckoutRegistry.name}: client`, () => {
       onCreateSession: stubSession,
     });
     const destroySpy = vi.spyOn(first, 'destroy');
-    checkoutRegistry.register(first);
+    cioCheckoutRegistry.register(first);
 
     const second = new CioCheckoutFlow({
       steps: [{ id: 'b' }],
       onCreateSession: stubSession,
     });
-    checkoutRegistry.register(second);
+    cioCheckoutRegistry.register(second);
 
     expect(destroySpy).toHaveBeenCalledTimes(1);
-    expect(checkoutRegistry.getFlow()).toBe(second);
+    expect(cioCheckoutRegistry.getFlow()).toBe(second);
   });
 
   it('clear destroys and unregisters the flow', () => {
@@ -63,28 +63,28 @@ describe(`${CheckoutRegistry.name}: client`, () => {
       onCreateSession: stubSession,
     });
     const destroySpy = vi.spyOn(flow, 'destroy');
-    checkoutRegistry.register(flow);
-    checkoutRegistry.clear();
+    cioCheckoutRegistry.register(flow);
+    cioCheckoutRegistry.clear();
     expect(destroySpy).toHaveBeenCalledTimes(1);
-    expect(checkoutRegistry.hasFlow()).toBe(false);
+    expect(cioCheckoutRegistry.hasFlow()).toBe(false);
   });
 
   it('resume() creates a storage-backed flow and registers it', async () => {
-    const flow = checkoutRegistry.resume({
+    const flow = cioCheckoutRegistry.resume({
       steps: [{ id: 'a' }, { id: 'b' }],
       onCreateSession: stubSession,
       storageKey: 'user-r',
       storageSaveDebounceMs: 0,
     });
     expect(flow).toBeInstanceOf(CioCheckoutFlow);
-    expect(checkoutRegistry.getFlow()).toBe(flow);
+    expect(cioCheckoutRegistry.getFlow()).toBe(flow);
 
     await flow.start();
     await flow.next();
     await new Promise((r) => setTimeout(r, 10));
     flow.destroy();
 
-    const resumed = checkoutRegistry.resume({
+    const resumed = cioCheckoutRegistry.resume({
       steps: [{ id: 'a' }, { id: 'b' }],
       onCreateSession: stubSession,
       storageKey: 'user-r',
@@ -99,7 +99,7 @@ describe(`${CheckoutRegistry.name}: client`, () => {
       save: vi.fn(() => Promise.resolve()),
       clear: vi.fn(() => Promise.resolve()),
     };
-    const flow = checkoutRegistry.resume({
+    const flow = cioCheckoutRegistry.resume({
       steps: [{ id: 'a' }],
       onCreateSession: stubSession,
       storage: custom,

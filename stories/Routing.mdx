@@ -128,7 +128,7 @@ Traditional server-rendered sites (Shopify Liquid, WooCommerce, Rails, plain PHP
 const flow = CioCheckout.resume({
   steps: [
     { id: 'cart',   path: '/cart' },
-    { id: 'stripe', path: '/checkout/payment' },
+    { id: 'payment', path: '/checkout/payment' },
   ],
   onCreateSession: () => fetch('/api/session').then(r => r.json()),
   storageKey: 'user-123',

@@ -2,13 +2,13 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 <Meta title="Getting Started/Integration Guide" />
 
-# CioCheckoutFlow
+# Integration Guide
 
 Headless primitives for building multi-step checkout on top of Stripe. The library gives you the state machine, session lifecycle, storage, and Stripe surface — your app composes the UI.
 
 ## Three integration paths, one core
 
-- **React** — `<CioPaymentProvider>` + `useCheckoutFlow()` + `<CioFlowStep>` + `<CioStripePaymentStep>` / `<CioFulfillmentStep>`
+- **React** — `<CioPaymentProvider>` + `useCioPayment()` + `<CioFlowStep>` + `<CioStripePaymentStep>` / `<CioFulfillmentStep>`
 - **Vanilla JS (npm)** — `new CioCheckoutFlow(config)` from `@constructor-io/constructorio-ui-checkout`
 - **Standalone bundle** — `<script>` tag exposes `window.CioCheckout` with the same class
 
@@ -22,8 +22,8 @@ import {
   CioFlowStep,
   CioStripePaymentStep,
   CioFulfillmentStep,
-  STRIPE_STEP,
-  useCheckoutFlow,
+  PAYMENT_STEP,
+  useCioPayment,
 } from '@constructor-io/constructorio-ui-checkout';
 
 function App() {
@@ -32,7 +32,7 @@ function App() {
       steps={[
         { id: 'cart' },
         { id: 'address' },
-        { id: STRIPE_STEP },
+        { id: PAYMENT_STEP },
         { id: 'fulfill' },
         { id: 'done' },
       ]}
@@ -42,7 +42,7 @@ function App() {
       <StartButton />
       <CioFlowStep id="cart"><MyCart /></CioFlowStep>
       <CioFlowStep id="address"><MyAddressForm /></CioFlowStep>
-      <CioFlowStep id={STRIPE_STEP}>
+      <CioFlowStep id={PAYMENT_STEP}>
         <CioStripePaymentStep uiMode="form" />
       </CioFlowStep>
       <CioFlowStep id="fulfill">
@@ -56,7 +56,7 @@ function App() {
 }
 
 function StartButton() {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   if (flow.state.currentStepId !== null) return null;
   return <button onClick={() => flow.start()}>Checkout</button>;
 }
@@ -68,7 +68,7 @@ The old library shipped `<CheckoutTrigger>`, `trigger`, `triggerLabel`, `trigger
 
 ```tsx
 function BuyButton() {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   const cart = useMyCartStore();
   if (cart.items.length === 0) return null;
   if (flow.state.sessionStatus === 'creating') return <Spinner />;
@@ -81,7 +81,7 @@ function BuyButton() {
 There's no `displayMode` prop — you wrap the `stripe` step in your own modal or render it inline:
 
 ```tsx
-<CioFlowStep id={STRIPE_STEP}>
+<CioFlowStep id={PAYMENT_STEP}>
   <MyModal open>
     <CioStripePaymentStep />
   </MyModal>
@@ -97,7 +97,7 @@ Pass a `router` adapter and give each step a `path`. The library keeps URL and s
   steps={[
     { id: 'cart', path: '/cart' },
     { id: 'address', path: '/checkout/address' },
-    { id: STRIPE_STEP, path: '/checkout/payment' },
+    { id: PAYMENT_STEP, path: '/checkout/payment' },
   ]}
   router={{
     push: (path) => navigate(path),
@@ -137,7 +137,7 @@ Two options, both funnel through `onUpdateSession`:
 import { CioCheckoutFlow } from '@constructor-io/constructorio-ui-checkout';
 
 const flow = new CioCheckoutFlow({
-  steps: [{ id: 'createSession' }, { id: 'stripe' }],
+  steps: [{ id: 'createSession' }, { id: 'payment' }],
   onCreateSession: () => fetch('/api/session').then(r => r.json()),
 });
 
@@ -148,10 +148,10 @@ await flow.start();
 ## Standalone bundle
 
 ```html
-<script src="https://cdn.../constructorio-ui-checkout.standalone.js"></script>
+<script src="/path/to/constructorio-ui-checkout.standalone.js"></script>
 <script>
   const flow = CioCheckout.resume({
-    steps: [{ id: 'cart', path: '/cart' }, { id: 'stripe', path: '/pay' }],
+    steps: [{ id: 'cart', path: '/cart' }, { id: 'payment', path: '/pay' }],
     onCreateSession: () => fetch('/api/session').then(r => r.json()),
     router: {
       push: (p) => (window.location.href = p),

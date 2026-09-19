@@ -6,7 +6,7 @@ import {
   type CioFulfillmentResult,
   CioFulfillmentStep,
 } from '@src/app/components/CioFulfillmentStep';
-import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
+import { useCioPayment } from '@src/app/hooks/useCioPayment';
 import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 
 const stubSession = () =>
@@ -51,7 +51,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
   it('advances the flow on success by default', async () => {
     const events: string[] = [];
     function Probe() {
-      const flow = useCheckoutFlow();
+      const flow = useCioPayment();
       events.push(String(flow.state.currentStepId));
       return null;
     }
@@ -115,7 +115,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
   it('respects advanceOnSuccess=false — does not advance on success', async () => {
     const events: string[] = [];
     function Probe() {
-      const flow = useCheckoutFlow();
+      const flow = useCioPayment();
       events.push(String(flow.state.currentStepId));
       return null;
     }

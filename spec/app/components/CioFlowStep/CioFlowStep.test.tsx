@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
 import { CioFlowStep } from '@src/app/components/CioFlowStep';
-import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
+import { useCioPayment } from '@src/app/hooks/useCioPayment';
 import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 import type { CheckoutFlowConfig } from '@src/core/types';
 
@@ -21,7 +21,7 @@ describe(`${CioFlowStep.name}: client`, () => {
   it('renders children only when its id matches currentStepId', async () => {
     const user = userEvent.setup();
     function App() {
-      const flow = useCheckoutFlow();
+      const flow = useCioPayment();
       return (
         <>
           <button

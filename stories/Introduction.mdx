@@ -9,18 +9,18 @@ Headless primitives for building multi-step checkout on top of Stripe. The libra
 ## Where to go next
 
 - **[Integration Guide](./?path=/docs/getting-started-integration-guide--docs)** — install, wire up, and ship a working flow
-- **[Hook-only composition](./?path=/docs/getting-started-hook-only-composition--docs)** — bypass the built-in step components and drive the flow directly from `useCheckoutFlow()` when you need a custom Stripe wrapper, per-route composition, or unusual layouts
+- **[Hook-only composition](./?path=/docs/getting-started-hook-only-composition--docs)** — bypass the built-in step components and drive the flow directly from `useCioPayment()` when you need a custom Stripe wrapper, per-route composition, or unusual layouts
 - **[Routing](./?path=/docs/adapters-routing--docs)** — real-world adapter snippets for React Router, Next.js App Router, TanStack Router, and vanilla `window.location`
 - **[Persistence](./?path=/docs/adapters-persistence--docs)** — session/localStorage or backend-backed pause/resume
 - **[Steps](./?path=/docs/core-steps--docs)**, **[Sessions](./?path=/docs/core-sessions--docs)**, **[Cart](./?path=/docs/core-cart--docs)**, **[Auth](./?path=/docs/core-auth--docs)**, **[Events](./?path=/docs/core-events--docs)**, **[Custom State](./?path=/docs/core-custom-state--docs)** — what the library manages internally, and how you hook in
-- **[Components / CioCheckoutFlow](./?path=/docs/components-checkoutflow--docs)** — the basic shapes: single-page multi-step, express Buy Now, guest, with-login, routed, persistence
-- **[Components / CioCheckoutFlow / Advanced](./?path=/story/components-checkoutflow-advanced)** — obscure but real patterns: mid-flow add-to-cart, session recovery, custom fulfillment UI, backend storage, multi-instance, and more
+- **[Components / CioPaymentProvider](./?path=/docs/components-ciopaymentprovider--docs)** — the basic shapes: single-page multi-step, express Buy Now, guest, with-login, routed, persistence
+- **[Components / CioPaymentProvider / Advanced](./?path=/story/components-ciopaymentprovider-advanced)** — obscure but real patterns: mid-flow add-to-cart, session recovery, custom fulfillment UI, backend storage, multi-instance, and more
 
 ## Three integration paths, one core
 
 | Path | Best for | Entry |
 |---|---|---|
-| React | React apps with the full flow | `<CioPaymentProvider>` + `useCheckoutFlow()` |
+| React | React apps with the full flow | `<CioPaymentProvider>` + `useCioPayment()` |
 | Vanilla JS (npm) | Non-React SPAs or custom UIs | `new CioCheckoutFlow(config)` |
 | Standalone bundle | Server-rendered sites, `<script>` tags | `window.CioCheckout.resume(config)` |
 

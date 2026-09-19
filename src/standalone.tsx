@@ -1,8 +1,8 @@
 import { createCheckoutFlow } from './core/createCheckoutFlow';
 import { createSessionStorageAdapter } from './core/storage/sessionStorageAdapter';
 import type { CheckoutFlowConfig } from './core/types';
+import cioCheckoutRegistry from './manager/CioCheckoutRegistry';
 import { CioCheckoutFlow } from './manager/CioCheckoutFlow';
-import checkoutRegistry from './manager/CheckoutRegistry';
 import version from './version';
 
 import './styles.css';
@@ -17,16 +17,16 @@ const CioCheckout = {
   CioCheckoutFlow,
   createCheckoutFlow,
   createSessionStorageAdapter,
-  checkoutRegistry,
+  cioCheckoutRegistry,
 
   resume<TState = unknown>(
     config: CheckoutFlowConfig<TState>
   ): CioCheckoutFlow<TState> {
-    return checkoutRegistry.resume(config);
+    return cioCheckoutRegistry.resume(config);
   },
 
   reset(): void {
-    checkoutRegistry.clear();
+    cioCheckoutRegistry.clear();
   },
 };
 

@@ -17,8 +17,8 @@ import {
   CioPaymentProvider,
   CioFlowStep,
   CioStripePaymentStep,
-  STRIPE_STEP,
-  useCheckoutFlow,
+  PAYMENT_STEP,
+  useCioPayment,
 } from '@constructor-io/constructorio-ui-checkout';
 import { getCart, getCartId } from './lib/cart';
 import { getAuthToken } from './lib/auth';
@@ -50,7 +50,7 @@ function CheckoutApp() {
     <CioPaymentProvider
       steps={[
         { id: 'cart', path: '/cart' },
-        { id: STRIPE_STEP, path: '/checkout/payment' },
+        { id: PAYMENT_STEP, path: '/checkout/payment' },
         { id: 'done', path: '/order/confirmed' },
       ]}
       onCreateSession={onCreateSession}
@@ -87,7 +87,7 @@ function CheckoutApp() {
         }
       }}
     >
-      <CioFlowStep id={STRIPE_STEP}>
+      <CioFlowStep id={PAYMENT_STEP}>
         <CioStripePaymentStep
           onError={(err) => reportToSentry(err)}
         />
@@ -188,7 +188,7 @@ If you want your own recovery UI, render conditionally on `sessionStatus`:
 
 ```tsx
 function MyCustomStripePane() {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   if (flow.state.sessionStatus === 'error') {
     return (
       <MyErrorBanner

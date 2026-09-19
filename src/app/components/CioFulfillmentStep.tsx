@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
+import { useCioPayment } from '@src/app/hooks/useCioPayment';
 
 import './CioFulfillmentStep.css';
 
@@ -34,7 +34,7 @@ export function CioFulfillmentStep({
   advanceOnSuccess = true,
   render,
 }: CioFulfillmentStepProps) {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   const [status, setStatus] = useState<CioFulfillmentStatus>('idle');
   const [result, setResult] = useState<CioFulfillmentResult | null>(null);
   const inFlightRef = useRef(false);

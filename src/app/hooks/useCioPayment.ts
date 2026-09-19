@@ -2,21 +2,21 @@ import { useCallback, useContext } from 'react';
 
 import { useSyncExternalStore } from 'use-sync-external-store/shim';
 
-import { CheckoutFlowContext } from '@src/app/providers/CheckoutFlowContext';
+import { CioPaymentContext } from '@src/app/providers/CioPaymentContext';
 import type { CheckoutFlowCore, FlowState } from '@src/core/types';
 
-export type UseCheckoutFlowReturn<TState = unknown> =
+export type UseCioPaymentReturn<TState = unknown> =
   CheckoutFlowCore<TState> & { state: FlowState };
 
 // Context stores CheckoutFlowCore<unknown> for type erasure; the merchant
 // asserts TState at the hook boundary. Single documented cast on read.
-export function useCheckoutFlow<
+export function useCioPayment<
   TState = unknown,
->(): UseCheckoutFlowReturn<TState> {
-  const untyped = useContext(CheckoutFlowContext);
+>(): UseCioPaymentReturn<TState> {
+  const untyped = useContext(CioPaymentContext);
   if (!untyped) {
     throw new Error(
-      'useCheckoutFlow: must be used inside <CioPaymentProvider>'
+      'useCioPayment: must be used inside <CioPaymentProvider>'
     );
   }
   const flow = untyped as CheckoutFlowCore<TState>;

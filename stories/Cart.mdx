@@ -25,14 +25,14 @@ const [cart, setCart] = useState<CheckoutItem[]>([]);
 **`flow.setCart(items)`** — imperative, debounced. Same debounce semantics as the reactive prop; use when cart mutations come from callbacks, not renders (e.g., a recommendation carousel).
 
 ```tsx
-const flow = useCheckoutFlow();
+const flow = useCioPayment();
 flow.setCart([...cart, newItem]);
 ```
 
 **`flow.syncCart(items)`** — imperative, immediate. Bypasses the debounce and returns a promise that resolves with the updated session. Use when you need to guarantee the update is applied before proceeding.
 
 ```tsx
-const flow = useCheckoutFlow();
+const flow = useCioPayment();
 await flow.syncCart([...cart, newItem]);
 navigate('/checkout/payment');  // safe to advance
 ```
@@ -85,7 +85,7 @@ A recommendation carousel (Constructor PIA-style, "Frequently bought together", 
 
 ```tsx
 function RecommendationCard({ item }) {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   return (
     <button onClick={() => {
       flow.syncCart([...flow.state.cartSnapshot, item]);

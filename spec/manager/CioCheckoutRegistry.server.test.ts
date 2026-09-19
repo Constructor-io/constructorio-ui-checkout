@@ -1,20 +1,20 @@
+import cioCheckoutRegistry, {
+  CioCheckoutRegistry,
+} from '@src/manager/CioCheckoutRegistry';
 import { CioCheckoutFlow } from '@src/manager/CioCheckoutFlow';
-import checkoutRegistry, {
-  CheckoutRegistry,
-} from '@src/manager/CheckoutRegistry';
 
-describe(`${CheckoutRegistry.name}: server`, () => {
+describe(`${CioCheckoutRegistry.name}: server`, () => {
   afterEach(() => {
-    checkoutRegistry.clear();
+    cioCheckoutRegistry.clear();
   });
 
   it('can be imported in a server environment', () => {
-    expect(checkoutRegistry).toBeDefined();
+    expect(cioCheckoutRegistry).toBeDefined();
   });
 
   it('hasFlow returns false without any registration', () => {
-    expect(checkoutRegistry.hasFlow()).toBe(false);
-    expect(checkoutRegistry.getFlow()).toBeNull();
+    expect(cioCheckoutRegistry.hasFlow()).toBe(false);
+    expect(cioCheckoutRegistry.getFlow()).toBeNull();
   });
 
   it('register works without browser globals', () => {
@@ -26,7 +26,7 @@ describe(`${CheckoutRegistry.name}: server`, () => {
           publishableKey: 'pk_test',
         }),
     });
-    checkoutRegistry.register(flow);
-    expect(checkoutRegistry.getFlow()).toBe(flow);
+    cioCheckoutRegistry.register(flow);
+    expect(cioCheckoutRegistry.getFlow()).toBe(flow);
   });
 });

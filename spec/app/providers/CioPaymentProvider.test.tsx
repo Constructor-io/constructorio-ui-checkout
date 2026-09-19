@@ -4,7 +4,7 @@ import { act, render, renderHook, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
 import { CioFlowStep } from '@src/app/components/CioFlowStep';
-import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
+import { useCioPayment } from '@src/app/hooks/useCioPayment';
 import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 import type { CheckoutFlowConfig } from '@src/core/types';
 
@@ -25,7 +25,7 @@ describe(`${CioPaymentProvider.name}: client`, () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <CioPaymentProvider {...baseConfig}>{children}</CioPaymentProvider>
       );
-      const { result, unmount } = renderHook(() => useCheckoutFlow(), {
+      const { result, unmount } = renderHook(() => useCioPayment(), {
         wrapper,
       });
       const flow = result.current;
@@ -39,7 +39,7 @@ describe(`${CioPaymentProvider.name}: client`, () => {
           {children}
         </CioPaymentProvider>
       );
-      const { result } = renderHook(() => useCheckoutFlow(), { wrapper });
+      const { result } = renderHook(() => useCioPayment(), { wrapper });
       await act(async () => {
         await Promise.resolve();
       });
@@ -55,7 +55,7 @@ describe(`${CioPaymentProvider.name}: client`, () => {
       const snapshots: number[] = [];
 
       function Probe() {
-        const flow = useCheckoutFlow();
+        const flow = useCioPayment();
         snapshots.push(flow.state.cartSnapshot.length);
         return null;
       }
@@ -96,7 +96,7 @@ describe(`${CioPaymentProvider.name}: client`, () => {
         );
       }
       function TriggerNext() {
-        const flow = useCheckoutFlow();
+        const flow = useCioPayment();
         React.useEffect(() => {
           void flow.start();
         }, [flow]);
@@ -137,7 +137,7 @@ describe(`${CioPaymentProvider.name}: client`, () => {
           {children}
         </CioPaymentProvider>
       );
-      const { result } = renderHook(() => useCheckoutFlow(), { wrapper });
+      const { result } = renderHook(() => useCioPayment(), { wrapper });
       await act(async () => {
         await result.current.start();
       });

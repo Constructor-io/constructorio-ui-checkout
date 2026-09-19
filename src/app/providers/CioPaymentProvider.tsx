@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
-import { CheckoutFlowContext } from '@src/app/providers/CheckoutFlowContext';
+import { CioPaymentContext } from '@src/app/providers/CioPaymentContext';
 import { createCheckoutFlow } from '@src/core/createCheckoutFlow';
 import type {
   CheckoutFlowConfig,
@@ -88,8 +88,8 @@ export function CioPaymentProvider<TState = unknown>(
   }, [cart, flow]);
 
   return (
-    <CheckoutFlowContext.Provider value={flow as CheckoutFlowCore<unknown>}>
+    <CioPaymentContext.Provider value={flow as CheckoutFlowCore<unknown>}>
       {children}
-    </CheckoutFlowContext.Provider>
+    </CioPaymentContext.Provider>
   );
 }

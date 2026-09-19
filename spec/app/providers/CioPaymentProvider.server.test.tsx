@@ -1,7 +1,7 @@
 import { renderToString } from 'react-dom/server';
 
 import { CioFlowStep } from '@src/app/components/CioFlowStep';
-import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
+import { useCioPayment } from '@src/app/hooks/useCioPayment';
 import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 
 const stubSession = () =>
@@ -37,9 +37,9 @@ describe(`${CioPaymentProvider.name}: server`, () => {
     expect(view).not.toContain('data-testid="cart"');
   });
 
-  it('useCheckoutFlow returns state on the server', () => {
+  it('useCioPayment returns state on the server', () => {
     function Probe() {
-      const flow = useCheckoutFlow();
+      const flow = useCioPayment();
       return <div data-status={flow.state.sessionStatus} />;
     }
     const view = renderToString(

@@ -60,13 +60,13 @@ The `error` event's `source` identifies where the failure originated:
 
 - `'session.create'` — `onCreateSession` threw or rejected
 - `'session.update'` — `onUpdateSession` threw or rejected
-- `'session.recover'` — `flow.recreate()` after expiry threw
+- `'payment.confirm'` — Stripe `checkout.confirm()` threw or returned an error
 - `'storage'` — the storage adapter's `save` / `load` / `clear` threw
 - `'router'` — the router adapter's `push` threw or an unsafe path was rejected
 - `'guard'` — a step's `guard` returned `false` or threw
 - `'authenticate'` — the `authenticate` config callback threw
 
-Some errors include a `retry` function that re-runs the failed operation. `session.create`, `session.update`, and `session.recover` are the retryable sources.
+Some errors include a `retry` function that re-runs the failed operation. `session.create` and `session.update` are the retryable sources.
 
 ## `CheckoutSessionUpdateReason` and `CheckoutSessionDiff`
 
@@ -176,6 +176,37 @@ onEvent={(event) => {
 - `flow.completed` fires after the last `step.entered` for the terminal step.
 - `error` events fire _instead of_ the success event for the failed operation — a failed `onCreateSession` emits `error` with `source: 'session.create'`, not `session.created`.
 
-## `onEvent` vs subscribing to state
+## Three ways to observe
 
-`onEvent` delivers discrete transitions with rich payloads. `flow.subscribe(listener)` delivers the whole `CheckoutFlowState` on every change. For most analytics, telemetry, and error use cases, `onEvent` is the right handle — typed, filtered, and non-noisy. Use `flow.subscribe` only when the imperative store is required (rare outside custom step components).
+- **`config.onEvent`** — set once at Provider config time. Fires for every event. Best for analytics, error reporting, and top-level app concerns.
+- **`flow.on(listener)`** — imperative subscription; returns an unsubscribe function. Use inside custom step components or hooks that need scoped access to specific events (e.g., listening for `session.created` to trigger a follow-up).
+- **`flow.subscribe(listener)`** — subscribes to `CheckoutFlowState` changes (not events). Fires with the whole state on every mutation. Reach for it only when you need reactive access to the imperative store outside React (rare).
+
+```tsx
+useEffect(() => {
+  return flow.on((event) => {
+    if (event.type === 'session.created') {
+      trackAnalytics('checkout_session_id', event.sessionId);
+    }
+  });
+}, [flow]);
+```
+
+## Reporting errors from custom components
+
+Custom payment steps or fulfillment components can push errors into the same event stream via `flow.emitError(source, error, retry?)`:
+
+```tsx
+try {
+  await customPspConfirm();
+  flow.next();
+} catch (err) {
+  flow.emitError('payment.confirm', err, async () => {
+    // Optional retry closure — re-runs the failed op when
+    // consumers call `event.retry?.()`.
+    await customPspConfirm();
+  });
+}
+```
+
+The consumer's `onEvent` (and any `flow.on` subscriber) sees a normal `error` event — no special casing needed.

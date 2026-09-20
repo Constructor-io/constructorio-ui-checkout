@@ -81,7 +81,9 @@ export function createSessionManager<
       } catch (reason) {
         if (isDestroyed() || gen !== requestGen) return null;
         store.setState((prev) => ({ ...prev, sessionStatus: 'error' }));
-        emitError('session.create', toError(reason));
+        emitError('session.create', toError(reason), async () => {
+          await createSession();
+        });
         return null;
       } finally {
         if (gen === requestGen) createInFlight = null;
@@ -137,7 +139,9 @@ export function createSessionManager<
       return response;
     } catch (reason) {
       if (isDestroyed() || gen !== requestGen) return null;
-      emitError('session.update', toError(reason));
+      emitError('session.update', toError(reason), async () => {
+        await updateSession(patch);
+      });
       return null;
     }
   };

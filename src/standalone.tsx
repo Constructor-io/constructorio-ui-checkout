@@ -2,7 +2,7 @@ import { createCheckoutFlow } from './core/createCheckoutFlow';
 import { createSessionStorageAdapter } from './core/storage/sessionStorageAdapter';
 import type { CheckoutFlowConfig, CheckoutFlowCore } from './core/types';
 import cioCheckoutRegistry from './manager/CioCheckoutRegistry';
-import type { BuiltInPaymentProvider } from './types';
+import type { BaseCartItem, BuiltInPaymentProvider } from './types';
 import version from './version';
 
 import './styles.css';
@@ -13,10 +13,14 @@ const CioCheckout = {
   createSessionStorageAdapter,
   cioCheckoutRegistry,
 
-  resume<TProvider extends string = BuiltInPaymentProvider, TState = unknown>(
-    config: CheckoutFlowConfig<TProvider, TState>
-  ): CheckoutFlowCore<TProvider, TState> {
-    return cioCheckoutRegistry.resume(config);
+  resume<
+    TProvider extends string = BuiltInPaymentProvider,
+    TState = unknown,
+    TItem = BaseCartItem,
+  >(
+    config: CheckoutFlowConfig<TProvider, TState, TItem>
+  ): CheckoutFlowCore<TProvider, TState, TItem> {
+    return cioCheckoutRegistry.resume<TProvider, TState, TItem>(config);
   },
 
   reset(): void {

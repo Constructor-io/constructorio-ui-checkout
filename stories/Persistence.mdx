@@ -251,10 +251,6 @@ const recoveryToken = params.get('recover');   // e.g. '?recover=abc123'
 
 ## Clearing state
 
-Two APIs — pick based on intent:
-
-**`flow.reset()`** — clears in-memory state only. Does not touch storage.
-
 **`flow.clearState()`** — clears in-memory state _and_ the stored entry. Awaits pending saves, then calls `storage.clear(key)`. Use on "start over" or after successful checkout completion.
 
 ```tsx

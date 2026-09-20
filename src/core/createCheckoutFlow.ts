@@ -150,6 +150,39 @@ export function createCheckoutFlow<
         return;
       }
     }
+    for (const item of validated.cartSnapshot) {
+      try {
+        if (typeof accessors.getId(item) !== 'string') {
+          emitError(
+            'storage',
+            new Error('hydrate: cart item id is not a string')
+          );
+          return;
+        }
+        if (!Number.isFinite(accessors.getQuantity(item))) {
+          emitError(
+            'storage',
+            new Error('hydrate: cart item quantity is not finite')
+          );
+          return;
+        }
+        if (!Number.isFinite(accessors.getUnitAmount(item))) {
+          emitError(
+            'storage',
+            new Error('hydrate: cart item unitAmount is not finite')
+          );
+          return;
+        }
+      } catch (reason) {
+        emitError(
+          'storage',
+          new Error(
+            `hydrate: cart item accessor threw: ${reason instanceof Error ? reason.message : String(reason)}`
+          )
+        );
+        return;
+      }
+    }
     const needsRecovery =
       sessionManager.getSession() === null &&
       (validated.sessionStatus === 'active' ||
@@ -195,7 +228,6 @@ export function createCheckoutFlow<
     goTo,
     complete,
     hydrate,
-    reset,
     clearState,
     getSession: () => sessionManager.getSession(),
     createSession: () => sessionManager.createSession(),
@@ -209,6 +241,9 @@ export function createCheckoutFlow<
       integratorState = updater(integratorState);
       store.setState((prev) => ({ ...prev }));
     },
+    on: (listener) => events.on(listener),
+    emitError,
     destroy,
+    isDestroyed: isDead,
   };
 }

@@ -36,8 +36,8 @@ export function createCartManager<
       store.setState((prev) => ({ ...prev, cartSnapshot: items.slice() }));
       const pendingCreate = session.getCreateInFlight();
       if (pendingCreate !== null) {
-        return pendingCreate.then((response) => {
-          if (isDestroyed() || !response) return null;
+        return pendingCreate.then(() => {
+          if (isDestroyed() || !session.getSession()) return null;
           return session.updateSession({ items, reason: 'items' });
         });
       }

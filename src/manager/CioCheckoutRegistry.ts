@@ -46,9 +46,11 @@ class CioCheckoutRegistry {
     config: CheckoutFlowConfig<TProvider, TState, TItem>
   ): CheckoutFlowCore<TProvider, TState, TItem> {
     const storage = config.storage ?? createSessionStorageAdapter<TItem>();
+    const storageKey = config.storageKey ?? 'cio-checkout-flow';
     const flow = createCheckoutFlow<TProvider, TState, TItem>({
       ...config,
       storage,
+      storageKey,
     });
     this.register(flow);
     return flow;

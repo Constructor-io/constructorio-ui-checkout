@@ -52,6 +52,7 @@ export function createNavigator<
     const failIdx = await findFirstFailingGuard(0, resumedIdx);
     if (isDestroyed()) return;
     if (failIdx === null) {
+      events.emit({ type: 'step.entered', stepId: resumedStepId, from: null });
       const resumedStep = steps[resumedIdx];
       if (resumedStep) router.push(resumedStep.path);
       return;
@@ -72,6 +73,7 @@ export function createNavigator<
         (id) => findStepIndex(steps, id) < failIdx
       ),
     }));
+    events.emit({ type: 'step.entered', stepId: failedStep.id, from: null });
     router.push(failedStep.path);
   };
 
@@ -262,11 +264,6 @@ export function createNavigator<
     back,
     goTo,
     complete,
-    enterStep,
-    exitStep,
-    bumpVersion: () => {
-      navVersion += 1;
-    },
   };
 }
 

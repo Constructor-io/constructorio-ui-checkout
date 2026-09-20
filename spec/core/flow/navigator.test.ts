@@ -324,31 +324,6 @@ describe(`${createNavigator.name}: client`, () => {
     });
   });
 
-  describe('bumpVersion', () => {
-    it('invalidates in-flight guards (next() awaiting a slow guard)', async () => {
-      let resolveGuard: (v: boolean) => void = () => {};
-      const { ctx, nav } = wire({
-        steps: [
-          { id: 'a' },
-          {
-            id: 'b',
-            guard: () =>
-              new Promise<boolean>((resolve) => {
-                resolveGuard = resolve;
-              }),
-          },
-        ],
-      });
-      await nav.start();
-      const advance = nav.next();
-      nav.bumpVersion();
-      resolveGuard(true);
-      await advance;
-      // navVersion was bumped mid-await; next() should have bailed out.
-      expect(ctx.store.getState().currentStepId).toBe('a');
-    });
-  });
-
   describe('resume + guard validation', () => {
     it('emits guard error and resets to failing step when a resumed guard fails', async () => {
       const ctxWrap = makeCtx({

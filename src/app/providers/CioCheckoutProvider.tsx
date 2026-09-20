@@ -61,7 +61,7 @@ export function CioCheckoutProvider<
       : undefined;
 
     const config: CheckoutFlowConfig<TProvider, TState, TItem> = {
-      ...props,
+      ...(props as unknown as CheckoutFlowConfig<TProvider, TState, TItem>),
       steps: wrappedSteps,
       cart,
       router: wrappedRouter,

@@ -237,7 +237,9 @@ const router: CheckoutRouterAdapter = {
   render: () => <RoutedDemo />,
 };
 
-const demoCart = [{ name: 'Widget', amount: 20, quantity: 1 }];
+const demoCart = [
+  { id: 'widget', name: 'Widget', unitAmount: 20, quantity: 1 },
+];
 const getCart = () => demoCart;
 const getAuthToken = () => 'demo-token';
 

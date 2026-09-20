@@ -102,7 +102,7 @@ That is a complete wiring. The sections below unpack each piece.
 
 `state.sessionStatus` is a discriminated string:
 
-- **`idle`** — no session yet. Set on init and after `reset()`, `clearState()`, or `recreate()`.
+- **`idle`** — no session yet. Set on init and after `clearState()` or `recreate()`.
 - **`creating`** — `onCreateSession` is in flight.
 - **`active`** — a session exists and is usable for payment.
 - **`expired`** — the session was live but is no longer valid (Stripe reported expiry or `markExpired()` was called).
@@ -209,7 +209,7 @@ All errors emit through `onEvent` (and through `CioCheckoutProvider`'s error lis
 
 - **`session.create`** — `onCreateSession` rejected or returned invalid data.
 - **`session.update`** — `onUpdateSession` rejected or returned invalid data.
-- **`session.recover`** — recovery attempt during hydration failed.
+- **`payment.confirm`** — Stripe `checkout.confirm()` rejected or returned an error.
 - **`storage`** — storage adapter's save/load/clear threw or rejected.
 - **`router`** — `router.push` / `router.getCurrentPath` threw, or a `path` was refused as unsafe.
 - **`guard`** — a step guard threw (rejections count as "guard failed", not error).
@@ -231,7 +231,7 @@ onEvent: (event) => {
 
 ## Late-response protection
 
-`onCreateSession` and `onUpdateSession` are network calls. When the caller invokes `reset()`, `markExpired()`, `recreate()`, or `destroy()` while a request is in flight, the library discards the stale response — an invalidated session cannot be resurrected.
+`onCreateSession` and `onUpdateSession` are network calls. When the caller invokes `clearState()`, `markExpired()`, `recreate()`, or `destroy()` while a request is in flight, the library discards the stale response — an invalidated session cannot be resurrected.
 
 In practice: if the server takes 5 seconds to return a session and the user closes the modal after 2 seconds, the eventual response is dropped. No cancellation logic required on the caller side.
 

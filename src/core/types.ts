@@ -70,7 +70,7 @@ export interface CheckoutSessionUpdatePatch<TItem = BaseCartItem> {
 export type CheckoutEventErrorSource =
   | 'session.create'
   | 'session.update'
-  | 'session.recover'
+  | 'payment.confirm'
   | 'storage'
   | 'router'
   | 'guard'
@@ -159,7 +159,6 @@ export interface CheckoutFlowCoreBase<
   back(): Promise<void>;
   goTo(stepId: CheckoutStepId): Promise<void>;
   complete(): void;
-  reset(): void;
   clearState(): Promise<void>;
   getIntegratorState(): TState;
   setIntegratorState(updater: (prev: TState) => TState): void;
@@ -168,6 +167,12 @@ export interface CheckoutFlowCoreBase<
   recreate(): Promise<PaymentSessionFor<TProvider> | null>;
   markExpired(): void;
   destroy(): void;
+  isDestroyed(): boolean;
+  emitError(
+    source: CheckoutEventErrorSource,
+    error: Error,
+    retry?: () => Promise<void>
+  ): void;
 }
 
 export interface CheckoutFlowCore<
@@ -183,6 +188,7 @@ export interface CheckoutFlowCore<
   ): Promise<PaymentSessionFor<TProvider> | null>;
   syncCart(items: TItem[]): Promise<PaymentSessionFor<TProvider> | null>;
   setCart(items: TItem[]): void;
+  on(listener: (event: CheckoutEvent<TItem>) => void): () => void;
 }
 
 export type RequireAccessorsIfNeeded<TItem> = TItem extends BaseCartItem

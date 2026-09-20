@@ -23,6 +23,17 @@ export function createStorageManager<
   const enabled = storage !== undefined && storageKey !== undefined;
   const debounceMs = config.storageSaveDebounceMs ?? 150;
 
+  if ((storage !== undefined) !== (storageKey !== undefined)) {
+    emitError(
+      'storage',
+      new Error(
+        storage === undefined
+          ? '`storageKey` provided without a `storage` adapter — persistence disabled'
+          : '`storage` adapter provided without a `storageKey` — persistence disabled'
+      )
+    );
+  }
+
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let saveInFlight: Promise<void> | null = null;
   let hasPendingSave = false;

@@ -73,20 +73,52 @@ describe(`${toError.name}: client`, () => {
 });
 
 describe(`${isValidSessionResponse.name}: client`, () => {
-  it('accepts any non-null object', () => {
-    expect(isValidSessionResponse({ clientSecret: 'cs_x' })).toBe(true);
-    expect(isValidSessionResponse({ sessionId: 'session_abc' })).toBe(true);
-    expect(isValidSessionResponse({})).toBe(true);
+  it('accepts a valid stripe session shape', () => {
+    expect(
+      isValidSessionResponse(
+        { clientSecret: 'cs_x_secret_y', publishableKey: 'pk_test' },
+        'stripe'
+      )
+    ).toBe(true);
+  });
+
+  it('accepts any non-null object for non-stripe providers', () => {
+    expect(isValidSessionResponse({ sessionId: 'session_abc' }, 'fiserv')).toBe(
+      true
+    );
+    expect(isValidSessionResponse({}, 'fiserv')).toBe(true);
+  });
+
+  it('rejects stripe response missing clientSecret or publishableKey', () => {
+    expect(isValidSessionResponse({}, 'stripe')).toBe(false);
+    expect(isValidSessionResponse({ clientSecret: 'cs_x' }, 'stripe')).toBe(
+      false
+    );
+    expect(
+      isValidSessionResponse({ publishableKey: 'pk_test' }, 'stripe')
+    ).toBe(false);
+    expect(
+      isValidSessionResponse(
+        { clientSecret: '', publishableKey: 'pk_test' },
+        'stripe'
+      )
+    ).toBe(false);
   });
 
   it('rejects null', () => {
-    expect(isValidSessionResponse(null)).toBe(false);
+    expect(isValidSessionResponse(null, 'stripe')).toBe(false);
+    expect(isValidSessionResponse(null, 'fiserv')).toBe(false);
+  });
+
+  it('rejects arrays', () => {
+    expect(isValidSessionResponse([], 'stripe')).toBe(false);
+    expect(isValidSessionResponse([], 'fiserv')).toBe(false);
   });
 
   it('rejects primitives', () => {
-    expect(isValidSessionResponse('a string')).toBe(false);
-    expect(isValidSessionResponse(42)).toBe(false);
-    expect(isValidSessionResponse(undefined)).toBe(false);
+    expect(isValidSessionResponse('a string', 'stripe')).toBe(false);
+    expect(isValidSessionResponse(42, 'stripe')).toBe(false);
+    expect(isValidSessionResponse(undefined, 'stripe')).toBe(false);
   });
 });
 

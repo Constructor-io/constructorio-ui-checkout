@@ -42,6 +42,7 @@ import '@constructor-io/constructorio-ui-checkout/styles.css';
 function App() {
   return (
     <CioCheckoutProvider
+      provider="stripe"
       steps={[
         { id: 'cart' },
         { id: 'address' },
@@ -112,7 +113,7 @@ import CioCheckout from '@constructor-io/constructorio-ui-checkout/constructorio
 | ----------------------------------------- | --------------------------------------------------------------------------------- |
 | `CioCheckout.VERSION`                     | Library version string                                                            |
 | `CioCheckout.createCheckoutFlow`          | Factory returning the framework-agnostic checkout flow                            |
-| `CioCheckout.createSessionStorageAdapter` | Default sessionStorage-backed `StorageAdapter`                                    |
+| `CioCheckout.createSessionStorageAdapter` | Default sessionStorage-backed `CheckoutStorageAdapter`                            |
 | `CioCheckout.resume(config)`              | Creates + registers a flow with the sessionStorage adapter injected               |
 | `CioCheckout.reset()`                     | Destroys the registered flow                                                      |
 | `CioCheckout.cioCheckoutRegistry`         | Singleton registry — `register(flow)`, `getFlow()`, `hasFlow()`, `clear()`        |
@@ -137,7 +138,7 @@ active?.syncCart(newItems);
 
 ## Persistence & resume
 
-Persistence is opt-in. Pass a `storage` adapter + `storageKey` to `CioCheckoutProvider` (or `createCheckoutFlow`) and the library serializes `FlowState` on every change and hydrates on next mount:
+Persistence is opt-in. Pass a `storage` adapter + `storageKey` to `CioCheckoutProvider` (or `createCheckoutFlow`) and the library serializes `CheckoutFlowState` on every change and hydrates on next mount:
 
 ```tsx
 import { createSessionStorageAdapter } from '@constructor-io/constructorio-ui-checkout';

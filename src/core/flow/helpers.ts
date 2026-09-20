@@ -42,8 +42,21 @@ export function toError(reason: unknown): Error {
   return new Error('Unknown error');
 }
 
-export function isValidSessionResponse(r: unknown): r is BasePaymentSession {
-  return r !== null && typeof r === 'object';
+export function isValidSessionResponse(
+  r: unknown,
+  provider: string
+): r is BasePaymentSession {
+  if (r === null || typeof r !== 'object' || Array.isArray(r)) return false;
+  if (provider === 'stripe') {
+    const s = r as { clientSecret?: unknown; publishableKey?: unknown };
+    if (typeof s.clientSecret !== 'string' || s.clientSecret.length === 0) {
+      return false;
+    }
+    if (typeof s.publishableKey !== 'string' || s.publishableKey.length === 0) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export function extractSessionId(

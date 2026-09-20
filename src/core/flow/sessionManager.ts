@@ -63,8 +63,10 @@ export function createSessionManager<
       try {
         const response = await config.onCreateSession(store.getState());
         if (isDestroyed() || gen !== requestGen) return null;
-        if (!isValidSessionResponse(response)) {
-          throw new Error('onCreateSession must resolve with a session object');
+        if (!isValidSessionResponse(response, config.provider)) {
+          throw new Error(
+            `onCreateSession must resolve with a valid ${config.provider} session object`
+          );
         }
         session = response;
         const sessionId = getSessionIdFromResponse(response, config.provider);
@@ -116,8 +118,10 @@ export function createSessionManager<
     try {
       const response = await config.onUpdateSession(patch);
       if (isDestroyed() || gen !== requestGen) return null;
-      if (!isValidSessionResponse(response)) {
-        throw new Error('onUpdateSession must resolve with a session object');
+      if (!isValidSessionResponse(response, config.provider)) {
+        throw new Error(
+          `onUpdateSession must resolve with a valid ${config.provider} session object`
+        );
       }
       session = response;
       const sessionId = getSessionIdFromResponse(response, config.provider);

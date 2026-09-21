@@ -63,6 +63,6 @@ export interface PayButtonRenderProps {
   onClick: () => void;
 }
 
-export interface CioCheckoutComponentOverrides {
+export interface CheckoutComponentOverrides {
   payButton?: ComponentOverrideProps<PayButtonRenderProps>;
 }

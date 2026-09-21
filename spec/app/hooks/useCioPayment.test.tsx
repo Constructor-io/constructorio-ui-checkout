@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import type React from 'react';
 
-import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
+import { useCioPayment } from '@src/app/hooks/useCioPayment';
 import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 import type { CheckoutFlowConfig } from '@src/core/types';
 
@@ -16,10 +16,10 @@ const baseConfig: CheckoutFlowConfig = {
   onCreateSession: stubSession,
 };
 
-describe(`${useCheckoutFlow.name}: client`, () => {
+describe(`${useCioPayment.name}: client`, () => {
   it('throws when used outside the Provider', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    expect(() => renderHook(() => useCheckoutFlow())).toThrow(
+    expect(() => renderHook(() => useCioPayment())).toThrow(
       /must be used inside/
     );
     spy.mockRestore();
@@ -29,7 +29,7 @@ describe(`${useCheckoutFlow.name}: client`, () => {
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <CioPaymentProvider {...baseConfig}>{children}</CioPaymentProvider>
     );
-    const { result } = renderHook(() => useCheckoutFlow(), { wrapper });
+    const { result } = renderHook(() => useCioPayment(), { wrapper });
     expect(result.current.state.currentStepId).toBeNull();
     await act(async () => {
       await result.current.start();

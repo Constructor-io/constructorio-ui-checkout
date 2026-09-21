@@ -17,8 +17,8 @@ import {
   CioPaymentProvider,
   CioFlowStep,
   CioStripePaymentStep,
-  STRIPE_STEP,
-  useCheckoutFlow,
+  PAYMENT_STEP,
+  useCioPayment,
 } from '@constructor-io/constructorio-ui-checkout';
 import type { StorageAdapter } from '@constructor-io/constructorio-ui-checkout';
 import { getAuthToken, getUserId } from './lib/auth';
@@ -72,7 +72,7 @@ function CheckoutApp() {
       steps={[
         { id: 'cart', path: '/cart' },
         { id: 'approval', path: '/checkout/approval' },
-        { id: STRIPE_STEP, path: '/checkout/payment' },
+        { id: PAYMENT_STEP, path: '/checkout/payment' },
         { id: 'done', path: '/order/confirmed' },
       ]}
       onCreateSession={onCreateSession}
@@ -90,7 +90,7 @@ function CheckoutApp() {
     >
       <CioFlowStep id="cart"><CartView /></CioFlowStep>
       <CioFlowStep id="approval"><ApprovalGate /></CioFlowStep>
-      <CioFlowStep id={STRIPE_STEP}>
+      <CioFlowStep id={PAYMENT_STEP}>
         <CioStripePaymentStep />
       </CioFlowStep>
       <CioFlowStep id="done">
@@ -101,10 +101,10 @@ function CheckoutApp() {
 }
 
 function OrderConfirmed() {
-  const { clearState } = useCheckoutFlow();
+  const { clearState } = useCioPayment();
   useEffect(() => {
     // Remove the stored entry so a page refresh doesn't resume a finished order.
-    // useCheckoutFlow() returns a new wrapper each render, but the underlying
+    // useCioPayment() returns a new wrapper each render, but the underlying
     // clearState reference is stable — depend on it, not on the whole hook.
     clearState();
   }, [clearState]);

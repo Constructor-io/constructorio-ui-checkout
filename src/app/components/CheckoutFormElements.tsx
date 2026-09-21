@@ -12,8 +12,8 @@ import {
 import type { StripePaymentElementChangeEvent } from '@stripe/stripe-js';
 
 import type {
+  CheckoutComponentOverrides,
   CheckoutRedirectBehavior,
-  CioCheckoutComponentOverrides,
   PayButtonRenderProps,
   Translations,
 } from '@src/types';
@@ -26,7 +26,7 @@ interface CheckoutFormElementsProps {
   onError?: (error: Error) => void;
   onSessionExpired?: () => void;
   translations?: Translations;
-  componentOverrides?: CioCheckoutComponentOverrides;
+  componentOverrides?: CheckoutComponentOverrides;
   redirectBehavior?: CheckoutRedirectBehavior;
 }
 

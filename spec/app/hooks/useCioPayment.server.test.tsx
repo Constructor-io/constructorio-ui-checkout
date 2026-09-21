@@ -1,6 +1,6 @@
 import { renderToString } from 'react-dom/server';
 
-import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
+import { useCioPayment } from '@src/app/hooks/useCioPayment';
 import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 
 const stubSession = () =>
@@ -9,11 +9,11 @@ const stubSession = () =>
     publishableKey: 'pk_test',
   });
 
-describe(`${useCheckoutFlow.name}: server`, () => {
+describe(`${useCioPayment.name}: server`, () => {
   it('returns initial flow state on the server when wrapped in Provider', () => {
-    let captured: ReturnType<typeof useCheckoutFlow> | undefined;
+    let captured: ReturnType<typeof useCioPayment> | undefined;
     function Probe() {
-      captured = useCheckoutFlow();
+      captured = useCioPayment();
       return null;
     }
     renderToString(

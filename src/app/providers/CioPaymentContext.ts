@@ -2,6 +2,6 @@ import { createContext } from 'react';
 
 import type { CheckoutFlowCore } from '@src/core/types';
 
-export const CheckoutFlowContext =
+export const CioPaymentContext =
   createContext<CheckoutFlowCore<unknown> | null>(null);
-CheckoutFlowContext.displayName = 'CheckoutFlowContext';
+CioPaymentContext.displayName = 'CioPaymentContext';

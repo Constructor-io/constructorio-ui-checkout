@@ -1,4 +1,4 @@
-import { CheckoutFlow } from '@src/manager/CheckoutFlow';
+import { CioCheckoutFlow } from '@src/manager/CioCheckoutFlow';
 
 const stubSession = () =>
   Promise.resolve({
@@ -6,11 +6,11 @@ const stubSession = () =>
     publishableKey: 'pk_test',
   });
 
-describe(`${CheckoutFlow.name}: server`, () => {
+describe(`${CioCheckoutFlow.name}: server`, () => {
   it('constructs safely server-side without adapters', () => {
     expect(
       () =>
-        new CheckoutFlow({
+        new CioCheckoutFlow({
           steps: [{ id: 'a' }],
           onCreateSession: stubSession,
         })
@@ -18,7 +18,7 @@ describe(`${CheckoutFlow.name}: server`, () => {
   });
 
   it('returns initial state server-side', () => {
-    const flow = new CheckoutFlow({
+    const flow = new CioCheckoutFlow({
       steps: [{ id: 'a' }],
       onCreateSession: stubSession,
     });

@@ -10,7 +10,7 @@ The library persists it, restores it on resume, and gives you typed getters/sett
 
 ## Under the hood
 
-Custom state is the `TState` generic on `CheckoutFlowConfig<TState>` and `useCheckoutFlow<TState>()`. Internally the library calls it `integratorState` — you'll see that in the API method names (`getIntegratorState`, `setIntegratorState`, `initialState`). Same concept, older name.
+Custom state is the `TState` generic on `CheckoutFlowConfig<TState>` and `useCioPayment<TState>()`. Internally the library calls it `integratorState` — you'll see that in the API method names (`getIntegratorState`, `setIntegratorState`, `initialState`). Same concept, older name.
 
 ## Shape
 
@@ -59,7 +59,7 @@ Then anywhere inside the provider:
 
 ```tsx
 function ShippingPicker() {
-  const flow = useCheckoutFlow<MyCheckoutState>();
+  const flow = useCioPayment<MyCheckoutState>();
   const shippingMethod = flow.getIntegratorState().shippingMethod;
 
   return (
@@ -79,16 +79,16 @@ function ShippingPicker() {
 }
 ```
 
-The generic on `useCheckoutFlow<MyCheckoutState>()` is the same one you passed to the provider — TypeScript can't infer it across the context boundary, so re-assert it at each call site.
+The generic on `useCioPayment<MyCheckoutState>()` is the same one you passed to the provider — TypeScript can't infer it across the context boundary, so re-assert it at each call site.
 
 ## When state changes trigger re-renders
 
-`setIntegratorState` mutates the flow store, which triggers the same subscription mechanism as `state.currentStepId` or `cartSnapshot`. Components using `useCheckoutFlow()` re-render on every custom state change.
+`setIntegratorState` mutates the flow store, which triggers the same subscription mechanism as `state.currentStepId` or `cartSnapshot`. Components using `useCioPayment()` re-render on every custom state change.
 
 If you have a large custom state and want granular re-renders, select what you need:
 
 ```tsx
-const shippingMethod = useCheckoutFlow<MyCheckoutState>()
+const shippingMethod = useCioPayment<MyCheckoutState>()
   .getIntegratorState().shippingMethod;
 ```
 

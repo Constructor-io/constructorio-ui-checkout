@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
+import { useCioPayment } from '@src/app/hooks/useCioPayment';
 import type { StepId } from '@src/core/types';
 
 export interface CioFlowStepProps {
@@ -12,7 +12,7 @@ export function CioFlowStep({
   id,
   children,
 }: CioFlowStepProps): React.ReactElement | null {
-  const { state } = useCheckoutFlow();
+  const { state } = useCioPayment();
   if (state.currentStepId !== id) return null;
   return <>{children}</>;
 }

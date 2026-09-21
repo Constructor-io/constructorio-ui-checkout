@@ -22,10 +22,10 @@ That's the whole surface. Nothing else on the step defines rendering — the mer
 ## Two built-in step IDs
 
 ```ts
-import { CREATE_SESSION_STEP, STRIPE_STEP } from '@constructor-io/constructorio-ui-checkout';
+import { CREATE_SESSION_STEP, PAYMENT_STEP } from '@constructor-io/constructorio-ui-checkout';
 ```
 
-- **`STRIPE_STEP`** (`'stripe'`) — the ID the built-in `<CioStripePaymentStep>` looks for. Use this constant instead of the literal string so future renames stay backwards-compatible.
+- **`PAYMENT_STEP`** (`'stripe'`) — the ID the built-in `<CioStripePaymentStep>` looks for. Use this constant instead of the literal string so future renames stay backwards-compatible.
 - **`CREATE_SESSION_STEP`** (`'createSession'`) — a virtual step ID used in `error` events with `source: 'session.create'`. You do not put this in your `steps` array; the flow uses it internally to describe where a session-creation error originated.
 
 Everything else is your own step ID.
@@ -41,7 +41,7 @@ Typical B2C flow:
   steps={[
     { id: 'cart' },
     { id: 'address' },
-    { id: STRIPE_STEP },
+    { id: PAYMENT_STEP },
     { id: 'done' },
   ]}
   ...
@@ -55,7 +55,7 @@ steps: [
   { id: 'cart', path: '/cart' },
   { id: 'address', path: '/checkout/address' },
   { id: 'approval', path: '/checkout/approval' },   // waits on a second signer
-  { id: STRIPE_STEP, path: '/checkout/payment' },
+  { id: PAYMENT_STEP, path: '/checkout/payment' },
   { id: 'fulfill', path: '/checkout/fulfill' },
   { id: 'done', path: '/order/confirmed' },
 ],
@@ -76,7 +76,7 @@ steps: [
   steps={[
     { id: 'cart' },
     ...(authed ? [] : [{ id: 'auth' }]),
-    { id: STRIPE_STEP },
+    { id: PAYMENT_STEP },
   ]}
   ...
 />
@@ -94,7 +94,7 @@ Don't use `optional` for A/B branching — that's a guard concern, not an option
 
 ```tsx
 {
-  id: STRIPE_STEP,
+  id: PAYMENT_STEP,
   guard: async (state) => {
     if (state.metadata.userId) return true;
     window.location.assign('/login?returnTo=/checkout/payment');
@@ -107,7 +107,7 @@ Don't use `optional` for A/B branching — that's a guard concern, not an option
 
 ```tsx
 {
-  id: STRIPE_STEP,
+  id: PAYMENT_STEP,
   guard: (state) => cartTotal(state.cartSnapshot) >= 100,
 }
 ```
@@ -116,7 +116,7 @@ Don't use `optional` for A/B branching — that's a guard concern, not an option
 
 ```tsx
 {
-  id: STRIPE_STEP,
+  id: PAYMENT_STEP,
   guard: async (state) => {
     const stock = await checkInventory(state.cartSnapshot);
     return stock.allInStock;
@@ -158,7 +158,7 @@ For steps that own their side effects (auto-creating a session, polling fulfillm
 </CioFlowStep>
 
 function MyFulfillmentPoll() {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   useEffect(() => {
     const timer = setInterval(async () => {
       const result = await checkFulfillment(flow.state.sessionId);

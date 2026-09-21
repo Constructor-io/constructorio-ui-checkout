@@ -7,7 +7,7 @@ import {
   type CioFulfillmentResult,
   CioFulfillmentStep,
 } from '@src/app/components/CioFulfillmentStep';
-import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
+import { useCioPayment } from '@src/app/hooks/useCioPayment';
 import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
 
 const stubSession = () =>
@@ -26,7 +26,7 @@ export default meta;
 type Story = StoryObj<typeof CioFulfillmentStep>;
 
 function StepShell({ children }: { children: React.ReactNode }) {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   if (flow.state.currentStepId === null) {
     return (
       <button

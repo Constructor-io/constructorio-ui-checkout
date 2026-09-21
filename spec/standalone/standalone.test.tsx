@@ -1,4 +1,4 @@
-import checkoutRegistry from '@src/manager/CheckoutRegistry';
+import cioCheckoutRegistry from '@src/manager/CioCheckoutRegistry';
 import CioCheckout from '@src/standalone';
 
 import {
@@ -19,7 +19,7 @@ describe('CioCheckout: client', () => {
   });
 
   afterEach(() => {
-    checkoutRegistry.clear();
+    cioCheckoutRegistry.clear();
     globalThis.sessionStorage.clear();
   });
 
@@ -28,8 +28,8 @@ describe('CioCheckout: client', () => {
     expect(CioCheckout.VERSION.length).toBeGreaterThan(0);
   });
 
-  it('exposes the CheckoutFlow class', () => {
-    expect(typeof CioCheckout.CheckoutFlow).toBe('function');
+  it('exposes the CioCheckoutFlow class', () => {
+    expect(typeof CioCheckout.CioCheckoutFlow).toBe('function');
   });
 
   it('exposes createCheckoutFlow factory', () => {
@@ -43,8 +43,8 @@ describe('CioCheckout: client', () => {
     expect(adapter).toHaveProperty('clear');
   });
 
-  it('exposes checkoutRegistry singleton', () => {
-    expect(CioCheckout.checkoutRegistry).toBe(checkoutRegistry);
+  it('exposes cioCheckoutRegistry singleton', () => {
+    expect(CioCheckout.cioCheckoutRegistry).toBe(cioCheckoutRegistry);
   });
 
   it('resume() creates a storage-backed flow, registers it, and hydrates on the next call', async () => {
@@ -54,7 +54,7 @@ describe('CioCheckout: client', () => {
       storageKey: 'user-standalone',
       storageSaveDebounceMs: 0,
     });
-    expect(CioCheckout.checkoutRegistry.getFlow()).toBe(first);
+    expect(CioCheckout.cioCheckoutRegistry.getFlow()).toBe(first);
     await first.start();
     await first.next();
     await new Promise((r) => setTimeout(r, 10));
@@ -75,8 +75,8 @@ describe('CioCheckout: client', () => {
       onCreateSession: stubSession,
       storageKey: 'user-reset',
     });
-    expect(CioCheckout.checkoutRegistry.getFlow()).toBe(flow);
+    expect(CioCheckout.cioCheckoutRegistry.getFlow()).toBe(flow);
     CioCheckout.reset();
-    expect(CioCheckout.checkoutRegistry.getFlow()).toBeNull();
+    expect(CioCheckout.cioCheckoutRegistry.getFlow()).toBeNull();
   });
 });

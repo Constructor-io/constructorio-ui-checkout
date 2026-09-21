@@ -160,5 +160,5 @@ export interface CheckoutFlowCore<TState = unknown> {
 }
 
 export const CREATE_SESSION_STEP: StepId = 'createSession';
-export const STRIPE_STEP: StepId = 'stripe';
+export const PAYMENT_STEP: StepId = 'payment';
 export const FLOW_SCHEMA_VERSION = 1 as const;

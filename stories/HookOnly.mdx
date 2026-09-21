@@ -4,7 +4,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Hook-only composition
 
-`useCheckoutFlow()` is the primitive. `CioFlowStep`, `CioStripePaymentStep`, and `CioFulfillmentStep` are conveniences that read from the same hook. When the built-in components don't fit — you want a custom Stripe wrapper, a non-standard layout, a route-per-step split — drop them and drive the flow from the hook directly.
+`useCioPayment()` is the primitive. `CioFlowStep`, `CioStripePaymentStep`, and `CioFulfillmentStep` are conveniences that read from the same hook. When the built-in components don't fit — you want a custom Stripe wrapper, a non-standard layout, a route-per-step split — drop them and drive the flow from the hook directly.
 
 This page shows what that looks like end-to-end. If the default step components cover you, prefer them; this is the escape hatch, not the default path.
 
@@ -18,7 +18,7 @@ Bypassing them means you write those ~30 lines yourself, in exchange for owning 
 
 ## Minimal hook-only example
 
-Same flow as the Quick Start, but with no built-in step components — just `useCheckoutFlow` and raw `@stripe/react-stripe-js`:
+Same flow as the Quick Start, but with no built-in step components — just `useCioPayment` and raw `@stripe/react-stripe-js`:
 
 ```tsx
 import { useEffect, useMemo } from 'react';
@@ -29,8 +29,8 @@ import {
 } from '@stripe/react-stripe-js/checkout';
 import {
   CioPaymentProvider,
-  useCheckoutFlow,
-  STRIPE_STEP,
+  useCioPayment,
+  PAYMENT_STEP,
 } from '@constructor-io/constructorio-ui-checkout';
 
 function App() {
@@ -39,7 +39,7 @@ function App() {
       steps={[
         { id: 'cart' },
         { id: 'address' },
-        { id: STRIPE_STEP },
+        { id: PAYMENT_STEP },
         { id: 'done' },
       ]}
       onCreateSession={() =>
@@ -52,7 +52,7 @@ function App() {
 }
 
 function Checkout() {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
 
   if (flow.state.currentStepId === null) {
     return <button onClick={() => flow.start()}>Checkout</button>;
@@ -68,7 +68,7 @@ function Checkout() {
           onNext={() => flow.next()}
         />
       );
-    case STRIPE_STEP:
+    case PAYMENT_STEP:
       return <MyStripeStep />;
     case 'done':
       return <MyConfirmation />;
@@ -79,7 +79,7 @@ function Checkout() {
 
 // Your own Stripe wrapper — full control over provider, options, elements.
 function MyStripeStep() {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   const session = flow.getSession();
 
   useEffect(() => {
@@ -110,7 +110,7 @@ function MyStripeStep() {
 
 function MyPayButton() {
   const checkout = useCheckoutForm();
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   return (
     <button
       onClick={async () => {
@@ -134,7 +134,7 @@ Pair the hook with a router: each URL renders a component that reads `flow.state
 import { Route, Routes, Navigate } from 'react-router-dom';
 
 function CheckoutRoutes() {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
 
   return (
     <Routes>
@@ -145,7 +145,7 @@ function CheckoutRoutes() {
       />
       <Route
         path="/checkout/payment"
-        element={<GateStep id={STRIPE_STEP}><MyStripeStep /></GateStep>}
+        element={<GateStep id={PAYMENT_STEP}><MyStripeStep /></GateStep>}
       />
       <Route path="/order/confirmed" element={<MyConfirmation />} />
     </Routes>
@@ -156,7 +156,7 @@ function CheckoutRoutes() {
 // /checkout/payment but the flow says they're still on 'cart' (e.g. deep-link
 // into an incomplete flow), send them back.
 function GateStep({ id, children }: { id: string; children: React.ReactNode }) {
-  const { state } = useCheckoutFlow();
+  const { state } = useCioPayment();
   if (state.currentStepId === null) return <Navigate to="/cart" replace />;
   if (state.currentStepId !== id) {
     const currentPath = pathFor(state.currentStepId);
@@ -174,7 +174,7 @@ A common ask that reads like "different Stripe steps for different paths" is rea
 
 ```tsx
 function MyStripeStep() {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   const brand = useBrandFromRoute(); // e.g. 'us-storefront' | 'uk-storefront'
   const session = flow.getSession();
   // ... (session-loading omitted, same as above)

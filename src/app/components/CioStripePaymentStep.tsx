@@ -7,14 +7,14 @@ import {
 
 import CheckoutForm from '@src/app/components/CheckoutForm';
 import CheckoutFormElements from '@src/app/components/CheckoutFormElements';
-import { useCheckoutFlow } from '@src/app/hooks/useCheckoutFlow';
+import { useCioPayment } from '@src/app/hooks/useCioPayment';
 import checkoutManager from '@src/manager/CheckoutManager';
 import type {
+  CheckoutComponentOverrides,
   CheckoutLayout,
   CheckoutRedirectBehavior,
   CheckoutStripeOptions,
   CheckoutUiMode,
-  CioCheckoutComponentOverrides,
   Translations,
 } from '@src/types';
 
@@ -25,7 +25,7 @@ export interface CioStripePaymentStepProps extends CheckoutStripeOptions {
   redirectBehavior?: CheckoutRedirectBehavior;
   layout?: CheckoutLayout;
   translations?: Translations;
-  componentOverrides?: CioCheckoutComponentOverrides;
+  componentOverrides?: CheckoutComponentOverrides;
   onError?: (error: Error) => void;
 }
 
@@ -48,7 +48,7 @@ export function CioStripePaymentStep({
   adaptivePricing,
   syncAddressCheckbox,
 }: CioStripePaymentStepProps) {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   const session = flow.getSession();
   const sessionStatus = flow.state.sessionStatus;
   const mountedRef = useRef(true);

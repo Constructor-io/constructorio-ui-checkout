@@ -19,7 +19,7 @@ Both should point at the same `/login` route and the same `<LoginPage>` componen
   steps={[
     { id: 'cart', path: '/cart' },
     { id: 'auth', path: '/login' },              // routed auth step
-    { id: STRIPE_STEP, path: '/checkout/payment' },
+    { id: PAYMENT_STEP, path: '/checkout/payment' },
     { id: 'done', path: '/order/confirmed' },
   ]}
   onCreateSession={createSession}
@@ -37,11 +37,11 @@ Both should point at the same `/login` route and the same `<LoginPage>` componen
 ## LoginPage — checkout-aware, but works standalone
 
 ```tsx
-import { useCheckoutFlow } from '@constructor-io/constructorio-ui-checkout';
+import { useCioPayment } from '@constructor-io/constructorio-ui-checkout';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 function LoginPage() {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -135,7 +135,7 @@ That means the guard goes on the **step after auth** (the one that requires bein
 { id: 'cart' },
 { id: 'auth', path: '/login' },
 {
-  id: STRIPE_STEP,
+  id: PAYMENT_STEP,
   path: '/checkout/payment',
   guard: () => Promise.resolve(isSignedIn()),  // gates entry to payment
 },
@@ -157,7 +157,7 @@ const authed = useIsAuthenticated();
   steps={[
     { id: 'cart', path: '/cart' },
     ...(authed ? [] : [{ id: 'auth', path: '/login' }]),
-    { id: STRIPE_STEP, path: '/checkout/payment' },
+    { id: PAYMENT_STEP, path: '/checkout/payment' },
   ]}
   ...
 />
@@ -169,7 +169,7 @@ Zero flash, no extra `next()` plumbing. Trade-off: the step list is snapshotted 
 
 ```tsx
 function AuthStepBody() {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   useEffect(() => {
     if (isSignedIn()) flow.next();
   }, [flow.next]);
@@ -214,7 +214,7 @@ The checkout flow doesn't care about your auth *strategy* — only about the ans
 
 ```tsx
 function LoginPage() {
-  const flow = useCheckoutFlow();
+  const flow = useCioPayment();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -277,7 +277,7 @@ steps={[
   { id: 'cart', path: '/cart' },
   { id: 'auth-credentials', path: '/login' },
   { id: 'auth-otp', path: '/login/verify' },
-  { id: STRIPE_STEP, path: '/checkout/payment' },
+  { id: PAYMENT_STEP, path: '/checkout/payment' },
 ]}
 ```
 

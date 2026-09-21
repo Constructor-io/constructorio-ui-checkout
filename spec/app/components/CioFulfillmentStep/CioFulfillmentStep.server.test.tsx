@@ -1,11 +1,11 @@
 import { renderToString } from 'react-dom/server';
 
-import { CioFlowStep } from '@src/app/components/CioFlowStep';
+import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
 import {
   type CioFulfillmentResult,
   CioFulfillmentStep,
 } from '@src/app/components/CioFulfillmentStep';
-import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
+import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 
 const stubSession = () =>
   Promise.resolve({
@@ -20,28 +20,30 @@ describe(`${CioFulfillmentStep.name}: server`, () => {
   it('is safe to render inside a Provider server-side', () => {
     expect(() =>
       renderToString(
-        <CioPaymentProvider
+        <CioCheckoutProvider
+          provider="stripe"
           steps={[{ id: 'fulfill' }]}
           onCreateSession={stubSession}
         >
-          <CioFlowStep id="fulfill">
+          <CioCheckoutStep id="fulfill">
             <CioFulfillmentStep onFulfill={onFulfill} />
-          </CioFlowStep>
-        </CioPaymentProvider>
+          </CioCheckoutStep>
+        </CioCheckoutProvider>
       )
     ).not.toThrow();
   });
 
   it('renders nothing before the flow enters the fulfillment step', () => {
     const view = renderToString(
-      <CioPaymentProvider
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'fulfill' }]}
         onCreateSession={stubSession}
       >
-        <CioFlowStep id="fulfill">
+        <CioCheckoutStep id="fulfill">
           <CioFulfillmentStep onFulfill={onFulfill} />
-        </CioFlowStep>
-      </CioPaymentProvider>
+        </CioCheckoutStep>
+      </CioCheckoutProvider>
     );
     expect(view).not.toContain('cio-checkout-fulfillment');
   });

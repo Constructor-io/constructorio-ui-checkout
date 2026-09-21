@@ -1,4 +1,4 @@
-import type { FlowState } from './types';
+import type { CheckoutFlowState } from './types';
 import { FLOW_SCHEMA_VERSION } from './types';
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
@@ -18,36 +18,18 @@ const VALID_SESSION_STATUSES = new Set([
   'error',
 ]);
 
-const isOptionalString = (v: unknown): boolean =>
-  v === undefined || typeof v === 'string';
-
-const isValidCartItem = (item: unknown): boolean => {
-  if (!isPlainObject(item)) return false;
-  if (typeof item.name !== 'string') return false;
-  if (typeof item.amount !== 'number' || !Number.isFinite(item.amount)) {
-    return false;
-  }
-  if (
-    item.quantity !== undefined &&
-    (typeof item.quantity !== 'number' || !Number.isFinite(item.quantity))
-  ) {
-    return false;
-  }
-  return (
-    isOptionalString(item.currencySign) &&
-    isOptionalString(item.priceId) &&
-    isOptionalString(item.imageUrl)
-  );
-};
-
 // Rejects untrusted input on any structural mismatch — never mutates or
 // coerces — to prevent prototype pollution from a backend storage adapter.
-export function validateFlowState(input: unknown): FlowState | null {
+export function validateFlowState<TItem = unknown>(
+  input: unknown
+): CheckoutFlowState<TItem> | null {
   if (!isPlainObject(input)) return null;
   if (input.schemaVersion !== FLOW_SCHEMA_VERSION) return null;
   if (!isStringOrNull(input.currentStepId)) return null;
   if (!isStringArray(input.completedStepIds)) return null;
   if (!Array.isArray(input.cartSnapshot)) return null;
+  if (!input.cartSnapshot.every(isPlainObject)) return null;
+  if (!isStringOrNull(input.currency)) return null;
   if (!isStringOrNull(input.sessionId)) return null;
   if (
     typeof input.sessionStatus !== 'string' ||
@@ -56,10 +38,6 @@ export function validateFlowState(input: unknown): FlowState | null {
     return null;
   }
   if (!isPlainObject(input.metadata)) return null;
-  if (!input.cartSnapshot.every(isValidCartItem)) return null;
 
-  // Every field has been narrowed by the checks above; TS's structural type
-  // system can't propagate that across a Record<string, unknown> → FlowState
-  // cast, so we bridge through unknown. Safety comes from the runtime checks.
-  return input as unknown as FlowState;
+  return input as unknown as CheckoutFlowState<TItem>;
 }

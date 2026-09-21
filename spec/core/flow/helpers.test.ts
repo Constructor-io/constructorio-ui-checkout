@@ -1,13 +1,17 @@
 import {
+  compileCartItemAccessors,
   computeCartDiff,
   extractSessionId,
   findStepIndex,
+  getSessionIdFromResponse,
   isValidSessionResponse,
   makeInitialState,
   toError,
 } from '@src/core/flow/helpers';
 import { FLOW_SCHEMA_VERSION } from '@src/core/types';
-import type { CheckoutItem } from '@src/types';
+import type { BaseCartItem, StripePaymentSession } from '@src/types';
+
+const accessors = compileCartItemAccessors<BaseCartItem>(undefined);
 
 describe(`${makeInitialState.name}: client`, () => {
   it('returns a fresh idle state with the current schema version', () => {
@@ -16,6 +20,7 @@ describe(`${makeInitialState.name}: client`, () => {
       currentStepId: null,
       completedStepIds: [],
       cartSnapshot: [],
+      currency: null,
       sessionId: null,
       sessionStatus: 'idle',
       metadata: {},
@@ -24,9 +29,9 @@ describe(`${makeInitialState.name}: client`, () => {
   });
 
   it('returns a new object each call (not a shared reference)', () => {
-    const a = makeInitialState();
-    const b = makeInitialState();
-    a.cartSnapshot.push({ name: 'x', amount: 1 });
+    const a = makeInitialState<BaseCartItem>();
+    const b = makeInitialState<BaseCartItem>();
+    a.cartSnapshot.push({ id: 'x', name: 'x', unitAmount: 1, quantity: 1 });
     expect(b.cartSnapshot).toEqual([]);
   });
 });
@@ -68,34 +73,93 @@ describe(`${toError.name}: client`, () => {
 });
 
 describe(`${isValidSessionResponse.name}: client`, () => {
-  it('accepts a valid { clientSecret, publishableKey } object', () => {
+  it('accepts a valid stripe session shape', () => {
     expect(
-      isValidSessionResponse({ clientSecret: 'cs_x', publishableKey: 'pk_x' })
+      isValidSessionResponse(
+        { clientSecret: 'cs_x_secret_y', publishableKey: 'pk_test' },
+        'stripe'
+      )
     ).toBe(true);
   });
 
-  it('rejects missing clientSecret', () => {
-    expect(isValidSessionResponse({ publishableKey: 'pk_x' })).toBe(false);
+  it('accepts any non-null object for non-stripe providers', () => {
+    expect(isValidSessionResponse({ sessionId: 'session_abc' }, 'fiserv')).toBe(
+      true
+    );
+    expect(isValidSessionResponse({}, 'fiserv')).toBe(true);
   });
 
-  it('rejects missing publishableKey', () => {
-    expect(isValidSessionResponse({ clientSecret: 'cs_x' })).toBe(false);
-  });
-
-  it('rejects non-string field types', () => {
+  it('rejects stripe response missing clientSecret or publishableKey', () => {
+    expect(isValidSessionResponse({}, 'stripe')).toBe(false);
+    expect(isValidSessionResponse({ clientSecret: 'cs_x' }, 'stripe')).toBe(
+      false
+    );
     expect(
-      isValidSessionResponse({ clientSecret: 123, publishableKey: 'pk_x' })
+      isValidSessionResponse({ publishableKey: 'pk_test' }, 'stripe')
+    ).toBe(false);
+    expect(
+      isValidSessionResponse(
+        { clientSecret: '', publishableKey: 'pk_test' },
+        'stripe'
+      )
     ).toBe(false);
   });
 
   it('rejects null', () => {
-    expect(isValidSessionResponse(null)).toBe(false);
+    expect(isValidSessionResponse(null, 'stripe')).toBe(false);
+    expect(isValidSessionResponse(null, 'fiserv')).toBe(false);
+  });
+
+  it('rejects arrays', () => {
+    expect(isValidSessionResponse([], 'stripe')).toBe(false);
+    expect(isValidSessionResponse([], 'fiserv')).toBe(false);
   });
 
   it('rejects primitives', () => {
-    expect(isValidSessionResponse('a string')).toBe(false);
-    expect(isValidSessionResponse(42)).toBe(false);
-    expect(isValidSessionResponse(undefined)).toBe(false);
+    expect(isValidSessionResponse('a string', 'stripe')).toBe(false);
+    expect(isValidSessionResponse(42, 'stripe')).toBe(false);
+    expect(isValidSessionResponse(undefined, 'stripe')).toBe(false);
+  });
+});
+
+describe(`${getSessionIdFromResponse.name}: client`, () => {
+  it('returns an explicit sessionId when present', () => {
+    expect(
+      getSessionIdFromResponse({ sessionId: 'session_abc' }, 'fiserv')
+    ).toBe('session_abc');
+  });
+
+  it('prefers explicit sessionId over Stripe clientSecret extraction', () => {
+    expect(
+      getSessionIdFromResponse(
+        {
+          sessionId: 'session_explicit',
+          clientSecret: 'cs_test_abc_secret_xyz',
+          publishableKey: 'pk_test',
+        } as StripePaymentSession,
+        'stripe'
+      )
+    ).toBe('session_explicit');
+  });
+
+  it('falls back to Stripe clientSecret extraction when sessionId is absent', () => {
+    expect(
+      getSessionIdFromResponse(
+        {
+          clientSecret: 'cs_test_abc_secret_xyz',
+          publishableKey: 'pk_test',
+        } as StripePaymentSession,
+        'stripe'
+      )
+    ).toBe('cs_test_abc');
+  });
+
+  it('returns null for non-Stripe providers without an explicit sessionId', () => {
+    expect(getSessionIdFromResponse({}, 'fiserv')).toBeNull();
+  });
+
+  it('returns null when sessionId is an empty string', () => {
+    expect(getSessionIdFromResponse({ sessionId: '' }, 'fiserv')).toBeNull();
   });
 });
 
@@ -126,48 +190,83 @@ describe(`${extractSessionId.name}: client`, () => {
 });
 
 describe(`${computeCartDiff.name}: client`, () => {
-  const item = (name: string, amount = 10, quantity = 1): CheckoutItem => ({
-    name,
-    amount,
+  const item = (id: string, unitAmount = 10, quantity = 1): BaseCartItem => ({
+    id,
+    name: id,
+    unitAmount,
     quantity,
   });
 
   it('detects added items', () => {
-    const diff = computeCartDiff([item('a')], [item('a'), item('b')]);
+    const diff = computeCartDiff(
+      [item('a')],
+      [item('a'), item('b')],
+      accessors
+    );
     expect(diff.added).toEqual([item('b')]);
     expect(diff.removed).toBeUndefined();
   });
 
   it('detects removed items', () => {
-    const diff = computeCartDiff([item('a'), item('b')], [item('a')]);
+    const diff = computeCartDiff(
+      [item('a'), item('b')],
+      [item('a')],
+      accessors
+    );
     expect(diff.removed).toEqual([item('b')]);
   });
 
   it('detects quantity changes', () => {
-    const diff = computeCartDiff([item('a', 10, 1)], [item('a', 10, 3)]);
+    const diff = computeCartDiff(
+      [item('a', 10, 1)],
+      [item('a', 10, 3)],
+      accessors
+    );
     expect(diff.quantityChanges).toEqual([{ id: 'a', from: 1, to: 3 }]);
   });
 
   it('reports totalChange when totals differ', () => {
-    const diff = computeCartDiff([item('a', 10, 1)], [item('a', 10, 2)]);
+    const diff = computeCartDiff(
+      [item('a', 10, 1)],
+      [item('a', 10, 2)],
+      accessors
+    );
     expect(diff.totalChange).toEqual({ from: 10, to: 20 });
   });
 
-  it('uses priceId as the identity key when present', () => {
-    const before: CheckoutItem[] = [
-      { name: 'A', amount: 10, priceId: 'price_1' },
+  it('uses the id field as the identity key', () => {
+    const before: BaseCartItem[] = [
+      { id: 'price_1', name: 'A', unitAmount: 10, quantity: 1 },
     ];
-    const after: CheckoutItem[] = [
-      { name: 'A renamed', amount: 10, priceId: 'price_1', quantity: 2 },
+    const after: BaseCartItem[] = [
+      { id: 'price_1', name: 'A renamed', unitAmount: 10, quantity: 2 },
     ];
-    const diff = computeCartDiff(before, after);
+    const diff = computeCartDiff(before, after, accessors);
     expect(diff.added).toBeUndefined();
     expect(diff.removed).toBeUndefined();
     expect(diff.quantityChanges).toEqual([{ id: 'price_1', from: 1, to: 2 }]);
   });
 
+  it('honors custom accessors for non-BaseCartItem shapes', () => {
+    interface CustomItem {
+      sku: string;
+      priceCents: number;
+      qty: number;
+    }
+    const customAccessors = compileCartItemAccessors<CustomItem>({
+      id: 'sku',
+      unitAmount: 'priceCents',
+      quantity: 'qty',
+    });
+    const before: CustomItem[] = [{ sku: 'x', priceCents: 500, qty: 1 }];
+    const after: CustomItem[] = [{ sku: 'x', priceCents: 500, qty: 3 }];
+    const diff = computeCartDiff(before, after, customAccessors);
+    expect(diff.quantityChanges).toEqual([{ id: 'x', from: 1, to: 3 }]);
+    expect(diff.totalChange).toEqual({ from: 500, to: 1500 });
+  });
+
   it('returns empty diff for identical carts', () => {
-    const diff = computeCartDiff([item('a')], [item('a')]);
+    const diff = computeCartDiff([item('a')], [item('a')], accessors);
     expect(diff).toEqual({});
   });
 });

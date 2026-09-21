@@ -1,14 +1,20 @@
-import type { Step, StepId } from '../types';
+import type { BaseCartItem } from '@src/types';
+
+import type { CheckoutStep, CheckoutStepId } from '../types';
 
 import type { FlowContext } from './context';
 import { toError } from './helpers';
-import type { StorageManager } from './storageManager';
+import type { createStorageManager } from './storageManager';
 
 const UNSAFE_SCHEME_RE = /^\s*(?:javascript|data|vbscript|file):/i;
 
-export function createRouterBridge<TState>(
-  ctx: FlowContext<TState>,
-  storage: StorageManager
+export function createRouterBridge<
+  TProvider extends string = string,
+  TState = unknown,
+  TItem = BaseCartItem,
+>(
+  ctx: FlowContext<TProvider, TState, TItem>,
+  storage: ReturnType<typeof createStorageManager<TProvider, TState, TItem>>
 ) {
   const { config, steps, store, isDestroyed, emitError } = ctx;
   const router = config.router;
@@ -16,7 +22,7 @@ export function createRouterBridge<TState>(
   let routerUnsubscribe: (() => void) | null = null;
   let syncingFromRouter = false;
 
-  const findStepByPath = (path: string): Step | null => {
+  const findStepByPath = (path: string): CheckoutStep<TItem> | null => {
     for (const step of steps) {
       if (step.path !== undefined && step.path === path) return step;
     }
@@ -46,7 +52,7 @@ export function createRouterBridge<TState>(
   };
 
   const subscribe = (
-    onExternalPathChange: (matched: Step) => Promise<void> | void
+    onExternalPathChange: (matched: CheckoutStep<TItem>) => Promise<void> | void
   ): void => {
     if (!router?.subscribe) return;
     routerUnsubscribe = router.subscribe((newPath: string) => {
@@ -66,7 +72,7 @@ export function createRouterBridge<TState>(
     try {
       routerUnsubscribe();
     } catch {
-      /* adapter unsubscribe should not throw */
+      // Adapter unsubscribe is best-effort; swallow to avoid cascading teardown errors.
     }
     routerUnsubscribe = null;
   };
@@ -81,7 +87,7 @@ export function createRouterBridge<TState>(
     }
   };
 
-  const isMatchedByCurrentUrl = (stepId: StepId): boolean => {
+  const isMatchedByCurrentUrl = (stepId: CheckoutStepId): boolean => {
     return findStepByPath(getCurrentPath())?.id === stepId;
   };
 

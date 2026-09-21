@@ -4,70 +4,157 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Cart
 
-The flow keeps a `cartSnapshot` in state, and it can propagate cart changes to the Stripe session via `onUpdateSession`. Merchants have three ways to feed cart data in — pick the one that matches your app's cart architecture.
+The flow keeps a `cartSnapshot` in state and can propagate cart changes to the PSP session through `onUpdateSession`. Three APIs feed cart data in — pick the one that matches your app's cart architecture.
+
+## Cart item shape
+
+The default expected shape is `BaseCartItem`:
+
+```ts
+interface BaseCartItem {
+  id: string;
+  name: string;
+  unitAmount: number;
+  quantity: number;
+}
+```
+
+All four fields are required. `id` is used as the stable identity key for diffing; `unitAmount * quantity` feeds the total-change detection. If your app's cart items already match this shape, no extra configuration is needed.
+
+## Custom cart item shape
+
+Real catalogs rarely use those exact field names. If your item is dictated by an upstream system (product API, GraphQL codegen, redux slice), pass `cartItemFields` to map from your shape without reshaping — the library reads via accessors, and `state.cartSnapshot` stays your native type end-to-end.
+
+```tsx
+interface MyCatalogItem {
+  sku: string;
+  title: string;
+  priceCents: number;
+  qty: number;
+  imageUrl: string; // extra fields flow through untouched
+  categoryId: string;
+}
+
+<CioCheckoutProvider<'stripe', unknown, MyCatalogItem>
+  provider="stripe"
+  cart={myCatalogItems}
+  cartItemFields={{
+    id: 'sku',
+    name: 'title',
+    unitAmount: 'priceCents',
+    quantity: 'qty',
+  }}
+  onCreateSession={(state) => {
+    // state.cartSnapshot is MyCatalogItem[] — all fields preserved
+    return fetch('/api/session', {
+      method: 'POST',
+      body: JSON.stringify({ items: state.cartSnapshot }),
+    }).then((r) => r.json());
+  }}
+/>;
+```
+
+Each accessor field accepts either a key of your item type (typed via `KeyOfType` so only fields of the right value type are allowed) or a function:
+
+```ts
+cartItemFields={{
+  id: 'sku',                                    // key string
+  unitAmount: (item) => item.pricing.cents,     // accessor fn — nested paths, computed values
+  quantity: 'qty',
+  name: 'title',
+}}
+```
+
+When `TItem extends BaseCartItem` structurally, `cartItemFields` is optional. Otherwise TypeScript makes it required.
+
+## Currency
+
+Currency is a session-level concept, not per-item. Set it once on the Provider; it lands in `state.currency` and your `onCreateSession` reads it to build the PSP request.
+
+```tsx
+<CioCheckoutProvider
+  provider="stripe"
+  cart={cart}
+  currency="USD"
+  onCreateSession={(state) =>
+    fetch('/api/session', {
+      method: 'POST',
+      body: JSON.stringify({
+        items: state.cartSnapshot,
+        currency: state.currency, // <- flows through here
+      }),
+    }).then((r) => r.json())
+  }
+/>
+```
+
+Currency is **static** — for a currency change, unmount and remount the Provider. PaymentIntent currency (Stripe) and equivalents in PayPal/Adyen are immutable once issued, so a mid-flow swap always requires a new session anyway.
+
+If you don't need multi-currency, `currency` is optional and can be hardcoded in your `onCreateSession` server call instead.
 
 ## Three cart-sync APIs
 
-**`cart` prop on `<CioPaymentProvider>`** — reactive, debounced. Best when cart lives in React state.
+**`cart` prop on `<CioCheckoutProvider>`** — reactive, debounced. Best when cart lives in React state.
 
 ```tsx
-const [cart, setCart] = useState<CheckoutItem[]>([]);
+const [cart, setCart] = useState<BaseCartItem[]>([]);
 
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   cart={cart}
-  cartDebounceMs={400}         // default is 400ms
+  cartDebounceMs={400} // default is 400ms
   onCreateSession={...}
-  onUpdateSession={...}         // required for updates after creation
+  onUpdateSession={...} // required for updates after creation
   ...
 >
 ```
 
-**`flow.setCart(items)`** — imperative, debounced. Same debounce semantics as the reactive prop; use when cart mutations come from callbacks, not renders (e.g., a recommendation carousel).
+**`flow.setCart(items)`** — imperative, debounced. Same debounce semantics as the reactive prop. Use when cart mutations come from callbacks rather than renders (e.g. a recommendation carousel).
 
 ```tsx
-const flow = useCioPayment();
+const flow = useCioCheckout();
 flow.setCart([...cart, newItem]);
 ```
 
-**`flow.syncCart(items)`** — imperative, immediate. Bypasses the debounce and returns a promise that resolves with the updated session. Use when you need to guarantee the update is applied before proceeding.
+**`flow.syncCart(items)`** — imperative, immediate. Bypasses the debounce and returns a promise resolving with the updated session. Use when the update must apply before proceeding.
 
 ```tsx
-const flow = useCioPayment();
+const flow = useCioCheckout();
 await flow.syncCart([...cart, newItem]);
-navigate('/checkout/payment');  // safe to advance
+navigate('/checkout/payment'); // safe to advance
 ```
 
 Content-equality check: `setCart` (and the `cart` prop) diff via JSON before scheduling a debounce, so React rerenders that emit the same items don't reset the timer.
 
 ## What happens under the hood
 
-`onCreateSession(state)` receives the current `state.cartSnapshot` at session-create time. Any subsequent cart change is applied via `onUpdateSession({ items, reason: 'items' })`.
+`onCreateSession(state)` receives the current `state.cartSnapshot` at session-create time. Any subsequent cart change is applied through `onUpdateSession({ items, reason: 'items' })`.
 
-Updates are serialized through a queue — you can't accidentally send two overlapping `updateSession` requests. The queue drains sequentially, calling `onUpdateSession` for each patch.
+Updates are serialized through a queue, so two overlapping `updateSession` requests cannot fire. The queue drains sequentially, calling `onUpdateSession` for each patch.
 
-If `setCart` fires *while* `onCreateSession` is still in flight, the library:
+When `setCart` fires _while_ `onCreateSession` is still in flight, the library:
 
 1. Stores the new items locally (`store.cartSnapshot`).
 2. Waits for the create to finish.
-3. Automatically flushes the pending cart via `updateSession` once the session is active.
+3. Flushes the pending cart through `updateSession` once the session is active.
 
-You don't have to wire this yourself. The Stripe session ends up reflecting the *latest* cart, not the cart at create-request time.
+No manual wiring required. The PSP session ends up reflecting the _latest_ cart, not the cart at create-request time.
 
 ## Cart id vs cart items
 
 Two ways to model what your server sees:
 
-**Send items directly.** Easiest, but you have to be sure the client-side cart is authoritative:
+**Send items directly.** Simplest, but assumes the client-side cart is authoritative:
 
 ```tsx
-onCreateSession: () =>
+onCreateSession: (state) =>
   fetch('/api/session', {
     method: 'POST',
-    body: JSON.stringify({ items: getCart() }),
+    body: JSON.stringify({ items: state.cartSnapshot }),
   }).then((r) => r.json());
 ```
 
-**Send a cart id, let the server expand.** Cleaner for real e-commerce — the server is the source of truth. The client just tells the server which cart to price:
+**Send a cart id, let the server expand.** Cleaner for real e-commerce — the server is the source of truth. The client only tells the server which cart to price:
 
 ```tsx
 onCreateSession: () =>
@@ -77,35 +164,37 @@ onCreateSession: () =>
   }).then((r) => r.json());
 ```
 
-If you use the cart-id pattern, you often skip the `cart` prop on the Provider entirely — the flow's `cartSnapshot` becomes redundant since the server holds the real items. Only pass `cart` if you want the flow to emit `session.updated` events with cart diffs (useful for analytics).
+With the cart-id pattern, the `cart` prop on the Provider is usually redundant since the server holds the real items. Pass `cart` only to have the flow emit `session.updated` events with cart diffs (useful for analytics).
 
 ## Cart mutations from recommendations
 
-A recommendation carousel (Constructor PIA-style, "Frequently bought together", etc.) firing add-to-cart while checkout is already open:
+A recommendation carousel (Constructor PIA-style, "Frequently bought together") firing add-to-cart while checkout is already open:
 
 ```tsx
 function RecommendationCard({ item }) {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   return (
-    <button onClick={() => {
-      flow.syncCart([...flow.state.cartSnapshot, item]);
-    }}>
+    <button
+      onClick={() => {
+        flow.syncCart([...flow.state.cartSnapshot, item]);
+      }}
+    >
       Add to cart
     </button>
   );
 }
 ```
 
-`syncCart` funnels through the updateSession queue, so rapid clicks don't corrupt the session — updates apply in order. The session's clientSecret survives; Stripe re-renders with the new totals.
+`syncCart` funnels through the updateSession queue, so rapid clicks apply in order without corrupting the session. The session's clientSecret survives; the PSP re-renders with the new totals.
 
 ## Debounce semantics
 
-`cartDebounceMs` (default 400ms) sets how long to wait after the last change before flushing:
+`cartDebounceMs` (default 400ms) sets the wait after the last change before flushing:
 
-- **Faster** (`50ms`) — near-immediate sync, more network calls, jittery totals in the UI as the user increments quantity.
+- **Faster** (`50ms`) — near-immediate sync, more network calls, jittery totals as the user increments quantity.
 - **Slower** (`1000ms`) — batches burst edits, feels laggy for single edits.
 
-Set `cartDebounceMs: 0` to disable debouncing entirely — every change flushes immediately (equivalent to `syncCart` semantics).
+Set `cartDebounceMs: 0` to disable debouncing entirely; every change flushes immediately (equivalent to `syncCart` semantics).
 
 ## Events
 
@@ -117,33 +206,20 @@ When cart changes propagate through `onUpdateSession`, the flow emits `session.u
   sessionId: string,
   reason: 'items',        // or 'address' / 'tax' / 'shipping' / 'coupon' / 'stock' / 'price' / 'manual'
   diff: {
-    added?: CheckoutItem[],
-    removed?: CheckoutItem[],
+    added?: TItem[],
+    removed?: TItem[],
     quantityChanges?: { id: string, from: number, to: number }[],
     totalChange?: { from: number, to: number },
   }
 }
 ```
 
-The `diff` is computed from the previous `cartSnapshot`. Wire it to analytics:
+`TItem` is your cart item type (`BaseCartItem` by default, or your custom shape when using `cartItemFields`). The `diff` is computed from the previous `cartSnapshot`. Wire it to analytics:
 
 ```tsx
 onEvent: (event) => {
   if (event.type === 'session.updated' && event.reason === 'items') {
     analytics.track('cart.updated', event.diff);
   }
-}
+};
 ```
-
-## `CheckoutItem` shape
-
-```ts
-interface CheckoutItem {
-  name: string;
-  amount: number;
-  quantity?: number;
-  // ...additional typed fields
-}
-```
-
-`name` and `amount` are required. Storage validation rejects entries without a `name`; passing an item without `amount` results in `NaN` totals downstream, so validate at the entry point.

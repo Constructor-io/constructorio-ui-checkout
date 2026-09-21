@@ -2,21 +2,21 @@
 export { createCheckoutFlow } from './core/createCheckoutFlow';
 export { createSessionStorageAdapter } from './core/storage/sessionStorageAdapter';
 export type {
-  AuthResult,
+  CheckoutAuthResult,
   CheckoutEvent,
   CheckoutEventErrorSource,
   CheckoutEventType,
   CheckoutFlowConfig,
   CheckoutFlowCore,
-  FlowState,
-  RouterAdapter,
-  SessionDiff,
-  SessionStatus,
-  SessionUpdatePatch,
-  SessionUpdateReason,
-  Step,
-  StepId,
-  StorageAdapter,
+  CheckoutFlowState,
+  CheckoutRouterAdapter,
+  CheckoutSessionDiff,
+  CheckoutSessionStatus,
+  CheckoutSessionUpdatePatch,
+  CheckoutSessionUpdateReason,
+  CheckoutStep,
+  CheckoutStepId,
+  CheckoutStorageAdapter,
 } from './core/types';
 export {
   CREATE_SESSION_STEP,
@@ -25,8 +25,8 @@ export {
 } from './core/types';
 
 // React adapter
-export type { CioFlowStepProps } from './app/components/CioFlowStep';
-export { CioFlowStep } from './app/components/CioFlowStep';
+export type { CioCheckoutStepProps } from './app/components/CioCheckoutStep';
+export { CioCheckoutStep } from './app/components/CioCheckoutStep';
 export type {
   CioFulfillmentRenderProps,
   CioFulfillmentResult,
@@ -36,14 +36,13 @@ export type {
 export { CioFulfillmentStep } from './app/components/CioFulfillmentStep';
 export type { CioStripePaymentStepProps } from './app/components/CioStripePaymentStep';
 export { CioStripePaymentStep } from './app/components/CioStripePaymentStep';
-export type { UseCioPaymentReturn } from './app/hooks/useCioPayment';
-export { useCioPayment } from './app/hooks/useCioPayment';
-export { CioPaymentContext } from './app/providers/CioPaymentContext';
-export type { CioPaymentProviderProps } from './app/providers/CioPaymentProvider';
-export { CioPaymentProvider } from './app/providers/CioPaymentProvider';
+export type { UseCioCheckoutReturn } from './app/hooks/useCioCheckout';
+export { useCioCheckout } from './app/hooks/useCioCheckout';
+export { CioCheckoutContext } from './app/providers/CioCheckoutContext';
+export type { CioCheckoutProviderProps } from './app/providers/CioCheckoutProvider';
+export { CioCheckoutProvider } from './app/providers/CioCheckoutProvider';
 
-// Imperative / vanilla JS
-export { CioCheckoutFlow } from './manager/CioCheckoutFlow';
+// Registry (multi-library setups)
 export {
   CioCheckoutRegistry,
   default as cioCheckoutRegistry,
@@ -52,13 +51,24 @@ export {
 // i18n helpers
 export { defaultTranslations, t } from './utils/translate';
 
-// Stripe-render types (used with CioStripePaymentStep)
+// Payment session
+export type {
+  BasePaymentSession,
+  BuiltInPaymentProvider,
+  PaymentProvider,
+  PaymentSessionFor,
+  PaymentSessionMap,
+  StripePaymentSession,
+} from './types';
+
+// Cart item
+export type { BaseCartItem, CartItemAccessors } from './types';
+
+// Render / SDK types
 export type {
   CheckoutComponentOverrides,
-  CheckoutItem,
   CheckoutLayout,
   CheckoutRedirectBehavior,
-  CheckoutSessionResponse,
   CheckoutStripeOptions,
   CheckoutUiMode,
   PayButtonRenderProps,

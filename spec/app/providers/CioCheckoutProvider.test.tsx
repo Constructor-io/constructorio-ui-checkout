@@ -3,9 +3,9 @@ import React from 'react';
 import { act, render, renderHook, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
-import { CioFlowStep } from '@src/app/components/CioFlowStep';
-import { useCioPayment } from '@src/app/hooks/useCioPayment';
-import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
+import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
+import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
+import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 import type { CheckoutFlowConfig } from '@src/core/types';
 
 const stubSession = () =>
@@ -15,17 +15,18 @@ const stubSession = () =>
   });
 
 const baseConfig: CheckoutFlowConfig = {
+  provider: 'stripe',
   steps: [{ id: 'cart' }, { id: 'auth' }, { id: 'pay' }],
   onCreateSession: stubSession,
 };
 
-describe(`${CioPaymentProvider.name}: client`, () => {
+describe(`${CioCheckoutProvider.name}: client`, () => {
   describe('lifecycle', () => {
     it('destroys the flow on unmount', () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <CioPaymentProvider {...baseConfig}>{children}</CioPaymentProvider>
+        <CioCheckoutProvider {...baseConfig}>{children}</CioCheckoutProvider>
       );
-      const { result, unmount } = renderHook(() => useCioPayment(), {
+      const { result, unmount } = renderHook(() => useCioCheckout(), {
         wrapper,
       });
       const flow = result.current;
@@ -35,11 +36,11 @@ describe(`${CioPaymentProvider.name}: client`, () => {
 
     it('autoStart triggers start on mount', async () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <CioPaymentProvider {...baseConfig} autoStart>
+        <CioCheckoutProvider {...baseConfig} autoStart>
           {children}
-        </CioPaymentProvider>
+        </CioCheckoutProvider>
       );
-      const { result } = renderHook(() => useCioPayment(), { wrapper });
+      const { result } = renderHook(() => useCioCheckout(), { wrapper });
       await act(async () => {
         await Promise.resolve();
       });
@@ -47,24 +48,24 @@ describe(`${CioPaymentProvider.name}: client`, () => {
     });
 
     it('reactive cart prop updates the snapshot on rerender', async () => {
-      const cartV1 = [{ name: 'A', amount: 10 }];
+      const cartV1 = [{ id: 'a', name: 'A', unitAmount: 10, quantity: 1 }];
       const cartV2 = [
-        { name: 'A', amount: 10 },
-        { name: 'B', amount: 5 },
+        { id: 'a', name: 'A', unitAmount: 10, quantity: 1 },
+        { id: 'b', name: 'B', unitAmount: 5, quantity: 1 },
       ];
       const snapshots: number[] = [];
 
       function Probe() {
-        const flow = useCioPayment();
+        const flow = useCioCheckout();
         snapshots.push(flow.state.cartSnapshot.length);
         return null;
       }
 
       function Harness({ cart }: { cart: typeof cartV1 }) {
         return (
-          <CioPaymentProvider {...baseConfig} cart={cart} cartDebounceMs={0}>
+          <CioCheckoutProvider {...baseConfig} cart={cart} cartDebounceMs={0}>
             <Probe />
-          </CioPaymentProvider>
+          </CioCheckoutProvider>
         );
       }
 
@@ -83,20 +84,21 @@ describe(`${CioPaymentProvider.name}: client`, () => {
       const guardFn = vi.fn(() => Promise.resolve(allow));
       function Harness() {
         return (
-          <CioPaymentProvider
+          <CioCheckoutProvider
+            provider="stripe"
             steps={[{ id: 'a' }, { id: 'b', guard: () => guardFn() }]}
             onCreateSession={stubSession}
           >
             <>
               <TriggerNext />
-              <CioFlowStep id="a">a-view</CioFlowStep>
-              <CioFlowStep id="b">b-view</CioFlowStep>
+              <CioCheckoutStep id="a">a-view</CioCheckoutStep>
+              <CioCheckoutStep id="b">b-view</CioCheckoutStep>
             </>
-          </CioPaymentProvider>
+          </CioCheckoutProvider>
         );
       }
       function TriggerNext() {
-        const flow = useCioPayment();
+        const flow = useCioCheckout();
         React.useEffect(() => {
           void flow.start();
         }, [flow]);
@@ -127,7 +129,8 @@ describe(`${CioPaymentProvider.name}: client`, () => {
       const authenticate = vi.fn(() => Promise.resolve({ userId: 'u1' }));
 
       const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <CioPaymentProvider
+        <CioCheckoutProvider
+          provider="stripe"
           steps={[{ id: 'a' }, { id: 'b' }]}
           onCreateSession={stubSession}
           onUpdateSession={onUpdateSession}
@@ -135,9 +138,9 @@ describe(`${CioPaymentProvider.name}: client`, () => {
           authenticate={authenticate}
         >
           {children}
-        </CioPaymentProvider>
+        </CioCheckoutProvider>
       );
-      const { result } = renderHook(() => useCioPayment(), { wrapper });
+      const { result } = renderHook(() => useCioCheckout(), { wrapper });
       await act(async () => {
         await result.current.start();
       });
@@ -172,7 +175,8 @@ describe(`${CioPaymentProvider.name}: client`, () => {
       };
       function Harness() {
         return (
-          <CioPaymentProvider
+          <CioCheckoutProvider
+            provider="stripe"
             steps={[
               { id: 'a', path: '/a' },
               { id: 'b', path: '/b' },
@@ -181,9 +185,9 @@ describe(`${CioPaymentProvider.name}: client`, () => {
             router={router}
             autoStart
           >
-            <CioFlowStep id="a">a-view</CioFlowStep>
-            <CioFlowStep id="b">b-view</CioFlowStep>
-          </CioPaymentProvider>
+            <CioCheckoutStep id="a">a-view</CioCheckoutStep>
+            <CioCheckoutStep id="b">b-view</CioCheckoutStep>
+          </CioCheckoutProvider>
         );
       }
       render(<Harness />);

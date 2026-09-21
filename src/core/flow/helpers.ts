@@ -1,13 +1,26 @@
-import type { CheckoutItem, CheckoutSessionResponse } from '@src/types';
+import type {
+  BaseCartItem,
+  BasePaymentSession,
+  CartItemAccessors,
+} from '@src/types';
 
-import type { FlowState, SessionDiff, Step, StepId } from '../types';
+import type {
+  CheckoutFlowState,
+  CheckoutSessionDiff,
+  CheckoutStep,
+  CheckoutStepId,
+  CompiledCartItemAccessors,
+} from '../types';
 import { FLOW_SCHEMA_VERSION } from '../types';
 
-export function makeInitialState(): FlowState {
+export function makeInitialState<
+  TItem = BaseCartItem,
+>(): CheckoutFlowState<TItem> {
   return {
     currentStepId: null,
     completedStepIds: [],
     cartSnapshot: [],
+    currency: null,
     sessionId: null,
     sessionStatus: 'idle',
     metadata: {},
@@ -15,7 +28,10 @@ export function makeInitialState(): FlowState {
   };
 }
 
-export function findStepIndex(steps: Step[], id: StepId | null): number {
+export function findStepIndex<TItem>(
+  steps: CheckoutStep<TItem>[],
+  id: CheckoutStepId | null
+): number {
   if (id === null) return -1;
   return steps.findIndex((s) => s.id === id);
 }
@@ -27,14 +43,20 @@ export function toError(reason: unknown): Error {
 }
 
 export function isValidSessionResponse(
-  r: unknown
-): r is CheckoutSessionResponse {
-  return (
-    r !== null &&
-    typeof r === 'object' &&
-    typeof (r as CheckoutSessionResponse).clientSecret === 'string' &&
-    typeof (r as CheckoutSessionResponse).publishableKey === 'string'
-  );
+  r: unknown,
+  provider: string
+): r is BasePaymentSession {
+  if (r === null || typeof r !== 'object' || Array.isArray(r)) return false;
+  if (provider === 'stripe') {
+    const s = r as { clientSecret?: unknown; publishableKey?: unknown };
+    if (typeof s.clientSecret !== 'string' || s.clientSecret.length === 0) {
+      return false;
+    }
+    if (typeof s.publishableKey !== 'string' || s.publishableKey.length === 0) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export function extractSessionId(
@@ -47,30 +69,62 @@ export function extractSessionId(
   return clientSecret.slice(0, idx);
 }
 
-function keyOf(item: CheckoutItem): string {
-  return item.priceId ?? item.name;
+export function getSessionIdFromResponse(
+  session: BasePaymentSession,
+  provider: string
+): string | null {
+  if (typeof session.sessionId === 'string' && session.sessionId.length > 0) {
+    return session.sessionId;
+  }
+  if (provider === 'stripe') {
+    const clientSecret = (session as { clientSecret?: unknown }).clientSecret;
+    if (typeof clientSecret === 'string') return extractSessionId(clientSecret);
+  }
+  return null;
 }
 
-export function computeCartDiff(
-  before: CheckoutItem[],
-  after: CheckoutItem[]
-): SessionDiff {
-  const beforeMap = new Map<string, CheckoutItem>();
-  for (const item of before) beforeMap.set(keyOf(item), item);
-  const afterMap = new Map<string, CheckoutItem>();
-  for (const item of after) afterMap.set(keyOf(item), item);
+export function compileCartItemAccessors<TItem>(
+  cfg: CartItemAccessors<TItem> | undefined
+): CompiledCartItemAccessors<TItem> {
+  const toGetter = <R>(
+    spec: string | ((item: TItem) => R) | undefined,
+    fallback: string
+  ): ((item: TItem) => R) => {
+    if (typeof spec === 'function') return spec;
+    const key = (spec ?? fallback) as keyof TItem;
+    return (item) => item[key] as R;
+  };
+  return {
+    getId: toGetter<string>(cfg?.id, 'id'),
+    getQuantity: toGetter<number>(cfg?.quantity, 'quantity'),
+    getUnitAmount: toGetter<number>(cfg?.unitAmount, 'unitAmount'),
+    getName: cfg?.name ? toGetter<string>(cfg.name, 'name') : null,
+  };
+}
 
-  const added: CheckoutItem[] = [];
-  const removed: CheckoutItem[] = [];
+export function computeCartDiff<TItem>(
+  before: TItem[],
+  after: TItem[],
+  accessors: CompiledCartItemAccessors<TItem>
+): CheckoutSessionDiff<TItem> {
+  const { getId, getQuantity, getUnitAmount } = accessors;
+
+  const beforeMap = new Map<string, TItem>();
+  for (const item of before) beforeMap.set(getId(item), item);
+  const afterMap = new Map<string, TItem>();
+  for (const item of after) afterMap.set(getId(item), item);
+
+  const added: TItem[] = [];
+  const removed: TItem[] = [];
   const quantityChanges: { id: string; from: number; to: number }[] = [];
 
   for (const [id, item] of afterMap) {
-    if (!beforeMap.has(id)) {
+    const prev = beforeMap.get(id);
+    if (prev === undefined) {
       added.push(item);
     } else {
-      const prev = beforeMap.get(id) as CheckoutItem;
-      const prevQty = prev.quantity ?? 1;
-      const nextQty = item.quantity ?? 1;
+      const prevQty = getQuantity(prev);
+      const nextQty = getQuantity(item);
       if (prevQty !== nextQty) {
         quantityChanges.push({ id, from: prevQty, to: nextQty });
       }
@@ -81,15 +135,15 @@ export function computeCartDiff(
   }
 
   const totalBefore = before.reduce(
-    (sum, i) => sum + i.amount * (i.quantity ?? 1),
+    (sum, i) => sum + getUnitAmount(i) * getQuantity(i),
     0
   );
   const totalAfter = after.reduce(
-    (sum, i) => sum + i.amount * (i.quantity ?? 1),
+    (sum, i) => sum + getUnitAmount(i) * getQuantity(i),
     0
   );
 
-  const diff: SessionDiff = {};
+  const diff: CheckoutSessionDiff<TItem> = {};
   if (added.length > 0) diff.added = added;
   if (removed.length > 0) diff.removed = removed;
   if (quantityChanges.length > 0) diff.quantityChanges = quantityChanges;

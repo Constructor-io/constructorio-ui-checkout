@@ -1,11 +1,11 @@
-import type { CheckoutSessionResponse } from '@src/types';
+import type { BaseCartItem, PaymentSessionFor } from '@src/types';
 
-import type { SessionUpdatePatch } from '../types';
+import type { CheckoutSessionUpdatePatch } from '../types';
 
 import type { FlowContext } from './context';
 import {
   computeCartDiff,
-  extractSessionId,
+  getSessionIdFromResponse,
   isValidSessionResponse,
   toError,
 } from './helpers';
@@ -14,26 +14,29 @@ export interface SessionManagerOptions {
   onSessionActive: () => void;
 }
 
-export function createSessionManager<TState>(
-  ctx: FlowContext<TState>,
-  opts: SessionManagerOptions
-) {
-  const { config, store, isDestroyed, events, emitError } = ctx;
+export function createSessionManager<
+  TProvider extends string = string,
+  TState = unknown,
+  TItem = BaseCartItem,
+>(ctx: FlowContext<TProvider, TState, TItem>, opts: SessionManagerOptions) {
+  const { config, store, isDestroyed, events, emitError, accessors } = ctx;
+
+  type Session = PaymentSessionFor<TProvider>;
 
   interface QueuedUpdate {
-    patch: SessionUpdatePatch;
-    resolve: (value: CheckoutSessionResponse | null) => void;
+    patch: CheckoutSessionUpdatePatch<TItem>;
+    resolve: (value: Session | null) => void;
   }
 
-  let session: CheckoutSessionResponse | null = null;
+  let session: Session | null = null;
   const queue: QueuedUpdate[] = [];
   let queueRunning = false;
-  let createInFlight: Promise<CheckoutSessionResponse | null> | null = null;
+  let createInFlight: Promise<Session | null> | null = null;
   let requestGen = 0;
 
-  const getSession = (): CheckoutSessionResponse | null => session;
-  const getCreateInFlight =
-    (): Promise<CheckoutSessionResponse | null> | null => createInFlight;
+  const getSession = (): Session | null => session;
+  const getCreateInFlight = (): Promise<Session | null> | null =>
+    createInFlight;
 
   const drainQueue = (): void => {
     while (queue.length > 0) {
@@ -49,24 +52,24 @@ export function createSessionManager<TState>(
     drainQueue();
   };
 
-  const createSession = (): Promise<CheckoutSessionResponse | null> => {
+  const createSession = (): Promise<Session | null> => {
     if (isDestroyed()) return Promise.resolve(null);
     if (session !== null) return Promise.resolve(session);
     if (createInFlight !== null) return createInFlight;
 
     const gen = ++requestGen;
-    const run = async (): Promise<CheckoutSessionResponse | null> => {
+    const run = async (): Promise<Session | null> => {
       store.setState((prev) => ({ ...prev, sessionStatus: 'creating' }));
       try {
         const response = await config.onCreateSession(store.getState());
         if (isDestroyed() || gen !== requestGen) return null;
-        if (!isValidSessionResponse(response)) {
+        if (!isValidSessionResponse(response, config.provider)) {
           throw new Error(
-            'onCreateSession must resolve with { clientSecret, publishableKey }'
+            `onCreateSession must resolve with a valid ${config.provider} session object`
           );
         }
         session = response;
-        const sessionId = extractSessionId(response.clientSecret);
+        const sessionId = getSessionIdFromResponse(response, config.provider);
         store.setState((prev) => ({
           ...prev,
           sessionStatus: 'active',
@@ -80,7 +83,9 @@ export function createSessionManager<TState>(
       } catch (reason) {
         if (isDestroyed() || gen !== requestGen) return null;
         store.setState((prev) => ({ ...prev, sessionStatus: 'error' }));
-        emitError('session.create', toError(reason));
+        emitError('session.create', toError(reason), async () => {
+          await createSession();
+        });
         return null;
       } finally {
         if (gen === requestGen) createInFlight = null;
@@ -92,8 +97,8 @@ export function createSessionManager<TState>(
   };
 
   const runUpdate = async (
-    patch: SessionUpdatePatch
-  ): Promise<CheckoutSessionResponse | null> => {
+    patch: CheckoutSessionUpdatePatch<TItem>
+  ): Promise<Session | null> => {
     if (!config.onUpdateSession) {
       emitError(
         'session.update',
@@ -113,13 +118,13 @@ export function createSessionManager<TState>(
     try {
       const response = await config.onUpdateSession(patch);
       if (isDestroyed() || gen !== requestGen) return null;
-      if (!isValidSessionResponse(response)) {
+      if (!isValidSessionResponse(response, config.provider)) {
         throw new Error(
-          'onUpdateSession must resolve with { clientSecret, publishableKey }'
+          `onUpdateSession must resolve with a valid ${config.provider} session object`
         );
       }
       session = response;
-      const sessionId = extractSessionId(response.clientSecret);
+      const sessionId = getSessionIdFromResponse(response, config.provider);
       store.setState((prev) => ({
         ...prev,
         sessionId,
@@ -130,13 +135,17 @@ export function createSessionManager<TState>(
           type: 'session.updated',
           sessionId,
           reason: patch.reason ?? 'manual',
-          diff: patch.items ? computeCartDiff(before, patch.items) : {},
+          diff: patch.items
+            ? computeCartDiff(before, patch.items, accessors)
+            : {},
         });
       }
       return response;
     } catch (reason) {
       if (isDestroyed() || gen !== requestGen) return null;
-      emitError('session.update', toError(reason));
+      emitError('session.update', toError(reason), async () => {
+        await updateSession(patch);
+      });
       return null;
     }
   };
@@ -157,8 +166,8 @@ export function createSessionManager<TState>(
   };
 
   const updateSession = (
-    patch: SessionUpdatePatch
-  ): Promise<CheckoutSessionResponse | null> => {
+    patch: CheckoutSessionUpdatePatch<TItem>
+  ): Promise<Session | null> => {
     if (isDestroyed()) return Promise.resolve(null);
     return new Promise((resolve) => {
       queue.push({ patch, resolve });
@@ -169,16 +178,16 @@ export function createSessionManager<TState>(
   const markExpired = (): void => {
     if (isDestroyed()) return;
     if (!session) return;
-    const sessionId = extractSessionId(session.clientSecret);
+    const sessionId = getSessionIdFromResponse(session, config.provider);
     invalidate();
     store.setState((prev) => ({ ...prev, sessionStatus: 'expired' }));
     if (sessionId) events.emit({ type: 'session.expired', sessionId });
   };
 
-  const recreate = async (): Promise<CheckoutSessionResponse | null> => {
+  const recreate = async (): Promise<Session | null> => {
     if (isDestroyed()) return null;
     const oldSessionId = session
-      ? extractSessionId(session.clientSecret)
+      ? getSessionIdFromResponse(session, config.provider)
       : store.getState().sessionId;
     invalidate();
     store.setState((prev) => ({
@@ -189,7 +198,7 @@ export function createSessionManager<TState>(
     const response = await createSession();
     if (isDestroyed()) return null;
     if (response && oldSessionId) {
-      const newSessionId = extractSessionId(response.clientSecret);
+      const newSessionId = getSessionIdFromResponse(response, config.provider);
       if (newSessionId) {
         events.emit({
           type: 'session.recreated',

@@ -1,26 +1,30 @@
+import { createCheckoutFlow } from '@src/core/createCheckoutFlow';
 import { createSessionStorageAdapter } from '@src/core/storage/sessionStorageAdapter';
-import type { CheckoutFlowConfig } from '@src/core/types';
-import { CioCheckoutFlow } from '@src/manager/CioCheckoutFlow';
+import type {
+  CheckoutFlowConfig,
+  CheckoutFlowCore,
+  CheckoutFlowCoreBase,
+} from '@src/core/types';
+import type { BaseCartItem, BuiltInPaymentProvider } from '@src/types';
 
-// Non-React singleton so any CIO library on the page (e.g. pia dispatching an
-// add-to-cart mid-flow) can reach the active CioCheckoutFlow instance. resume()
-// is the typical entry point for the standalone-bundle case — it creates a
-// flow with the default sessionStorage adapter, registers it, and returns it.
-// Stored as `CioCheckoutFlow<unknown>` for type erasure — the merchant asserts
-// TState on read via getFlow/resume generics.
 class CioCheckoutRegistry {
-  private flow: CioCheckoutFlow<unknown> | null = null;
+  private flow: CheckoutFlowCoreBase<string, unknown> | null = null;
 
-  register<TState>(flow: CioCheckoutFlow<TState>): void {
-    const erased = flow as CioCheckoutFlow<unknown>;
-    if (this.flow && this.flow !== erased) {
+  register<TProvider extends string, TState, TItem = BaseCartItem>(
+    flow: CheckoutFlowCore<TProvider, TState, TItem>
+  ): void {
+    if (this.flow && this.flow !== flow) {
       this.flow.destroy();
     }
-    this.flow = erased;
+    this.flow = flow;
   }
 
-  getFlow<TState = unknown>(): CioCheckoutFlow<TState> | null {
-    return this.flow as CioCheckoutFlow<TState> | null;
+  getFlow<
+    TProvider extends string = BuiltInPaymentProvider,
+    TState = unknown,
+    TItem = BaseCartItem,
+  >(): CheckoutFlowCore<TProvider, TState, TItem> | null {
+    return this.flow as CheckoutFlowCore<TProvider, TState, TItem> | null;
   }
 
   hasFlow(): boolean {
@@ -34,11 +38,20 @@ class CioCheckoutRegistry {
     }
   }
 
-  resume<TState = unknown>(
-    config: CheckoutFlowConfig<TState>
-  ): CioCheckoutFlow<TState> {
-    const storage = config.storage ?? createSessionStorageAdapter();
-    const flow = new CioCheckoutFlow<TState>({ ...config, storage });
+  resume<
+    TProvider extends string = BuiltInPaymentProvider,
+    TState = unknown,
+    TItem = BaseCartItem,
+  >(
+    config: CheckoutFlowConfig<TProvider, TState, TItem>
+  ): CheckoutFlowCore<TProvider, TState, TItem> {
+    const storage = config.storage ?? createSessionStorageAdapter<TItem>();
+    const storageKey = config.storageKey ?? 'cio-checkout-flow';
+    const flow = createCheckoutFlow<TProvider, TState, TItem>({
+      ...config,
+      storage,
+      storageKey,
+    });
     this.register(flow);
     return flow;
   }

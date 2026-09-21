@@ -1,8 +1,8 @@
 import { renderToString } from 'react-dom/server';
 
-import { CioFlowStep } from '@src/app/components/CioFlowStep';
+import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
 import { CioStripePaymentStep } from '@src/app/components/CioStripePaymentStep';
-import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
+import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 import { PAYMENT_STEP } from '@src/core/types';
 
 const stubSession = () =>
@@ -15,28 +15,30 @@ describe(`${CioStripePaymentStep.name}: server`, () => {
   it('is safe to render inside a Provider server-side', () => {
     expect(() =>
       renderToString(
-        <CioPaymentProvider
+        <CioCheckoutProvider
+          provider="stripe"
           steps={[{ id: PAYMENT_STEP }]}
           onCreateSession={stubSession}
         >
-          <CioFlowStep id={PAYMENT_STEP}>
+          <CioCheckoutStep id={PAYMENT_STEP}>
             <CioStripePaymentStep />
-          </CioFlowStep>
-        </CioPaymentProvider>
+          </CioCheckoutStep>
+        </CioCheckoutProvider>
       )
     ).not.toThrow();
   });
 
   it('renders nothing before the flow enters the stripe step', () => {
     const view = renderToString(
-      <CioPaymentProvider
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: PAYMENT_STEP }]}
         onCreateSession={stubSession}
       >
-        <CioFlowStep id={PAYMENT_STEP}>
+        <CioCheckoutStep id={PAYMENT_STEP}>
           <CioStripePaymentStep />
-        </CioFlowStep>
-      </CioPaymentProvider>
+        </CioCheckoutStep>
+      </CioCheckoutProvider>
     );
     expect(view).not.toContain('stripe-provider');
   });

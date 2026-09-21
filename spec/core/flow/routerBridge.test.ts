@@ -2,10 +2,10 @@ import { makeCtx } from '@spec/factory/flowCtx';
 
 import { createRouterBridge } from '@src/core/flow/routerBridge';
 import { createStorageManager } from '@src/core/flow/storageManager';
-import type { RouterAdapter, Step } from '@src/core/types';
+import type { CheckoutRouterAdapter, CheckoutStep } from '@src/core/types';
 
 function makeRouter(initialPath = '/a'): {
-  router: RouterAdapter;
+  router: CheckoutRouterAdapter;
   push: ReturnType<typeof vi.fn>;
   emit: (path: string) => void;
 } {
@@ -14,7 +14,7 @@ function makeRouter(initialPath = '/a'): {
   const push = vi.fn((p: string) => {
     current = p;
   });
-  const router: RouterAdapter = {
+  const router: CheckoutRouterAdapter = {
     push,
     getCurrentPath: () => current,
     subscribe: (fn) => {
@@ -80,7 +80,7 @@ describe(`${createRouterBridge.name}: client`, () => {
     });
 
     it('emits router error when router.push throws', () => {
-      const throwing: RouterAdapter = {
+      const throwing: CheckoutRouterAdapter = {
         push: () => {
           throw new Error('nav fail');
         },
@@ -106,13 +106,13 @@ describe(`${createRouterBridge.name}: client`, () => {
   });
 
   describe('subscribe', () => {
-    const steps: Step[] = [
+    const steps: CheckoutStep[] = [
       { id: 'a', path: '/a' },
       { id: 'b', path: '/b' },
     ];
 
     it('is a no-op when router has no subscribe', () => {
-      const router: RouterAdapter = {
+      const router: CheckoutRouterAdapter = {
         push: vi.fn(),
         getCurrentPath: () => '/a',
       };
@@ -163,7 +163,7 @@ describe(`${createRouterBridge.name}: client`, () => {
   describe('teardown', () => {
     it('unsubscribes from the router adapter', () => {
       const unsubscribe = vi.fn();
-      const router: RouterAdapter = {
+      const router: CheckoutRouterAdapter = {
         push: vi.fn(),
         getCurrentPath: () => '',
         subscribe: () => unsubscribe,
@@ -177,7 +177,7 @@ describe(`${createRouterBridge.name}: client`, () => {
     });
 
     it('swallows unsubscribe errors', () => {
-      const router: RouterAdapter = {
+      const router: CheckoutRouterAdapter = {
         push: vi.fn(),
         getCurrentPath: () => '',
         subscribe: () => () => {
@@ -201,7 +201,7 @@ describe(`${createRouterBridge.name}: client`, () => {
     });
 
     it('emits router error when router.getCurrentPath throws', () => {
-      const throwing: RouterAdapter = {
+      const throwing: CheckoutRouterAdapter = {
         push: vi.fn(),
         getCurrentPath: () => {
           throw new Error('read fail');

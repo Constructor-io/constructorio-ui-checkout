@@ -1,13 +1,15 @@
+import type { BaseCartItem } from '@src/types';
+
 import type { CheckoutEvent } from './types';
 
-export interface EventEmitter {
-  emit(event: CheckoutEvent): void;
-  on(listener: (event: CheckoutEvent) => void): () => void;
+export interface EventEmitter<TItem = BaseCartItem> {
+  emit(event: CheckoutEvent<TItem>): void;
+  on(listener: (event: CheckoutEvent<TItem>) => void): () => void;
   clear(): void;
 }
 
-export function createEmitter(): EventEmitter {
-  const listeners = new Set<(event: CheckoutEvent) => void>();
+export function createEmitter<TItem = BaseCartItem>(): EventEmitter<TItem> {
+  const listeners = new Set<(event: CheckoutEvent<TItem>) => void>();
 
   return {
     emit: (event) => {

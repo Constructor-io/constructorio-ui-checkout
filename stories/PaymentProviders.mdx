@@ -1,0 +1,99 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Getting Started/Payment Providers" />
+
+# Payment Providers
+
+`<CioCheckoutProvider>` takes a required `provider` prop naming the payment
+service processor (PSP) driving the checkout. The prop shapes three things at
+compile time:
+
+- The return type of `onCreateSession`
+- The runtime session available via `useCioCheckout().getSession()`
+- Which built-in step components can be mounted inside the provider
+
+## Built-in providers
+
+Stripe is the only PSP the library ships payment UI for. Passing
+`provider="stripe"` narrows `onCreateSession` to return a `StripePaymentSession`
+(`{ clientSecret, publishableKey }`) and allows `<CioStripePaymentStep>` to be
+mounted.
+
+```tsx
+<CioCheckoutProvider
+  provider="stripe"
+  steps={[{ id: 'cart' }, { id: PAYMENT_STEP }, { id: 'done' }]}
+  onCreateSession={async () => {
+    const res = await fetch('/api/checkout-session', { method: 'POST' });
+    return res.json(); // typed as StripePaymentSession
+  }}
+>
+  <CioCheckoutStep id={PAYMENT_STEP}>
+    <CioStripePaymentStep uiMode="form" />
+  </CioCheckoutStep>
+</CioCheckoutProvider>
+```
+
+Mounting `<CioStripePaymentStep>` inside a provider whose `provider` prop is
+not `"stripe"` throws at render with a message identifying both sides of the
+mismatch.
+
+## Custom providers
+
+`provider` accepts any string. For an unofficial PSP (Adyen, Braintree,
+in-house, sandbox), you own the payment UI and drive the flow through
+`useCioCheckout()`:
+
+```tsx
+<CioCheckoutProvider
+  provider="my-psp"
+  steps={[{ id: 'cart' }, { id: PAYMENT_STEP }, { id: 'done' }]}
+  onCreateSession={async () => {
+    const res = await fetch('/api/my-psp-session', { method: 'POST' });
+    return res.json();
+  }}
+>
+  <CioCheckoutStep id={PAYMENT_STEP}>
+    <MyPspStep />
+  </CioCheckoutStep>
+</CioCheckoutProvider>
+```
+
+Without further typing, the session is inferred as `BasePaymentSession`
+(`{ sessionId?: string }`). Read it out via `flow.getSession()` and cast at
+the boundary, or register a strongly-typed shape via module augmentation:
+
+```ts
+import type { BasePaymentSession } from '@constructor-io/constructorio-ui-checkout';
+
+interface MyPspSession extends BasePaymentSession {
+  approvalToken: string;
+  merchantId: string;
+}
+
+declare module '@constructor-io/constructorio-ui-checkout' {
+  interface PaymentSessionMap {
+    'my-psp': MyPspSession;
+  }
+}
+```
+
+Once the map is augmented, every `<CioCheckoutProvider provider="my-psp">`,
+`useCioCheckout<'my-psp'>()`, and `createCheckoutFlow<'my-psp'>()` call
+resolves the session type to `MyPspSession` — full autocomplete on
+`session.approvalToken` and `session.merchantId`, and a compile-time error if
+`onCreateSession` returns the wrong shape.
+
+## Session ID resolution
+
+`sessionId` is optional on `BasePaymentSession` because Stripe's client secret
+already encodes one. The library resolves it in this order:
+
+1. `session.sessionId` when set.
+2. For `provider="stripe"`, the prefix extracted from `session.clientSecret`
+   (matches Stripe's `cs_test_…_secret_…` shape).
+3. `null` otherwise.
+
+For a custom PSP where you want observability events (`session.created`,
+`session.updated`, `session.recreated`) to include a session identifier,
+return it explicitly on `sessionId`.

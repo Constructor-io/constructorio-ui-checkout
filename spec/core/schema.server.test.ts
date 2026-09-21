@@ -7,6 +7,7 @@ describe(`${validateFlowState.name}: server`, () => {
       currentStepId: 'a',
       completedStepIds: [],
       cartSnapshot: [],
+      currency: null,
       sessionId: null,
       sessionStatus: 'idle',
       metadata: {},

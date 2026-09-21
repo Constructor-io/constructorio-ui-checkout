@@ -20,9 +20,9 @@ npm i @constructor-io/constructorio-ui-checkout
 
 | Path              | Best for                          | Entry                                          |
 | ----------------- | --------------------------------- | ---------------------------------------------- |
-| React             | React apps with the full flow     | `<CioPaymentProvider>` + `useCioPayment()` |
-| Vanilla JS (npm)  | Non-React SPAs or custom UIs      | `new CioCheckoutFlow(config)`                     |
-| Standalone bundle | Server-rendered sites, `<script>` | `window.CioCheckout.resume(config)`            |
+| React             | React apps with the full flow     | `<CioCheckoutProvider>` + `useCioCheckout()`  |
+| Vanilla JS (npm)  | Non-React SPAs or custom UIs      | `createCheckoutFlow(config)`                  |
+| Standalone bundle | Server-rendered sites, `<script>` | `window.CioCheckout.resume(config)`           |
 
 All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
 
@@ -30,18 +30,19 @@ All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
 
 ```tsx
 import {
-  CioPaymentProvider,
-  CioFlowStep,
+  CioCheckoutProvider,
+  CioCheckoutStep,
   CioStripePaymentStep,
   CioFulfillmentStep,
   PAYMENT_STEP,
-  useCioPayment,
+  useCioCheckout,
 } from '@constructor-io/constructorio-ui-checkout';
 import '@constructor-io/constructorio-ui-checkout/styles.css';
 
 function App() {
   return (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[
         { id: 'cart' },
         { id: 'address' },
@@ -56,23 +57,23 @@ function App() {
       onEvent={(event) => console.log(event)}
     >
       <StartButton />
-      <CioFlowStep id="cart"><MyCart /></CioFlowStep>
-      <CioFlowStep id="address"><MyAddressForm /></CioFlowStep>
-      <CioFlowStep id={PAYMENT_STEP}>
+      <CioCheckoutStep id="cart"><MyCart /></CioCheckoutStep>
+      <CioCheckoutStep id="address"><MyAddressForm /></CioCheckoutStep>
+      <CioCheckoutStep id={PAYMENT_STEP}>
         <CioStripePaymentStep uiMode="form" />
-      </CioFlowStep>
-      <CioFlowStep id="fulfill">
+      </CioCheckoutStep>
+      <CioCheckoutStep id="fulfill">
         <CioFulfillmentStep
           onFulfill={() => fetch('/api/verify').then((r) => r.json())}
         />
-      </CioFlowStep>
-      <CioFlowStep id="done"><MyConfirmation /></CioFlowStep>
-    </CioPaymentProvider>
+      </CioCheckoutStep>
+      <CioCheckoutStep id="done"><MyConfirmation /></CioCheckoutStep>
+    </CioCheckoutProvider>
   );
 }
 
 function StartButton() {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   if (flow.state.currentStepId !== null) return null;
   return <button onClick={() => flow.start()}>Checkout</button>;
 }
@@ -104,19 +105,18 @@ Consuming through a bundler? Import the same bundle via subpath — same `CioChe
 import CioCheckout from '@constructor-io/constructorio-ui-checkout/constructorio-ui-checkout-standalone';
 ```
 
-`CioCheckout.resume(config)` creates a `CioCheckoutFlow` backed by a `sessionStorage` adapter (auto-hydrates on page load) and registers it as the active flow so any other CIO library on the page can reach it.
+`CioCheckout.resume(config)` creates a checkout flow backed by a `sessionStorage` adapter (auto-hydrates on page load) and registers it as the active flow so any other CIO library on the page can reach it.
 
 ### Standalone API
 
-| Member                             | Description                                                                       |
-| ---------------------------------- | --------------------------------------------------------------------------------- |
-| `CioCheckout.VERSION`              | Library version string                                                            |
-| `CioCheckout.CioCheckoutFlow`         | Class — instantiate directly if you don't want registry/sessionStorage defaults   |
-| `CioCheckout.createCheckoutFlow`   | Factory returning the framework-agnostic core (no manager wrapper)                |
-| `CioCheckout.createSessionStorageAdapter` | Default sessionStorage-backed `StorageAdapter`                             |
-| `CioCheckout.resume(config)`       | Creates + registers a `CioCheckoutFlow` with the sessionStorage adapter injected     |
-| `CioCheckout.reset()`              | Destroys the registered flow                                                      |
-| `CioCheckout.cioCheckoutRegistry`     | Singleton registry — `register(flow)`, `getFlow()`, `hasFlow()`, `clear()`        |
+| Member                                    | Description                                                                       |
+| ----------------------------------------- | --------------------------------------------------------------------------------- |
+| `CioCheckout.VERSION`                     | Library version string                                                            |
+| `CioCheckout.createCheckoutFlow`          | Factory returning the framework-agnostic checkout flow                            |
+| `CioCheckout.createSessionStorageAdapter` | Default sessionStorage-backed `CheckoutStorageAdapter`                            |
+| `CioCheckout.resume(config)`              | Creates + registers a flow with the sessionStorage adapter injected               |
+| `CioCheckout.reset()`                     | Destroys the registered flow                                                      |
+| `CioCheckout.cioCheckoutRegistry`         | Singleton registry — `register(flow)`, `getFlow()`, `hasFlow()`, `clear()`        |
 
 ## Registry pattern
 
@@ -124,11 +124,11 @@ For multi-library setups where another CIO library (e.g. `pia`) needs to reach t
 
 ```ts
 import {
-  CioCheckoutFlow,
+  createCheckoutFlow,
   cioCheckoutRegistry,
 } from '@constructor-io/constructorio-ui-checkout';
 
-const flow = new CioCheckoutFlow({ steps, onCreateSession, ... });
+const flow = createCheckoutFlow({ provider: 'stripe', steps, onCreateSession, ... });
 cioCheckoutRegistry.register(flow);
 
 // Elsewhere:
@@ -138,12 +138,12 @@ active?.syncCart(newItems);
 
 ## Persistence & resume
 
-Persistence is opt-in. Pass a `storage` adapter + `storageKey` to `CioPaymentProvider` (or `new CioCheckoutFlow`) and the library serializes `FlowState` on every change and hydrates on next mount:
+Persistence is opt-in. Pass a `storage` adapter + `storageKey` to `CioCheckoutProvider` (or `createCheckoutFlow`) and the library serializes `CheckoutFlowState` on every change and hydrates on next mount:
 
 ```tsx
 import { createSessionStorageAdapter } from '@constructor-io/constructorio-ui-checkout';
 
-<CioPaymentProvider
+<CioCheckoutProvider
   storage={createSessionStorageAdapter()}
   storageKey={`checkout-${userId}`}
   ...
@@ -219,7 +219,7 @@ app.post('/api/checkout-session', async (req, res) => {
 - [Stripe Custom Checkout (embedded components)](https://docs.stripe.com/payments/checkout/how-checkout-works?payment-ui=embedded-components)
 - [Stripe Checkout Form (embedded form, beta)](https://docs.stripe.com/payments/checkout/how-checkout-works?payment-ui=embedded-form)
 - [Stripe Embedded Checkout — Quickstart](https://docs.stripe.com/checkout/embedded/quickstart)
-- [Constructor.io](https://constructor.io)
+- [Constructor.io](https://constructor.com)
 
 ## Publishing New Versions
 

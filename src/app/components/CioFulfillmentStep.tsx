@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useCioPayment } from '@src/app/hooks/useCioPayment';
+import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
 
 import './CioFulfillmentStep.css';
 
@@ -25,16 +25,18 @@ export interface CioFulfillmentStepProps {
   render?: (props: CioFulfillmentRenderProps) => React.ReactNode;
 }
 
-// Verifies the order post-payment. Runs onFulfill once on mount, exposes
-// status + retry via render prop. Advances the flow on success by default.
-// Retry re-runs onFulfill without changing session state.
+/**
+ * Runs `onFulfill` once on mount, exposes status and retry via a render prop,
+ * and advances the flow on success by default. Retry re-invokes `onFulfill`
+ * without touching session state.
+ */
 export function CioFulfillmentStep({
   onFulfill,
   onFulfillComplete,
   advanceOnSuccess = true,
   render,
 }: CioFulfillmentStepProps) {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   const [status, setStatus] = useState<CioFulfillmentStatus>('idle');
   const [result, setResult] = useState<CioFulfillmentResult | null>(null);
   const inFlightRef = useRef(false);
@@ -69,7 +71,7 @@ export function CioFulfillmentStep({
     try {
       onFulfillComplete?.(outcome);
     } catch {
-      /* consumer callback error must not flip outcome */
+      // Consumer callback must not flip the outcome.
     }
     if (outcome.success && advanceOnSuccess) {
       void flow.next();

@@ -1,29 +1,35 @@
-import type { StepId } from '../types';
+import type { BaseCartItem } from '@src/types';
+
+import type { CheckoutStepId } from '../types';
 
 import type { FlowContext } from './context';
 import { createGuards } from './guards';
 import { findStepIndex, toError } from './helpers';
-import type { RouterBridge } from './routerBridge';
-import type { StorageManager } from './storageManager';
+import type { createRouterBridge } from './routerBridge';
+import type { createStorageManager } from './storageManager';
 
-export function createNavigator<TState>(
-  ctx: FlowContext<TState>,
-  storage: StorageManager,
-  router: RouterBridge
+export function createNavigator<
+  TProvider extends string = string,
+  TState = unknown,
+  TItem = BaseCartItem,
+>(
+  ctx: FlowContext<TProvider, TState, TItem>,
+  storage: ReturnType<typeof createStorageManager<TProvider, TState, TItem>>,
+  router: ReturnType<typeof createRouterBridge<TProvider, TState, TItem>>
 ) {
   const { config, steps, store, isDestroyed, events, emitError } = ctx;
   const { runGuard, findFirstFailingGuard } = createGuards(ctx);
 
   let navVersion = 0;
 
-  const enterStep = (stepId: StepId, from: StepId | null) => {
+  const enterStep = (stepId: CheckoutStepId, from: CheckoutStepId | null) => {
     store.setState((prev) => ({ ...prev, currentStepId: stepId }));
     events.emit({ type: 'step.entered', stepId, from });
     const step = steps[findStepIndex(steps, stepId)];
     if (step) router.push(step.path);
   };
 
-  const exitStep = (stepId: StepId, to: StepId | null) => {
+  const exitStep = (stepId: CheckoutStepId, to: CheckoutStepId | null) => {
     events.emit({ type: 'step.exited', stepId, to });
     store.setState((prev) => {
       if (prev.completedStepIds.includes(stepId)) return prev;
@@ -46,6 +52,7 @@ export function createNavigator<TState>(
     const failIdx = await findFirstFailingGuard(0, resumedIdx);
     if (isDestroyed()) return;
     if (failIdx === null) {
+      events.emit({ type: 'step.entered', stepId: resumedStepId, from: null });
       const resumedStep = steps[resumedIdx];
       if (resumedStep) router.push(resumedStep.path);
       return;
@@ -66,6 +73,7 @@ export function createNavigator<TState>(
         (id) => findStepIndex(steps, id) < failIdx
       ),
     }));
+    events.emit({ type: 'step.entered', stepId: failedStep.id, from: null });
     router.push(failedStep.path);
   };
 
@@ -199,7 +207,7 @@ export function createNavigator<TState>(
     return Promise.resolve();
   };
 
-  const goTo = async (stepId: StepId): Promise<void> => {
+  const goTo = async (stepId: CheckoutStepId): Promise<void> => {
     if (isDestroyed()) return;
     const targetIdx = findStepIndex(steps, stepId);
     if (targetIdx === -1) {
@@ -256,11 +264,6 @@ export function createNavigator<TState>(
     back,
     goTo,
     complete,
-    enterStep,
-    exitStep,
-    bumpVersion: () => {
-      navVersion += 1;
-    },
   };
 }
 

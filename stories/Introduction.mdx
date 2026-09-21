@@ -9,20 +9,20 @@ Headless primitives for building multi-step checkout on top of Stripe. The libra
 ## Where to go next
 
 - **[Integration Guide](./?path=/docs/getting-started-integration-guide--docs)** — install, wire up, and ship a working flow
-- **[Hook-only composition](./?path=/docs/getting-started-hook-only-composition--docs)** — bypass the built-in step components and drive the flow directly from `useCioPayment()` when you need a custom Stripe wrapper, per-route composition, or unusual layouts
-- **[Routing](./?path=/docs/adapters-routing--docs)** — real-world adapter snippets for React Router, Next.js App Router, TanStack Router, and vanilla `window.location`
-- **[Persistence](./?path=/docs/adapters-persistence--docs)** — session/localStorage or backend-backed pause/resume
-- **[Steps](./?path=/docs/core-steps--docs)**, **[Sessions](./?path=/docs/core-sessions--docs)**, **[Cart](./?path=/docs/core-cart--docs)**, **[Auth](./?path=/docs/core-auth--docs)**, **[Events](./?path=/docs/core-events--docs)**, **[Custom State](./?path=/docs/core-custom-state--docs)** — what the library manages internally, and how you hook in
-- **[Components / CioPaymentProvider](./?path=/docs/components-ciopaymentprovider--docs)** — the basic shapes: single-page multi-step, express Buy Now, guest, with-login, routed, persistence
-- **[Components / CioPaymentProvider / Advanced](./?path=/story/components-ciopaymentprovider-advanced)** — obscure but real patterns: mid-flow add-to-cart, session recovery, custom fulfillment UI, backend storage, multi-instance, and more
+- **[Payment Providers](./?path=/docs/getting-started-payment-providers--docs)** — the `provider` prop, the built-in Stripe path, and how to register a custom PSP via module augmentation
+- **[Hook-only composition](./?path=/docs/getting-started-hook-only-composition--docs)** — recipes for Stripe elements split across pages and for PSPs the library ships no UI for
+- **[Routing](./?path=/docs/adapters-routing--docs)** — adapter snippets for React Router, Next.js App Router, TanStack Router, and vanilla `window.location`
+- **[Persistence](./?path=/docs/adapters-persistence--docs)** — sessionStorage or backend-backed pause/resume
+- **[Steps](./?path=/docs/core-steps--docs)**, **[Sessions](./?path=/docs/core-sessions--docs)**, **[Cart](./?path=/docs/core-cart--docs)**, **[Auth](./?path=/docs/core-auth--docs)**, **[Events](./?path=/docs/core-events--docs)**, **[Custom State](./?path=/docs/core-custom-state--docs)** — what the library manages internally and where you hook in
+- **[Components / CioCheckoutProvider](./?path=/docs/components-ciocheckoutprovider--docs)** — single-page multi-step, express Buy Now, guest, with-login, routed, and persistence shapes
 
 ## Three integration paths, one core
 
-| Path | Best for | Entry |
-|---|---|---|
-| React | React apps with the full flow | `<CioPaymentProvider>` + `useCioPayment()` |
-| Vanilla JS (npm) | Non-React SPAs or custom UIs | `new CioCheckoutFlow(config)` |
-| Standalone bundle | Server-rendered sites, `<script>` tags | `window.CioCheckout.resume(config)` |
+| Path              | Best for                               | Entry                                                          |
+| ----------------- | -------------------------------------- | -------------------------------------------------------------- |
+| React             | React apps with the full flow          | `<CioCheckoutProvider provider="stripe">` + `useCioCheckout()` |
+| Vanilla JS (npm)  | Non-React SPAs or custom UIs           | `createCheckoutFlow(config)`                                   |
+| Standalone bundle | Server-rendered sites, `<script>` tags | `window.CioCheckout.resume(config)`                            |
 
 All three wrap the same framework-agnostic `createCheckoutFlow(config)` core.
 
@@ -30,7 +30,7 @@ All three wrap the same framework-agnostic `createCheckoutFlow(config)` core.
 
 - Multi-step state machine (start / next / back / goTo / guards / optional steps)
 - Session lifecycle (create / update / expire / recreate) with a serialization queue for payment integrity
-- Storage adapter interface (opt-in — pass `storage` + `storageKey` to enable; `createSessionStorageAdapter()` gives local persistence, or supply your own backend adapter for B2B / multi-device pause-resume). The standalone `CioCheckout.resume()` entry injects the sessionStorage adapter automatically, but `CioPaymentProvider` / `new CioCheckoutFlow(config)` / `createCheckoutFlow(config)` do not — no persistence unless you opt in.
+- Storage adapter interface (opt-in — pass `storage` + `storageKey` to enable; `createSessionStorageAdapter()` gives local persistence, or supply your own backend adapter for B2B / multi-device pause-resume). The standalone `CioCheckout.resume()` entry injects the sessionStorage adapter automatically; `CioCheckoutProvider` and `createCheckoutFlow(config)` do not — persistence is opt-in.
 - Router adapter interface (URL sync for routed multi-step; MPA works via full-page navigation + storage rehydrate)
 - Default Stripe surface (`<CioStripePaymentStep>`) and default fulfillment UI (`<CioFulfillmentStep>`)
 - Typed events for analytics + error handling

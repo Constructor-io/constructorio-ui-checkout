@@ -7,11 +7,10 @@ import {
 
 import CheckoutForm from '@src/app/components/CheckoutForm';
 import CheckoutFormElements from '@src/app/components/CheckoutFormElements';
-import { useCioPayment } from '@src/app/hooks/useCioPayment';
+import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
 import checkoutManager from '@src/manager/CheckoutManager';
 import type {
   CheckoutComponentOverrides,
-  CheckoutLayout,
   CheckoutRedirectBehavior,
   CheckoutStripeOptions,
   CheckoutUiMode,
@@ -23,16 +22,11 @@ import './CioStripePaymentStep.css';
 export interface CioStripePaymentStepProps extends CheckoutStripeOptions {
   uiMode?: CheckoutUiMode;
   redirectBehavior?: CheckoutRedirectBehavior;
-  layout?: CheckoutLayout;
   translations?: Translations;
   componentOverrides?: CheckoutComponentOverrides;
   onError?: (error: Error) => void;
 }
 
-// Default renderer for the built-in `stripe` step. Auto-creates the session on
-// first render, loads Stripe, wraps in the appropriate provider based on
-// uiMode, and advances the flow on completion / marks it expired if Stripe
-// reports session expiry.
 export function CioStripePaymentStep({
   uiMode = 'form',
   redirectBehavior,
@@ -48,11 +42,16 @@ export function CioStripePaymentStep({
   adaptivePricing,
   syncAddressCheckbox,
 }: CioStripePaymentStepProps) {
-  const flow = useCioPayment();
+  const flow = useCioCheckout<'stripe'>();
+  const receivedProvider: string = flow.provider;
+  if (receivedProvider !== 'stripe') {
+    throw new Error(
+      `<CioStripePaymentStep> must be rendered inside <CioCheckoutProvider provider="stripe">, received provider="${receivedProvider}".`
+    );
+  }
   const session = flow.getSession();
   const sessionStatus = flow.state.sessionStatus;
   const mountedRef = useRef(true);
-  const notifiedErrorRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -71,14 +70,16 @@ export function CioStripePaymentStep({
   }, [flow, session, sessionStatus]);
 
   useEffect(() => {
-    if (sessionStatus === 'error' && !notifiedErrorRef.current) {
-      notifiedErrorRef.current = true;
-      onError?.(new Error('Failed to create checkout session'));
-    }
-    if (sessionStatus === 'idle' || sessionStatus === 'active') {
-      notifiedErrorRef.current = false;
-    }
-  }, [sessionStatus, onError]);
+    return flow.on((event) => {
+      if (event.type !== 'error') return;
+      if (
+        event.source === 'session.create' ||
+        event.source === 'payment.confirm'
+      ) {
+        onError?.(event.error);
+      }
+    });
+  }, [flow, onError]);
 
   const handleComplete = useCallback(() => {
     if (!mountedRef.current) return;
@@ -88,6 +89,13 @@ export function CioStripePaymentStep({
   const handleExpired = useCallback(() => {
     flow.markExpired();
   }, [flow]);
+
+  const handleConfirmError = useCallback(
+    (error: Error) => {
+      flow.emitError('payment.confirm', error);
+    },
+    [flow]
+  );
 
   const handleRetrySession = useCallback(() => {
     void flow.recreate();
@@ -157,7 +165,7 @@ export function CioStripePaymentStep({
       {uiMode === 'form' ? (
         <CheckoutForm
           onComplete={handleComplete}
-          onError={onError}
+          onError={handleConfirmError}
           onSessionExpired={handleExpired}
           layout={layout}
           redirectBehavior={redirectBehavior}
@@ -165,7 +173,7 @@ export function CioStripePaymentStep({
       ) : (
         <CheckoutFormElements
           onComplete={handleComplete}
-          onError={onError}
+          onError={handleConfirmError}
           onSessionExpired={handleExpired}
           translations={translations}
           componentOverrides={componentOverrides}

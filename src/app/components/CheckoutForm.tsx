@@ -78,8 +78,8 @@ export default function CheckoutForm({
       } else if (result.type === 'error') {
         onError?.(new Error(result.error.message));
       }
-    } catch (err) {
-      onError?.(err instanceof Error ? err : new Error(String(err)));
+    } catch (reason) {
+      onError?.(reason instanceof Error ? reason : new Error(String(reason)));
     }
   };
 

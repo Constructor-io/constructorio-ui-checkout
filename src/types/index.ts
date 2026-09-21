@@ -18,19 +18,46 @@ export interface Translations {
   'CioCheckout.checkout.payButtonLoadingLabel'?: string;
 }
 
-export interface CheckoutItem {
+export interface BaseCartItem {
+  id: string;
   name: string;
-  amount: number;
-  currencySign?: string;
-  quantity?: number;
-  priceId?: string;
-  imageUrl?: string;
+  unitAmount: number;
+  quantity: number;
 }
 
-export interface CheckoutSessionResponse {
+export type KeyOfType<T, R> = {
+  [K in keyof T]-?: T[K] extends R ? K : never;
+}[keyof T] &
+  string;
+
+export interface CartItemAccessors<TItem> {
+  id: KeyOfType<TItem, string> | ((item: TItem) => string);
+  quantity: KeyOfType<TItem, number> | ((item: TItem) => number);
+  unitAmount: KeyOfType<TItem, number> | ((item: TItem) => number);
+  name?: KeyOfType<TItem, string> | ((item: TItem) => string);
+}
+
+export interface BasePaymentSession {
+  sessionId?: string;
+}
+
+export interface StripePaymentSession extends BasePaymentSession {
   clientSecret: string;
   publishableKey: string;
 }
+
+export interface PaymentSessionMap {
+  stripe: StripePaymentSession;
+}
+
+export type BuiltInPaymentProvider = keyof PaymentSessionMap;
+
+export type PaymentProvider = BuiltInPaymentProvider | (string & {});
+
+export type PaymentSessionFor<TProvider extends string> =
+  TProvider extends keyof PaymentSessionMap
+    ? PaymentSessionMap[TProvider]
+    : BasePaymentSession;
 
 export type CheckoutUiMode = 'elements' | 'form';
 

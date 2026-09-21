@@ -1,8 +1,8 @@
 import { renderToString } from 'react-dom/server';
 
-import { CioFlowStep } from '@src/app/components/CioFlowStep';
-import { useCioPayment } from '@src/app/hooks/useCioPayment';
-import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
+import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
+import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
+import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 
 const stubSession = () =>
   Promise.resolve({
@@ -10,45 +10,48 @@ const stubSession = () =>
     publishableKey: 'pk_test',
   });
 
-describe(`${CioPaymentProvider.name}: server`, () => {
+describe(`${CioCheckoutProvider.name}: server`, () => {
   it('renders without throwing on the server', () => {
     const view = renderToString(
-      <CioPaymentProvider
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'cart' }]}
         onCreateSession={stubSession}
       >
         <span data-testid="child">child</span>
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
     expect(view).toContain('child');
   });
 
-  it('CioFlowStep renders nothing on the server when the flow has not started', () => {
+  it('CioCheckoutStep renders nothing on the server when the flow has not started', () => {
     const view = renderToString(
-      <CioPaymentProvider
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'cart' }]}
         onCreateSession={stubSession}
       >
-        <CioFlowStep id="cart">
+        <CioCheckoutStep id="cart">
           <span data-testid="cart">cart</span>
-        </CioFlowStep>
-      </CioPaymentProvider>
+        </CioCheckoutStep>
+      </CioCheckoutProvider>
     );
     expect(view).not.toContain('data-testid="cart"');
   });
 
-  it('useCioPayment returns state on the server', () => {
+  it('useCioCheckout returns state on the server', () => {
     function Probe() {
-      const flow = useCioPayment();
+      const flow = useCioCheckout();
       return <div data-status={flow.state.sessionStatus} />;
     }
     const view = renderToString(
-      <CioPaymentProvider
+      <CioCheckoutProvider
+        provider="stripe"
         steps={[{ id: 'cart' }]}
         onCreateSession={stubSession}
       >
         <Probe />
-      </CioPaymentProvider>
+      </CioCheckoutProvider>
     );
     expect(view).toContain('data-status="idle"');
   });
@@ -59,12 +62,13 @@ describe(`${CioPaymentProvider.name}: server`, () => {
     // more importantly, we assert no exception surfaces.
     expect(() =>
       renderToString(
-        <CioPaymentProvider
+        <CioCheckoutProvider
+          provider="stripe"
           steps={[{ id: 'cart' }, { id: 'pay' }]}
           onCreateSession={stubSession}
         >
           <span />
-        </CioPaymentProvider>
+        </CioCheckoutProvider>
       )
     ).not.toThrow();
   });

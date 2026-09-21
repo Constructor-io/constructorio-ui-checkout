@@ -4,7 +4,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Persistence & Resume
 
-By default the flow is in-memory only. Pass a `storage` adapter + `storageKey` and the library serializes `FlowState` on every change (debounced) and hydrates on next mount. This is what powers refresh survival, deep-link resume, B2B pause/resume, and emailed abandoned-cart links.
+By default the flow is in-memory only. Pass a `storage` adapter and `storageKey` and the library serializes `CheckoutFlowState` on every change (debounced) and hydrates on the next mount. This powers refresh survival, deep-link resume, B2B pause/resume, and emailed abandoned-cart links.
 
 ## Full example
 
@@ -14,16 +14,16 @@ End-to-end wiring for a B2B pause/resume flow with backend storage, per-order ke
 import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
-  CioPaymentProvider,
-  CioFlowStep,
+  CioCheckoutProvider,
+  CioCheckoutStep,
   CioStripePaymentStep,
   PAYMENT_STEP,
-  useCioPayment,
+  useCioCheckout,
 } from '@constructor-io/constructorio-ui-checkout';
-import type { StorageAdapter } from '@constructor-io/constructorio-ui-checkout';
+import type { CheckoutStorageAdapter } from '@constructor-io/constructorio-ui-checkout';
 import { getAuthToken, getUserId } from './lib/auth';
 
-const backendStorage: StorageAdapter = {
+const backendStorage: CheckoutStorageAdapter = {
   save: (key, state) =>
     fetch(`/api/checkout/${encodeURIComponent(key)}`, {
       method: 'PUT',
@@ -68,7 +68,8 @@ function CheckoutApp() {
   );
 
   return (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[
         { id: 'cart', path: '/cart' },
         { id: 'approval', path: '/checkout/approval' },
@@ -88,23 +89,27 @@ function CheckoutApp() {
       }}
       autoStart
     >
-      <CioFlowStep id="cart"><CartView /></CioFlowStep>
-      <CioFlowStep id="approval"><ApprovalGate /></CioFlowStep>
-      <CioFlowStep id={PAYMENT_STEP}>
+      <CioCheckoutStep id="cart">
+        <CartView />
+      </CioCheckoutStep>
+      <CioCheckoutStep id="approval">
+        <ApprovalGate />
+      </CioCheckoutStep>
+      <CioCheckoutStep id={PAYMENT_STEP}>
         <CioStripePaymentStep />
-      </CioFlowStep>
-      <CioFlowStep id="done">
+      </CioCheckoutStep>
+      <CioCheckoutStep id="done">
         <OrderConfirmed />
-      </CioFlowStep>
-    </CioPaymentProvider>
+      </CioCheckoutStep>
+    </CioCheckoutProvider>
   );
 }
 
 function OrderConfirmed() {
-  const { clearState } = useCioPayment();
+  const { clearState } = useCioCheckout();
   useEffect(() => {
     // Remove the stored entry so a page refresh doesn't resume a finished order.
-    // useCioPayment() returns a new wrapper each render, but the underlying
+    // useCioCheckout() returns a new wrapper each render, but the underlying
     // clearState reference is stable — depend on it, not on the whole hook.
     clearState();
   }, [clearState]);
@@ -112,17 +117,18 @@ function OrderConfirmed() {
 }
 ```
 
-That covers create, resume from URL token, backend transport, auth on every call, error reporting, and cleanup. The sections below unpack each choice.
+That covers create, resume from URL token, backend transport, auth on every call, error reporting, and cleanup. The sections below unpack each decision.
 
 ## Enabling storage
 
 ```tsx
 import {
-  CioPaymentProvider,
+  CioCheckoutProvider,
   createSessionStorageAdapter,
 } from '@constructor-io/constructorio-ui-checkout';
 
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   storage={createSessionStorageAdapter()}
   storageKey={`checkout-${userId}`}     // scoped per user
   storageSaveDebounceMs={150}            // default
@@ -136,21 +142,21 @@ Nothing else changes about your integration. State auto-saves on every mutation,
 ## Adapter shape
 
 ```ts
-interface StorageAdapter {
-  load(key: string): Promise<FlowState | null>;
-  save(key: string, state: FlowState): Promise<void>;
+interface CheckoutStorageAdapter {
+  load(key: string): Promise<CheckoutFlowState | null>;
+  save(key: string, state: CheckoutFlowState): Promise<void>;
   clear(key: string): Promise<void>;
 }
 ```
 
-All three methods are async. The built-in `createSessionStorageAdapter()` is a thin wrapper over `sessionStorage` that returns resolved promises; async adapters (Redis, DynamoDB, whatever) work identically.
+All three methods are async. The built-in `createSessionStorageAdapter()` is a thin wrapper over `sessionStorage` that returns resolved promises; async adapters (Redis, DynamoDB, etc.) work identically.
 
 ## Backend storage (B2B / multi-device)
 
-For B2B pause/resume — buyer starts on a laptop, an approver finishes on a phone — you want the state on your server, not in the browser:
+For B2B pause/resume — buyer starts on a laptop, an approver finishes on a phone — state belongs on your server, not in the browser:
 
 ```ts
-const backendStorage: StorageAdapter = {
+const backendStorage: CheckoutStorageAdapter = {
   save: (key, state) =>
     fetch(`/api/checkout/${key}`, {
       method: 'PUT',
@@ -174,28 +180,29 @@ const backendStorage: StorageAdapter = {
     }),
 };
 
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   storage={backendStorage}
   storageKey={`b2b-order-${orderId}`}
   ...
 />
 ```
 
-Return `null` from `load` only for the "no saved state" case (e.g. 404). Throw on any other failure so the error routes through `onEvent` and doesn't silently start a fresh flow over recoverable backend state.
+Return `null` from `load` only for the "no saved state" case (e.g. 404). Throw on any other failure so the error routes through `onEvent` rather than silently starting a fresh flow over recoverable backend state.
 
-The library will call `save` on every state change (debounced by `storageSaveDebounceMs`, default 150ms) and `load` at start. It handles serialization; you handle the transport.
+The library calls `save` on every state change (debounced by `storageSaveDebounceMs`, default 150ms) and `load` at start. It handles serialization; you handle the transport.
 
 ## storageKey naming
 
 The key namespaces the persisted entry. Two rules:
 
-**Scope per user, not per app.** `checkout` (bare) collides across users on a shared device. `checkout-${userId}` or `checkout-${cartId}` is what you want.
+**Scope per user, not per app.** A bare `checkout` collides across users on a shared device. Use `checkout-${userId}` or `checkout-${cartId}`.
 
-**Change the key to invalidate.** If you release breaking changes to your step config, bumping the key (`checkout-v2-${userId}`) makes existing users start fresh instead of hydrating into a broken state.
+**Change the key to invalidate.** When releasing breaking changes to the step config, bump the key (`checkout-v2-${userId}`) so existing users start fresh instead of hydrating into a broken state.
 
 ## What gets saved
 
-Everything in `FlowState`:
+Everything in `CheckoutFlowState`:
 
 - `currentStepId` — where the user was
 - `completedStepIds` — which steps they finished
@@ -204,35 +211,38 @@ Everything in `FlowState`:
 - `metadata` — your integrator state key
 - `schemaVersion` — used to reject incompatible saves
 
-**What isn't saved: the in-memory `session` (`clientSecret`).** That lives only in RAM. On hydrate with `sessionStatus: 'active'`, the library downgrades to `sessionStatus: 'idle'` so the next `CioStripePaymentStep` mount will call `onCreateSession` again to recover. See [Sessions](./?path=/docs/core-sessions--docs#sessions-and-persistence) for the full explanation.
+**What isn't saved: the in-memory `session` (`clientSecret`).** That lives only in RAM. On hydrate with `sessionStatus: 'active'`, the library downgrades to `sessionStatus: 'idle'` so the next `CioStripePaymentStep` mount calls `onCreateSession` again to recover. See [Sessions](./?path=/docs/core-sessions--docs#sessions-and-persistence) for the full explanation.
 
 ## Storage precedence over deep links
 
-When both storage and a `router` are configured, storage wins on hydration. If a persisted state exists, `start()` restores it and pushes the stored step's path — the stored step wins over the current URL. An emailed link to `/checkout/payment` where the persisted state points at `cart` will resume at `cart`.
+When both storage and a `router` are configured, storage wins on hydration. If a persisted state exists, `start()` restores it and pushes the stored step's path — the stored step overrides the current URL. An emailed link to `/checkout/payment` where the persisted state points at `cart` resumes at `cart`.
 
-If you want deep links to override storage, either:
+To let deep links override storage, either:
+
 - Call `flow.clearState()` before mounting the provider, or
-- Skip `storage` on the checkout landing page and only pass it on interior pages.
+- Skip `storage` on the checkout landing page and pass it only on interior pages.
 
 ## Abandoned-cart recovery
 
-Common pattern: buyer partially fills the flow, closes the tab, gets an emailed link a day later, clicks it, lands back on the payment step with cart hydrated.
+Common pattern: buyer partially fills the flow, closes the tab, receives an emailed link a day later, clicks it, and lands back on the payment step with the cart hydrated.
 
 Sequence:
-1. Flow is running; `storage.save()` writes state on every change.
-2. User closes tab. Data is in sessionStorage (survives that tab's session) or your backend (survives everything).
-3. User clicks the emailed link → same URL.
-4. `<CioPaymentProvider>` mounts, `start()` hydrates from storage.
-5. Flow enters the persisted step. `CioStripePaymentStep` re-runs `onCreateSession` to recover the session (since `clientSecret` didn't persist).
-6. Buyer picks up where they left off.
 
-For emailed recovery, backend storage is the right choice (sessionStorage doesn't survive cross-device). Use the recovery token from the email URL as the `storageKey`:
+1. Flow runs; `storage.save()` writes state on every change.
+2. User closes the tab. State sits in sessionStorage (survives that tab's session) or your backend (survives everything).
+3. User clicks the emailed link at the same URL.
+4. `<CioCheckoutProvider provider="stripe">` mounts and `start()` hydrates from storage.
+5. Flow enters the persisted step. `CioStripePaymentStep` re-runs `onCreateSession` to recover the session (since `clientSecret` did not persist).
+6. Buyer resumes where they left off.
+
+For emailed recovery, use backend storage — sessionStorage does not survive cross-device. Use the recovery token from the email URL as the `storageKey`:
 
 ```tsx
 const params = new URLSearchParams(location.search);
 const recoveryToken = params.get('recover');   // e.g. '?recover=abc123'
 
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   storage={backendStorage}
   storageKey={recoveryToken ?? `checkout-${userId}`}
   ...
@@ -241,22 +251,18 @@ const recoveryToken = params.get('recover');   // e.g. '?recover=abc123'
 
 ## Clearing state
 
-Two APIs — pick based on intent:
-
-**`flow.reset()`** — clear in-memory state only. Doesn't touch storage.
-
-**`flow.clearState()`** — clear in-memory state *and* the stored entry. Awaits pending saves, calls `storage.clear(key)`. Use this on "start over" or after successful checkout completion.
+**`flow.clearState()`** — clears in-memory state _and_ the stored entry. Awaits pending saves, then calls `storage.clear(key)`. Use on "start over" or after successful checkout completion.
 
 ```tsx
 async function onOrderConfirmed() {
-  await flow.clearState();   // removes the stored entry
+  await flow.clearState(); // removes the stored entry
   navigate('/');
 }
 ```
 
 ## Storage error handling
 
-If `save` / `load` / `clear` throws or rejects, the library emits an error event:
+When `save`, `load`, or `clear` throws or rejects, the library emits an error event:
 
 ```tsx
 onEvent: (event) => {
@@ -264,24 +270,91 @@ onEvent: (event) => {
     reportToSentry(event.error);
     // The flow keeps running with in-memory state.
   }
-}
+};
 ```
 
-The built-in `createSessionStorageAdapter()` behaves slightly differently across operations:
+The built-in `createSessionStorageAdapter()` behaves differently across operations:
 
-- **Storage unavailable** (SSR, private mode with `sessionStorage` disabled, sandboxed iframe): every operation resolves silently — nothing is saved or cleared, and `load` returns `null`. You won't see a `storage` error event, because storage is a no-op.
-- **Storage available but the operation fails at write time** (quota exceeded, non-serializable state): `save` rejects and the error routes through `onEvent`. `load` returns `null` for corrupted entries and clears the bad entry so it doesn't wedge future loads.
+- **Storage unavailable** (SSR, private mode with `sessionStorage` disabled, sandboxed iframe): every operation resolves silently — nothing is saved or cleared, and `load` returns `null`. No `storage` error event fires, because storage is a no-op.
+- **Storage available but the operation fails at write time** (quota exceeded, non-serializable state): `save` rejects and the error routes through `onEvent`. `load` returns `null` for corrupted entries and clears the bad entry so it does not wedge future loads.
 
-If you need to distinguish "storage disabled" from "storage failed", wrap the adapter and probe explicitly, or write your own adapter that throws on unavailable storage.
+To distinguish "storage disabled" from "storage failed", wrap the adapter and probe explicitly, or write a custom adapter that throws on unavailable storage.
 
 ## Schema versioning
 
-`FlowState.schemaVersion` is currently `1`. When the library bumps it, entries saved under the old version are treated as invalid on load and dropped — buyers start fresh instead of hydrating into a broken shape.
+`CheckoutFlowState.schemaVersion` is currently `1`. When the library bumps it, entries saved under the old version are dropped on load — buyers start fresh instead of hydrating into a broken shape.
 
-If you extend `FlowState` via `metadata` or `integratorState` and later change your own schema, treat it the same way: bump `storageKey` to invalidate old entries.
+When extending `CheckoutFlowState` through `metadata` or `integratorState` and later changing that schema, apply the same rule: bump `storageKey` to invalidate old entries.
+
+## Security
+
+Persisted `CheckoutFlowState` is plain JSON, readable by any script running on the
+same origin.
+
+### What is persisted
+
+- `currentStepId`, `completedStepIds`, `sessionStatus`, `schemaVersion` —
+  flow navigation only.
+- `sessionId` — the session's public identifier (e.g. Stripe's
+  `cs_test_abc…`). A handle for reconnecting the flow; cannot charge on its
+  own.
+- `cartSnapshot` — items in whatever shape you passed to the Provider
+  (`BaseCartItem` fields `id`, `name`, `unitAmount`, `quantity` at minimum,
+  plus any extra fields on your custom `TItem`). Not PII, but discloses what a
+  shopper is buying and at what price. Use an encrypted or backend adapter if
+  that itself is sensitive (regulated goods, personalized pricing, B2B
+  contracts).
+- `currency` — the currency code passed to the Provider (or `null` if
+  unset).
+- `metadata` — merchant-owned, serialized verbatim. See "PII in metadata"
+  below.
+
+### What is never persisted
+
+- **`clientSecret` and full session response.** In-memory only. On hydrate,
+  `sessionStatus` downgrades from `active` to `idle` so `onCreateSession`
+  reconnects.
+- **Payment method details, PAN, CVV.** Handled by the PSP, never touched by
+  this library.
+- **PSP credentials.** API keys, publishable keys, and any tokens returned
+  by the PSP's client SDK are not stored.
+
+### PII in metadata
+
+`metadata` is the primary exposure surface because merchants fill it and the
+library stores it verbatim. An email or shipping address written to
+`metadata` lands in sessionStorage — readable by any script on the origin,
+including installed browser extensions with page-content permissions.
+
+Three options if PII must move across steps:
+
+- **Server round-trip.** Submit the value to your backend and read it back
+  through `onCreateSession` or a dedicated API when needed. Nothing
+  sensitive persists client-side.
+- **Encrypted adapter.** Wrap the built-in adapter so `save` encrypts and
+  `load` decrypts. Fetch the key from your backend per session; embedding it
+  in the bundle moves the exposure rather than removing it.
+- **Skip persistence.** Omit `storage` / `storageKey`. The flow runs
+  in-memory; refresh starts over.
+
+### Threat model
+
+| Threat             | sessionStorage default                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| Tab close          | Cleared automatically                                                                       |
+| Private browsing   | Cleared with the session; some browsers disable storage entirely (the adapter no-ops)       |
+| Cross-origin site  | Isolated per origin by the browser                                                          |
+| Network sniffing   | Never transmitted unless your code sends it                                                 |
+| XSS on your origin | Readable — but the same attacker already reads React state and issues authenticated fetches |
+| Session ID replay  | `sessionId` alone cannot charge; the PSP token / `clientSecret` stays in memory             |
+
+For B2B, regulated (HIPAA, PCI beyond the PSP's scope), or high-value flows,
+use a backend `CheckoutStorageAdapter` and guard it with your existing auth.
 
 ## What isn't the library's problem
 
-- **Cross-tab sync.** If a user opens two tabs on the same flow, they'll fight for storage. Use a mutex (BroadcastChannel + a locking scheme) or design your flow so only one tab is active.
-- **Encryption at rest.** Persisted state can contain PII (cart contents, addresses). If that's a concern, encrypt in your adapter's `save` and decrypt in `load`.
-- **Retention.** The library never expires stored entries. Prune them yourself if regulatory (GDPR/CCPA) or storage-cost concerns apply.
+- **Cross-tab sync.** If a user opens two tabs on the same flow, they'll
+  fight for storage. Use a mutex (BroadcastChannel + a locking scheme) or
+  design your flow so only one tab is active.
+- **Retention.** The library never expires stored entries. Prune them
+  yourself if regulatory (GDPR / CCPA) or storage-cost concerns apply.

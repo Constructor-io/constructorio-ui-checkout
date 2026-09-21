@@ -4,23 +4,23 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Routing
 
-The `router` prop is an adapter — you plug in your app's router so the checkout flow can push URLs on step transitions and react to browser back / refresh / deep links.
+The `router` prop is an adapter — plug in your app's router so the checkout flow can push URLs on step transitions and react to browser back, refresh, and deep links.
 
 ## Router adapter shape
 
 ```ts
-interface RouterAdapter {
+interface CheckoutRouterAdapter {
   push(path: string): void;
   getCurrentPath(): string;
   subscribe?(cb: (path: string) => void): () => void;
 }
 ```
 
-- `push` — called when the flow enters a step that has a `path`
-- `getCurrentPath` — called on mount to reconcile the flow to the current URL
-- `subscribe` (optional) — the flow listens for browser back / external nav and re-syncs state
+- `push` — called when the flow enters a step with a `path`.
+- `getCurrentPath` — called on mount to reconcile the flow to the current URL.
+- `subscribe` (optional) — the flow listens for browser back / external nav and re-syncs state.
 
-The library validates `path` for safety (rejects `javascript:`, `data:`, `vbscript:`, `file:` URLs).
+The library validates `path` for safety, rejecting `javascript:`, `data:`, `vbscript:`, and `file:` URLs.
 
 ## React Router (v6+)
 
@@ -54,9 +54,9 @@ function useReactRouterAdapter() {
 function App() {
   const router = useReactRouterAdapter();
   return (
-    <CioPaymentProvider steps={[...]} router={router} onCreateSession={...}>
+    <CioCheckoutProvider provider="stripe" steps={[...]} router={router} onCreateSession={...}>
       <Routes>{/* your routes */}</Routes>
-    </CioPaymentProvider>
+    </CioCheckoutProvider>
   );
 }
 ```
@@ -122,15 +122,16 @@ function useTanStackRouterAdapter() {
 
 ## Vanilla `window.location` (multi-page apps)
 
-Traditional server-rendered sites (Shopify Liquid, WooCommerce, Rails, plain PHP) navigate via full page loads. Combine `window.location` with a storage adapter — the flow rehydrates on the next page:
+Server-rendered sites (Shopify Liquid, WooCommerce, Rails, plain PHP) navigate through full page loads. Combine `window.location` with a storage adapter so the flow rehydrates on the next page:
 
 ```js
 const flow = CioCheckout.resume({
+  provider: 'stripe',
   steps: [
-    { id: 'cart',   path: '/cart' },
+    { id: 'cart', path: '/cart' },
     { id: 'payment', path: '/checkout/payment' },
   ],
-  onCreateSession: () => fetch('/api/session').then(r => r.json()),
+  onCreateSession: () => fetch('/api/session').then((r) => r.json()),
   storageKey: 'user-123',
   router: {
     push: (path) => (window.location.href = path),
@@ -143,11 +144,11 @@ flow.start();
 
 ## Refresh, deep links, and browser back
 
-- **Refresh** on a routed step: the flow reads `getCurrentPath()` on mount and enters that step (skipping the default first step).
-- **Deep link** from an email to `/checkout/payment`: same as refresh — flow lands on `payment`. Combine with a `storage` adapter so completed prior steps (`cart`, `address`) are marked done and the payment step has the correct cart snapshot.
-- **Storage precedence when both are configured**: if a persisted flow state exists, `start()` restores it and pushes the stored step's path — the stored step wins over the current URL. An emailed deep link to `/checkout/payment` for a session where the persisted state points at `cart` will resume at `cart`. Call `clearState()` (or omit `storage`) if you want deep links to override storage.
-- **Browser back**: `subscribe(cb)` fires with the new path; the flow syncs its `currentStepId` to match. Steps without a `path` don't participate (modals aren't deep-linkable by design).
+- **Refresh** on a routed step: the flow reads `getCurrentPath()` on mount and enters that step, skipping the default first step.
+- **Deep link** from an email to `/checkout/payment`: same as refresh — the flow lands on `payment`. Combine with a `storage` adapter so completed prior steps (`cart`, `address`) are marked done and the payment step has the correct cart snapshot.
+- **Storage precedence when both are configured**: if a persisted flow state exists, `start()` restores it and pushes the stored step's path — the stored step overrides the current URL. An emailed deep link to `/checkout/payment` for a session whose persisted state points at `cart` resumes at `cart`. Call `clearState()` (or omit `storage`) to let deep links override storage.
+- **Browser back**: `subscribe(cb)` fires with the new path; the flow syncs its `currentStepId` to match. Steps without a `path` do not participate (modals are not deep-linkable by design).
 
 ## Mixed routed + non-routed steps
 
-Any step can omit `path` — it becomes inline/modal within whatever route the merchant is on. See the `Mixed routed + inline modal steps` story for an example (cart at `/cart`, auth as a modal over cart, payment at `/checkout/payment`).
+Any step can omit `path` and become inline/modal within the current route. See the `Mixed routed + inline modal steps` story for an example (cart at `/cart`, auth as a modal over cart, payment at `/checkout/payment`).

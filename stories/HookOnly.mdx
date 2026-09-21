@@ -4,201 +4,259 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Hook-only composition
 
-`useCioPayment()` is the primitive. `CioFlowStep`, `CioStripePaymentStep`, and `CioFulfillmentStep` are conveniences that read from the same hook. When the built-in components don't fit — you want a custom Stripe wrapper, a non-standard layout, a route-per-step split — drop them and drive the flow from the hook directly.
+`useCioCheckout()` is the primitive. `CioCheckoutStep`, `CioStripePaymentStep`,
+and `CioFulfillmentStep` are conveniences that read from the same hook. When
+the built-in components don't fit — a Stripe surface split across multiple
+pages, a PSP the library doesn't ship UI for, or an unusual render tree —
+drive the flow from the hook directly.
 
-This page shows what that looks like end-to-end. If the default step components cover you, prefer them; this is the escape hatch, not the default path.
+## What each built-in does
 
-## What each built-in actually does
+- **`<CioCheckoutStep id="x">`** — three lines. Returns `null` unless
+  `state.currentStepId === 'x'`. Any gate does the same job.
+- **`<CioStripePaymentStep>`** — kicks off `flow.createSession()` on mount,
+  wraps children in `CheckoutFormProvider` or `CheckoutElementsProvider`, and
+  calls `flow.next()` on confirm. Reproducible in roughly 30 lines.
+- **`<CioFulfillmentStep>`** — polls `onFulfill` and advances on success.
 
-- **`<CioFlowStep id="x">`** — three lines. Returns `null` unless `state.currentStepId === 'x'`. You can replace it with any gate.
-- **`<CioStripePaymentStep>`** — kicks off `flow.createSession()` on mount, wraps children in `CheckoutFormProvider` or `CheckoutElementsProvider`, and calls `flow.next()` on confirm. All of that is doable in ~30 lines of your own code.
-- **`<CioFulfillmentStep>`** — polls your `onFulfill` and advances on success. Same pattern.
+Bypassing them trades those 30 lines of boilerplate for full control over the
+render tree.
 
-Bypassing them means you write those ~30 lines yourself, in exchange for owning the render tree.
+## Example 1 — Stripe elements across multiple pages
 
-## Minimal hook-only example
+The built-in `<CioStripePaymentStep>` renders address, payment, and pay
+button in one place. When Stripe's `AddressElement` lives on
+`/checkout/address` and `PaymentElement` on `/checkout/payment`, both must
+live inside the _same_ `<CheckoutFormProvider>` — one Stripe session, one
+`clientSecret`, elements split across routes.
 
-Same flow as the Quick Start, but with no built-in step components — just `useCioPayment` and raw `@stripe/react-stripe-js`:
+Pattern: mount `CheckoutFormProvider` above the router, render Stripe
+elements per route inside it, and use `useCioCheckout()` for navigation.
 
 ```tsx
 import { useEffect, useMemo } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import {
   CheckoutFormProvider,
+  AddressElement,
+  PaymentElement,
   useCheckoutForm,
 } from '@stripe/react-stripe-js/checkout';
+import { Route, Routes, Navigate, useNavigate } from 'react-router-dom';
 import {
-  CioPaymentProvider,
-  useCioPayment,
+  CioCheckoutProvider,
+  useCioCheckout,
   PAYMENT_STEP,
 } from '@constructor-io/constructorio-ui-checkout';
 
 function App() {
+  const navigate = useNavigate();
   return (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[
-        { id: 'cart' },
-        { id: 'address' },
-        { id: PAYMENT_STEP },
-        { id: 'done' },
+        { id: 'cart', path: '/checkout/cart' },
+        { id: 'address', path: '/checkout/address' },
+        { id: PAYMENT_STEP, path: '/checkout/payment' },
+        { id: 'done', path: '/checkout/done' },
       ]}
+      router={{
+        getCurrentPath: () => window.location.pathname,
+        push: (p) => navigate(p),
+      }}
       onCreateSession={() =>
         fetch('/api/checkout-session', { method: 'POST' }).then((r) => r.json())
       }
     >
-      <Checkout />
-    </CioPaymentProvider>
+      <StripeShell />
+    </CioCheckoutProvider>
   );
 }
 
-function Checkout() {
-  const flow = useCioPayment();
-
-  if (flow.state.currentStepId === null) {
-    return <button onClick={() => flow.start()}>Checkout</button>;
-  }
-
-  switch (flow.state.currentStepId) {
-    case 'cart':
-      return <MyCart onNext={() => flow.next()} />;
-    case 'address':
-      return (
-        <MyAddress
-          onBack={() => flow.back()}
-          onNext={() => flow.next()}
-        />
-      );
-    case PAYMENT_STEP:
-      return <MyStripeStep />;
-    case 'done':
-      return <MyConfirmation />;
-    default:
-      return null;
-  }
-}
-
-// Your own Stripe wrapper — full control over provider, options, elements.
-function MyStripeStep() {
-  const flow = useCioPayment();
+// One Stripe session, one CheckoutFormProvider — shared across every route.
+function StripeShell() {
+  const flow = useCioCheckout();
   const session = flow.getSession();
+  const status = flow.state.sessionStatus;
 
   useEffect(() => {
-    if (!session && flow.state.sessionStatus === 'idle') {
-      flow.createSession();
-    }
-  }, [session, flow]);
+    if (status === 'idle') void flow.createSession();
+    if (status === 'expired') void flow.recreate();
+  }, [flow, status]);
 
   const stripe = useMemo(
     () => (session ? loadStripe(session.publishableKey) : null),
     [session]
   );
 
-  if (!session || !stripe) return <div>Loading payment…</div>;
+  if (!session || !stripe) return <p>Loading…</p>;
 
   return (
     <CheckoutFormProvider
       stripe={stripe}
-      options={{
-        clientSecret: session.clientSecret,
-        appearance: myBrandAppearance,
-      }}
+      options={{ clientSecret: session.clientSecret }}
     >
-      <MyPayButton />
+      <Routes>
+        <Route path="/checkout/cart" element={<CartPage />} />
+        <Route path="/checkout/address" element={<AddressPage />} />
+        <Route path="/checkout/payment" element={<PaymentPage />} />
+        <Route path="/checkout/done" element={<Confirmation />} />
+        <Route path="*" element={<Navigate to="/checkout/cart" replace />} />
+      </Routes>
     </CheckoutFormProvider>
   );
 }
 
-function MyPayButton() {
+function AddressPage() {
+  const flow = useCioCheckout();
+  return (
+    <>
+      <AddressElement options={{ mode: 'shipping' }} />
+      <button onClick={() => flow.back()}>Back</button>
+      <button onClick={() => flow.next()}>Continue to payment</button>
+    </>
+  );
+}
+
+function PaymentPage() {
+  const flow = useCioCheckout();
   const checkout = useCheckoutForm();
-  const flow = useCioPayment();
   return (
-    <button
-      onClick={async () => {
-        const result = await checkout.confirm({ redirect: 'if_required' });
-        if (result.type === 'success') flow.next();
+    <>
+      <PaymentElement />
+      <button onClick={() => flow.back()}>Back</button>
+      <button
+        onClick={async () => {
+          const result = await checkout.confirm({ redirect: 'if_required' });
+          if (result.type === 'success') flow.next();
+        }}
+      >
+        Pay
+      </button>
+    </>
+  );
+}
+```
+
+One Stripe session drives both pages. Refresh and deep-links work because the
+router adapter keeps `flow.state.currentStepId` and the URL in sync — see
+[Routing](./?path=/docs/adapters-routing--docs) for the adapter contract and
+examples (React Router, Next.js App Router, TanStack).
+
+## Example 2 — a non-Stripe PSP end-to-end
+
+For any PSP the library ships no UI for (Adyen, Braintree, in-house, sandbox),
+keep the flow, session lifecycle, storage, routing, and events; own the
+payment surface.
+
+**Register the session shape** once through module augmentation so the flow is
+strongly typed:
+
+```ts
+import type { BasePaymentSession } from '@constructor-io/constructorio-ui-checkout';
+
+export interface MyPspSession extends BasePaymentSession {
+  approvalToken: string;
+  merchantId: string;
+}
+
+declare module '@constructor-io/constructorio-ui-checkout' {
+  interface PaymentSessionMap {
+    'my-psp': MyPspSession;
+  }
+}
+```
+
+Once augmented, every `<CioCheckoutProvider provider="my-psp">` and
+`useCioCheckout<'my-psp'>()` call resolves the session to `MyPspSession` —
+full autocomplete on `session.approvalToken`, and a compile-time error if
+`onCreateSession` returns the wrong shape.
+
+**Wire the provider and drive it from the hook:**
+
+```tsx
+function App() {
+  return (
+    <CioCheckoutProvider
+      provider="my-psp"
+      steps={[{ id: 'cart' }, { id: PAYMENT_STEP }, { id: 'done' }]}
+      onCreateSession={async () => {
+        const res = await fetch('/api/my-psp-session', { method: 'POST' });
+        return res.json();
+      }}
+      onEvent={(event) => {
+        if (event.type === 'session.created') console.log(event.sessionId);
       }}
     >
-      Pay
-    </button>
-  );
-}
-```
-
-Everything the built-in `<CioStripePaymentStep>` did is now visible in `MyStripeStep`. Add whatever you need: a saved-card dropdown, a wallet button, a custom loader, `AddressElement` inside the same provider, per-brand `appearance`.
-
-## Route-per-step
-
-Pair the hook with a router: each URL renders a component that reads `flow.state.currentStepId` and either shows its step or redirects. See [Routing](./?path=/docs/adapters-routing--docs) for the adapter shape.
-
-```tsx
-import { Route, Routes, Navigate } from 'react-router-dom';
-
-function CheckoutRoutes() {
-  const flow = useCioPayment();
-
-  return (
-    <Routes>
-      <Route path="/cart" element={<GateStep id="cart"><MyCart /></GateStep>} />
-      <Route
-        path="/checkout/address"
-        element={<GateStep id="address"><MyAddress /></GateStep>}
-      />
-      <Route
-        path="/checkout/payment"
-        element={<GateStep id={PAYMENT_STEP}><MyStripeStep /></GateStep>}
-      />
-      <Route path="/order/confirmed" element={<MyConfirmation />} />
-    </Routes>
+      <Cart />
+      <MyPspPaymentStep />
+      <Confirmation />
+    </CioCheckoutProvider>
   );
 }
 
-// The flow.state.currentStepId is the source of truth. If the user lands on
-// /checkout/payment but the flow says they're still on 'cart' (e.g. deep-link
-// into an incomplete flow), send them back.
-function GateStep({ id, children }: { id: string; children: React.ReactNode }) {
-  const { state } = useCioPayment();
-  if (state.currentStepId === null) return <Navigate to="/cart" replace />;
-  if (state.currentStepId !== id) {
-    const currentPath = pathFor(state.currentStepId);
-    return <Navigate to={currentPath} replace />;
+function MyPspPaymentStep() {
+  const flow = useCioCheckout<'my-psp'>();
+  const session = flow.getSession(); // MyPspSession | null
+  const status = flow.state.sessionStatus;
+
+  useEffect(() => {
+    if (status === 'idle') void flow.createSession();
+    if (status === 'expired') void flow.recreate();
+  }, [flow, status]);
+
+  if (flow.state.currentStepId !== PAYMENT_STEP) return null;
+
+  if (status === 'error') {
+    return (
+      <div role="alert">
+        <p>Failed to prepare payment.</p>
+        <button onClick={() => flow.recreate()}>Retry</button>
+      </div>
+    );
   }
-  return <>{children}</>;
-}
-```
 
-With `router` configured on the provider, `flow.next()` pushes the next step's URL and this same gate keeps refresh + back-button honest.
-
-## Varying Stripe per route (not per step)
-
-A common ask that reads like "different Stripe steps for different paths" is really "one Stripe step whose props vary." Don't register two Stripe steps — the state machine tracks one payment step, not two. Vary the props on your own wrapper instead:
-
-```tsx
-function MyStripeStep() {
-  const flow = useCioPayment();
-  const brand = useBrandFromRoute(); // e.g. 'us-storefront' | 'uk-storefront'
-  const session = flow.getSession();
-  // ... (session-loading omitted, same as above)
-
-  const options = {
-    clientSecret: session.clientSecret,
-    appearance: brandAppearances[brand],
-    layout: brand === 'uk-storefront' ? 'compact' : 'expanded',
-  };
+  if (!session) return <p>Loading…</p>;
 
   return (
-    <CheckoutFormProvider stripe={stripe} options={options}>
-      <MyPayButton />
-    </CheckoutFormProvider>
+    <MyPspSdkWidget
+      approvalToken={session.approvalToken}
+      merchantId={session.merchantId}
+      onComplete={() => flow.next()}
+      onError={(err) => console.error(err)}
+      onExpired={() => flow.markExpired()}
+    />
   );
 }
 ```
 
-If you genuinely need distinct payment surfaces on different paths (e.g. Stripe on one route, an alternate PSP on another), that's a multi-PSP concern rather than a multi-step one — one step ID with a branching renderer.
+When the response includes an identifier meaningful outside the PSP's SDK,
+expose it as `sessionId`. The library uses it in emitted `session.created` /
+`session.updated` / `session.expired` / `session.recreated` events.
+
+When multiple flows share the same PSP UI, wrap `MyPspPaymentStep` in a
+dedicated component — the same reason the library ships
+`<CioStripePaymentStep>` for Stripe.
+
+## What the hook covers regardless of PSP
+
+| Concern           | Managed by the library                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| Navigation        | `flow.start()`, `flow.next()`, `flow.back()`, `flow.goTo()`, guards, optional steps     |
+| Session lifecycle | `flow.createSession()`, `flow.updateSession()`, `flow.recreate()`, `flow.markExpired()` |
+| Cart              | `flow.setCart()`, `flow.syncCart()` — debounced, serialized against session updates     |
+| Persistence       | Any `CheckoutStorageAdapter` — sessionStorage default, or your own backend adapter      |
+| Routing           | Any `CheckoutRouterAdapter` — React Router, Next.js, TanStack, plain `window.location`  |
+| Observability     | `onEvent` — `session.*`, `flow.*`, `step.*`, `state.changed`, `error`                   |
 
 ## When to keep the built-ins
 
-- You're on the standard Stripe surface (`PaymentElement` or `CheckoutForm`) with no unusual wrapping — `<CioStripePaymentStep>` is fine, saves you the boilerplate.
-- Your steps map 1:1 to component trees with no routing subtleties — `<CioFlowStep>` is a clean gate.
-- Your fulfillment poll matches the default shape — `<CioFulfillmentStep>` handles the retry/timeout logic.
+- Standard Stripe surface (`PaymentElement` or `CheckoutForm`) with no
+  unusual wrapping — `<CioStripePaymentStep>` saves the boilerplate.
+- Steps that map 1:1 to component trees with no routing subtleties —
+  `<CioCheckoutStep>` is a clean gate.
+- Fulfillment poll matching the default shape — `<CioFulfillmentStep>`
+  handles the retry/timeout logic.
 
-Mix and match: keep `<CioFlowStep>` for gating and swap only `<CioStripePaymentStep>` for a hook-driven wrapper, or vice versa. Nothing forces all-in on either style.
+Mix and match freely: keep `<CioCheckoutStep>` for gating and swap only
+`<CioStripePaymentStep>` for a hook-driven wrapper, or vice versa.

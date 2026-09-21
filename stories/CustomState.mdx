@@ -4,13 +4,13 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Custom State
 
-Your app almost always has flow-scoped state that doesn't fit in the cart, session, or step id — a gift-wrap toggle, the shipping method the user picked on step 2, a coupon draft the user is typing, a "same as billing" checkbox. Custom state is a typed slot on the flow for exactly that.
+Most checkouts carry flow-scoped state that doesn't fit in the cart, session, or step id — a gift-wrap toggle, the shipping method picked on step 2, a coupon draft, a "same as billing" checkbox. Custom state is a typed slot on the flow for exactly that.
 
-The library persists it, restores it on resume, and gives you typed getters/setters. You avoid a parallel React state store for anything that lives inside the checkout flow.
+The library persists it, restores it on resume, and exposes typed getters and setters. Use it in place of a parallel React store for anything scoped to the checkout flow.
 
 ## Under the hood
 
-Custom state is the `TState` generic on `CheckoutFlowConfig<TState>` and `useCioPayment<TState>()`. Internally the library calls it `integratorState` — you'll see that in the API method names (`getIntegratorState`, `setIntegratorState`, `initialState`). Same concept, older name.
+Custom state is the `TState` generic on `CheckoutFlowConfig<TState>` and `useCioCheckout<TState>()`. Internally the library calls it `integratorState` — the name appears in the API (`getIntegratorState`, `setIntegratorState`, `initialState`). Same concept, older name.
 
 ## Shape
 
@@ -27,7 +27,7 @@ interface CheckoutFlowCore<TState = unknown> {
 }
 ```
 
-- `initialState` — the value used if there's nothing to hydrate from storage. Required in the type if `TState` isn't `undefined`-compatible.
+- `initialState` — the value used if nothing hydrates from storage. Required in the type when `TState` is not `undefined`-compatible.
 - `getIntegratorState()` — synchronous read of the current value.
 - `setIntegratorState(updater)` — functional setter, same shape as React's `setState(prev => next)`.
 
@@ -46,20 +46,21 @@ const initialState: MyCheckoutState = {
   couponDraft: '',
 };
 
-<CioPaymentProvider<MyCheckoutState>
+<CioCheckoutProvider<'stripe', MyCheckoutState>
+  provider="stripe"
   steps={[...]}
   onCreateSession={...}
   initialState={initialState}
 >
   <MyCheckout />
-</CioPaymentProvider>
+</CioCheckoutProvider>
 ```
 
 Then anywhere inside the provider:
 
 ```tsx
 function ShippingPicker() {
-  const flow = useCioPayment<MyCheckoutState>();
+  const flow = useCioCheckout<'stripe', MyCheckoutState>();
   const shippingMethod = flow.getIntegratorState().shippingMethod;
 
   return (
@@ -79,57 +80,61 @@ function ShippingPicker() {
 }
 ```
 
-The generic on `useCioPayment<MyCheckoutState>()` is the same one you passed to the provider — TypeScript can't infer it across the context boundary, so re-assert it at each call site.
+The generic on `useCioCheckout<'stripe', MyCheckoutState>()` matches the one passed to the provider. TypeScript cannot infer it across the context boundary, so re-assert it at each call site.
 
 ## When state changes trigger re-renders
 
-`setIntegratorState` mutates the flow store, which triggers the same subscription mechanism as `state.currentStepId` or `cartSnapshot`. Components using `useCioPayment()` re-render on every custom state change.
+`setIntegratorState` mutates the flow store through the same subscription mechanism as `state.currentStepId` or `cartSnapshot`. Components using `useCioCheckout()` re-render on every custom state change.
 
-If you have a large custom state and want granular re-renders, select what you need:
+For a large custom state where granular re-renders matter, select the field you need:
 
 ```tsx
-const shippingMethod = useCioPayment<MyCheckoutState>()
-  .getIntegratorState().shippingMethod;
+const shippingMethod = useCioCheckout<
+  'stripe',
+  MyCheckoutState
+>().getIntegratorState().shippingMethod;
 ```
 
-React will bail out of the update if `shippingMethod` is referentially equal to last render. For heavy trees, wrap the read in `useMemo` or use a memoized selector pattern.
+React bails out of the update when `shippingMethod` is referentially equal to the previous render. For heavy trees, wrap the read in `useMemo` or use a memoized selector.
 
 ## Custom state vs `metadata`
 
-The library exposes two ways to carry extra data. They're not interchangeable.
+The library exposes two ways to carry extra data. They are not interchangeable.
 
-| | Custom State (`integratorState`) | `metadata` on `FlowState` |
-|---|---|---|
-| **Type** | Fully typed via `TState` | `Record<string, unknown>` |
-| **Access** | `getIntegratorState()` / `setIntegratorState()` | `flow.state.metadata` (read-only from your side) |
-| **Written by** | Your code, via `setIntegratorState` | The library (session hooks, auth), not you |
-| **Persisted** | Yes | Yes |
-| **Intended for** | Merchant-owned flow-scoped state | Library-internal metadata + your `initialState`-adjacent hints |
+|                  | Custom State (`integratorState`)                | `metadata` on `CheckoutFlowState`                              |
+| ---------------- | ----------------------------------------------- | -------------------------------------------------------------- |
+| **Type**         | Fully typed via `TState`                        | `Record<string, unknown>`                                      |
+| **Access**       | `getIntegratorState()` / `setIntegratorState()` | `flow.state.metadata` (read-only from your side)               |
+| **Written by**   | Your code, via `setIntegratorState`             | The library (session hooks, auth), not you                     |
+| **Persisted**    | Yes                                             | Yes                                                            |
+| **Intended for** | Merchant-owned flow-scoped state                | Library-internal metadata + your `initialState`-adjacent hints |
 
 Use custom state for anything you mutate. `metadata` is a slot the library writes into and you read from.
 
 ## Custom state vs your app's Redux/Zustand store
 
-Custom state is scoped to *this specific flow instance*. If your app has global state that outlives checkout (user profile, cart before checkout begins, product catalog), keep it in your normal store and pass it in through props / context.
+Custom state is scoped to _this specific flow instance_. For global state that outlives checkout (user profile, cart before checkout begins, product catalog), keep it in your existing store and pass it in via props or context.
 
-Custom state is the right home when:
+Reach for custom state when:
+
 - The value is only meaningful during the checkout flow (gift-wrap choice on this order).
-- You want it persisted alongside `FlowState` and hydrated on resume automatically.
+- The value should persist alongside `CheckoutFlowState` and hydrate on resume.
 - Multiple steps read and write it.
 
-Custom state is the wrong home when:
+Skip custom state when:
+
 - The value is app-wide (auth token, user id).
 - The value is a derived read-only projection of props (cart total).
 
 ## Persistence
 
-Custom state is part of `FlowState.metadata` under the hood — persisted by your `StorageAdapter`, hydrated on resume. Everything in the [Persistence](./?path=/docs/adapters-persistence--docs) doc about backend storage, encryption, and abandoned-cart recovery applies unchanged.
+Custom state lives under `CheckoutFlowState.metadata` — persisted by the configured `CheckoutStorageAdapter`, hydrated on resume. Everything in [Persistence](./?path=/docs/adapters-persistence--docs) about backend storage, encryption, and abandoned-cart recovery applies unchanged.
 
-If you rename or restructure `TState`, bump your `storageKey` to invalidate stored entries — otherwise a resumed flow will hydrate with a shape that doesn't match your new type.
+When renaming or restructuring `TState`, bump `storageKey` to invalidate stored entries. Otherwise a resumed flow hydrates with a shape that no longer matches the new type.
 
 ## Reading in `onCreateSession`
 
-`onCreateSession(state)` receives `FlowState`, not `TState`. If your session creator needs the shipping method or gift-wrap toggle, read it from the flow first:
+`onCreateSession(state)` receives `CheckoutFlowState`, not `TState`. When the session creator needs the shipping method or gift-wrap toggle, read it from the flow first:
 
 ```tsx
 onCreateSession={async (state) => {
@@ -141,4 +146,4 @@ onCreateSession={async (state) => {
 }}
 ```
 
-Or capture the flow via `useMemo` inside a component and close over it — depends on where you construct the config.
+Or capture the flow via `useMemo` inside a component and close over it, depending on where the config is constructed.

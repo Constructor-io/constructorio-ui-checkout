@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/react';
 
-import { CioFlowStep } from '@src/app/components/CioFlowStep';
+import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
 import { CioStripePaymentStep } from '@src/app/components/CioStripePaymentStep';
-import { useCioPayment } from '@src/app/hooks/useCioPayment';
-import { CioPaymentProvider } from '@src/app/providers/CioPaymentProvider';
-import type { RouterAdapter } from '@src/core/types';
+import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
+import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
+import type { CheckoutRouterAdapter } from '@src/core/types';
 import { PAYMENT_STEP } from '@src/core/types';
 
 const stubSession = () =>
@@ -15,17 +15,17 @@ const stubSession = () =>
     publishableKey: 'pk_test_DEMO',
   });
 
-const meta: Meta<typeof CioPaymentProvider> = {
-  title: 'Components/CioPaymentProvider',
-  component: CioPaymentProvider,
+const meta: Meta<typeof CioCheckoutProvider> = {
+  title: 'Components/CioCheckoutProvider',
+  component: CioCheckoutProvider,
   tags: ['autodocs'],
   parameters: { layout: 'padded' },
 };
 export default meta;
-type Story = StoryObj<typeof CioPaymentProvider>;
+type Story = StoryObj<typeof CioCheckoutProvider>;
 
 function DemoStatus() {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   return (
     <div style={{ padding: 16, background: '#f6f6f6', borderRadius: 6 }}>
       <p style={{ margin: 0, fontSize: 13, opacity: 0.7 }}>
@@ -59,37 +59,39 @@ export const Basic: Story = {
       source: {
         language: 'tsx',
         code: `import {
-  CioPaymentProvider,
-  CioFlowStep,
+  CioCheckoutProvider,
+  CioCheckoutStep,
   CioStripePaymentStep,
   PAYMENT_STEP,
 } from '@constructor-io/constructorio-ui-checkout';
 
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   steps={[{ id: PAYMENT_STEP }]}
   onCreateSession={() =>
     fetch('/api/checkout-session', { method: 'POST' }).then((r) => r.json())
   }
   autoStart
 >
-  <CioFlowStep id={PAYMENT_STEP}>
+  <CioCheckoutStep id={PAYMENT_STEP}>
     <CioStripePaymentStep />
-  </CioFlowStep>
-</CioPaymentProvider>`,
+  </CioCheckoutStep>
+</CioCheckoutProvider>`,
       },
     },
   },
   render: () => (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[{ id: PAYMENT_STEP }]}
       onCreateSession={stubSession}
       autoStart
     >
       <DemoStatus />
-      <CioFlowStep id={PAYMENT_STEP}>
+      <CioCheckoutStep id={PAYMENT_STEP}>
         <CioStripePaymentStep />
-      </CioFlowStep>
-    </CioPaymentProvider>
+      </CioCheckoutStep>
+    </CioCheckoutProvider>
   ),
 };
 
@@ -100,15 +102,16 @@ export const MultiStep: Story = {
       source: {
         language: 'tsx',
         code: `import {
-  CioPaymentProvider,
-  CioFlowStep,
+  CioCheckoutProvider,
+  CioCheckoutStep,
   CioStripePaymentStep,
   CioFulfillmentStep,
   PAYMENT_STEP,
-  useCioPayment,
+  useCioCheckout,
 } from '@constructor-io/constructorio-ui-checkout';
 
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   steps={[
     { id: 'cart' },
     { id: 'address' },
@@ -119,19 +122,19 @@ export const MultiStep: Story = {
   onCreateSession={createSession}
 >
   <StartButton />
-  <CioFlowStep id="cart"><YourCartView /></CioFlowStep>
-  <CioFlowStep id="address"><YourAddressForm /></CioFlowStep>
-  <CioFlowStep id={PAYMENT_STEP}>
+  <CioCheckoutStep id="cart"><YourCartView /></CioCheckoutStep>
+  <CioCheckoutStep id="address"><YourAddressForm /></CioCheckoutStep>
+  <CioCheckoutStep id={PAYMENT_STEP}>
     <CioStripePaymentStep />
-  </CioFlowStep>
-  <CioFlowStep id="fulfill">
+  </CioCheckoutStep>
+  <CioCheckoutStep id="fulfill">
     <CioFulfillmentStep onFulfill={verifyOrder} />
-  </CioFlowStep>
-  <CioFlowStep id="done"><YourConfirmation /></CioFlowStep>
-</CioPaymentProvider>
+  </CioCheckoutStep>
+  <CioCheckoutStep id="done"><YourConfirmation /></CioCheckoutStep>
+</CioCheckoutProvider>
 
 function StartButton() {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   if (flow.state.currentStepId !== null) return null;
   return <button onClick={() => flow.start()}>Checkout</button>;
 }`,
@@ -139,7 +142,8 @@ function StartButton() {
     },
   },
   render: () => (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[
         { id: 'cart' },
         { id: 'address' },
@@ -150,21 +154,22 @@ function StartButton() {
       onCreateSession={stubSession}
     >
       <DemoStatus />
-      <CioFlowStep id={PAYMENT_STEP}>
+      <CioCheckoutStep id={PAYMENT_STEP}>
         <CioStripePaymentStep />
-      </CioFlowStep>
-    </CioPaymentProvider>
+      </CioCheckoutStep>
+    </CioCheckoutProvider>
   ),
 };
 
 function RoutedDemo() {
   const [path, setPath] = useState('/cart');
-  const router: RouterAdapter = useMemo(
+  const router: CheckoutRouterAdapter = useMemo(
     () => ({ push: setPath, getCurrentPath: () => path }),
     [path]
   );
   return (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[
         { id: 'cart', path: '/cart' },
         { id: 'address', path: '/checkout/address' },
@@ -179,10 +184,10 @@ function RoutedDemo() {
         URL: <code>{path}</code>
       </div>
       <DemoStatus />
-      <CioFlowStep id={PAYMENT_STEP}>
+      <CioCheckoutStep id={PAYMENT_STEP}>
         <CioStripePaymentStep />
-      </CioFlowStep>
-    </CioPaymentProvider>
+      </CioCheckoutStep>
+    </CioCheckoutProvider>
   );
 }
 
@@ -193,21 +198,22 @@ export const RoutedMultiStep: Story = {
       source: {
         language: 'tsx',
         code: `import {
-  CioPaymentProvider,
-  CioFlowStep,
+  CioCheckoutProvider,
+  CioCheckoutStep,
   CioStripePaymentStep,
   PAYMENT_STEP,
 } from '@constructor-io/constructorio-ui-checkout';
-import type { RouterAdapter } from '@constructor-io/constructorio-ui-checkout';
+import type { CheckoutRouterAdapter } from '@constructor-io/constructorio-ui-checkout';
 
-// Adapt your router (react-router, next/router, etc.) to RouterAdapter.
-const router: RouterAdapter = {
+// Adapt your router (react-router, next/router, etc.) to CheckoutRouterAdapter.
+const router: CheckoutRouterAdapter = {
   push: (path) => navigate(path),
   getCurrentPath: () => location.pathname,
   subscribe: (cb) => subscribeToLocationChanges(cb),
 };
 
-<CioPaymentProvider
+<CioCheckoutProvider
+  provider="stripe"
   steps={[
     { id: 'cart', path: '/cart' },
     { id: 'address', path: '/checkout/address' },
@@ -218,27 +224,29 @@ const router: RouterAdapter = {
   router={router}
   autoStart
 >
-  <CioFlowStep id="cart"><YourCartView /></CioFlowStep>
-  <CioFlowStep id="address"><YourAddressForm /></CioFlowStep>
-  <CioFlowStep id={PAYMENT_STEP}>
+  <CioCheckoutStep id="cart"><YourCartView /></CioCheckoutStep>
+  <CioCheckoutStep id="address"><YourAddressForm /></CioCheckoutStep>
+  <CioCheckoutStep id={PAYMENT_STEP}>
     <CioStripePaymentStep />
-  </CioFlowStep>
-  <CioFlowStep id="done"><YourConfirmation /></CioFlowStep>
-</CioPaymentProvider>`,
+  </CioCheckoutStep>
+  <CioCheckoutStep id="done"><YourConfirmation /></CioCheckoutStep>
+</CioCheckoutProvider>`,
       },
     },
   },
   render: () => <RoutedDemo />,
 };
 
-const demoCart = [{ name: 'Widget', amount: 20, quantity: 1 }];
+const demoCart = [
+  { id: 'widget', name: 'Widget', unitAmount: 20, quantity: 1 },
+];
 const getCart = () => demoCart;
 const getAuthToken = () => 'demo-token';
 
 function RealisticFlowDemo() {
   const [path, setPath] = useState('/cart');
   const [signedIn, setSignedIn] = useState(false);
-  const router: RouterAdapter = useMemo(
+  const router: CheckoutRouterAdapter = useMemo(
     () => ({ push: setPath, getCurrentPath: () => path }),
     [path]
   );
@@ -253,7 +261,8 @@ function RealisticFlowDemo() {
   };
 
   return (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[
         { id: 'cart', path: '/cart' },
         { id: 'auth', guard: () => Promise.resolve(signedIn) },
@@ -270,7 +279,7 @@ function RealisticFlowDemo() {
       </div>
       <DemoStatus />
 
-      <CioFlowStep id="cart">
+      <CioCheckoutStep id="cart">
         <div
           style={{
             marginTop: 12,
@@ -283,9 +292,9 @@ function RealisticFlowDemo() {
           <p>Widget × 1 — $20</p>
           <NextButton label="Continue to sign in" />
         </div>
-      </CioFlowStep>
+      </CioCheckoutStep>
 
-      <CioFlowStep id="auth">
+      <CioCheckoutStep id="auth">
         <div
           style={{
             marginTop: 12,
@@ -307,9 +316,9 @@ function RealisticFlowDemo() {
             <NextButton label="Continue to shipping" />
           )}
         </div>
-      </CioFlowStep>
+      </CioCheckoutStep>
 
-      <CioFlowStep id="shipping">
+      <CioCheckoutStep id="shipping">
         <div
           style={{
             marginTop: 12,
@@ -321,16 +330,16 @@ function RealisticFlowDemo() {
           <strong>Shipping</strong> (routed at /checkout/shipping)
           <NextButton label="Continue to payment" />
         </div>
-      </CioFlowStep>
+      </CioCheckoutStep>
 
-      <CioFlowStep id={PAYMENT_STEP}>
+      <CioCheckoutStep id={PAYMENT_STEP}>
         <div style={{ marginTop: 12 }}>
           <strong>Payment</strong> (routed at /checkout/payment)
           <CioStripePaymentStep />
         </div>
-      </CioFlowStep>
+      </CioCheckoutStep>
 
-      <CioFlowStep id="done">
+      <CioCheckoutStep id="done">
         <div
           style={{
             marginTop: 12,
@@ -341,13 +350,13 @@ function RealisticFlowDemo() {
         >
           <strong>Confirmed</strong> (routed at /order/confirmed)
         </div>
-      </CioFlowStep>
-    </CioPaymentProvider>
+      </CioCheckoutStep>
+    </CioCheckoutProvider>
   );
 }
 
 function NextButton({ label }: { label: string }) {
-  const flow = useCioPayment();
+  const flow = useCioCheckout();
   return (
     <button
       type="button"
@@ -368,20 +377,20 @@ export const RealisticMixedFlow: Story = {
       source: {
         language: 'tsx',
         code: `import {
-  CioPaymentProvider,
-  CioFlowStep,
+  CioCheckoutProvider,
+  CioCheckoutStep,
   CioStripePaymentStep,
   PAYMENT_STEP,
-  useCioPayment,
+  useCioCheckout,
 } from '@constructor-io/constructorio-ui-checkout';
-import type { RouterAdapter } from '@constructor-io/constructorio-ui-checkout';
+import type { CheckoutRouterAdapter } from '@constructor-io/constructorio-ui-checkout';
 
 import { getCart } from './lib/cart';        // plain function, module-scoped
 import { getAuthToken } from './lib/auth';   // plain function, module-scoped
 import { useAppRouter } from './hooks/useAppRouter';
 
 function CheckoutApp() {
-  const router: RouterAdapter = useAppRouter();
+  const router: CheckoutRouterAdapter = useAppRouter();
   const [signedIn, setSignedIn] = useState(false);
 
   // Reads cart + auth via plain functions at call time.
@@ -395,7 +404,8 @@ function CheckoutApp() {
     }).then((r) => r.json());
 
   return (
-    <CioPaymentProvider
+    <CioCheckoutProvider
+      provider="stripe"
       steps={[
         { id: 'cart', path: '/cart' },                       // routed
         { id: 'auth', guard: () => Promise.resolve(signedIn) }, // modal
@@ -407,20 +417,20 @@ function CheckoutApp() {
       router={router}
       autoStart
     >
-      <CioFlowStep id="cart"><CartView /></CioFlowStep>
+      <CioCheckoutStep id="cart"><CartView /></CioCheckoutStep>
 
       {/* No path — this step stays over whatever route is current
           (typically /cart). Guard blocks advance until signedIn. */}
-      <CioFlowStep id="auth">
+      <CioCheckoutStep id="auth">
         <SignInModal onSignedIn={() => setSignedIn(true)} />
-      </CioFlowStep>
+      </CioCheckoutStep>
 
-      <CioFlowStep id="shipping"><ShippingForm /></CioFlowStep>
-      <CioFlowStep id={PAYMENT_STEP}>
+      <CioCheckoutStep id="shipping"><ShippingForm /></CioCheckoutStep>
+      <CioCheckoutStep id={PAYMENT_STEP}>
         <CioStripePaymentStep />
-      </CioFlowStep>
-      <CioFlowStep id="done"><OrderConfirmation /></CioFlowStep>
-    </CioPaymentProvider>
+      </CioCheckoutStep>
+      <CioCheckoutStep id="done"><OrderConfirmation /></CioCheckoutStep>
+    </CioCheckoutProvider>
   );
 }`,
       },

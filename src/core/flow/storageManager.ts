@@ -1,21 +1,38 @@
-import type { FlowState } from '../types';
+import type { BaseCartItem } from '@src/types';
+
+import type { CheckoutFlowState } from '../types';
 
 import type { FlowContext } from './context';
 import { toError } from './helpers';
 
-export interface StorageManagerOptions {
-  hydrate: (state: FlowState) => void;
+export interface StorageManagerOptions<TItem = BaseCartItem> {
+  hydrate: (state: CheckoutFlowState<TItem>) => void;
 }
 
-export function createStorageManager<TState>(
-  ctx: FlowContext<TState>,
-  opts: StorageManagerOptions
+export function createStorageManager<
+  TProvider extends string = string,
+  TState = unknown,
+  TItem = BaseCartItem,
+>(
+  ctx: FlowContext<TProvider, TState, TItem>,
+  opts: StorageManagerOptions<TItem>
 ) {
   const { config, store, isDestroyed, emitError } = ctx;
   const storage = config.storage;
   const storageKey = config.storageKey;
   const enabled = storage !== undefined && storageKey !== undefined;
   const debounceMs = config.storageSaveDebounceMs ?? 150;
+
+  if ((storage !== undefined) !== (storageKey !== undefined)) {
+    emitError(
+      'storage',
+      new Error(
+        storage === undefined
+          ? '`storageKey` provided without a `storage` adapter — persistence disabled'
+          : '`storage` adapter provided without a `storageKey` — persistence disabled'
+      )
+    );
+  }
 
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let saveInFlight: Promise<void> | null = null;

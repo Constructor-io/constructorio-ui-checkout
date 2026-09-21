@@ -34,7 +34,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           registry-url: https://registry.npmjs.org/
-          scope: '@constructorio'
+          scope: '@constructor-io'
           token: ${{ secrets.NPM_TOKEN }}
 
       - name: Install dependencies

@@ -50,7 +50,7 @@ jobs:
         run: npm ci
 
       - name: Build compiled package for publishing
-        uses: "./.github/actions/compile"
+        uses: './.github/actions/compile'
         with:
           version: ${{ inputs.version }}
 
@@ -66,7 +66,7 @@ jobs:
       - name: Notify Slack about new publish to NPM
         uses: ravsamhq/notify-slack-action@bca2d7f5660b833a27bda4f6b8bef389ebfefd25 # v2
         with:
-          notification_title: "☁️ New constructorio-ui-checkout release published to npm at version ${{ steps.update-version.outputs.new-version }}"
+          notification_title: '☁️ New constructorio-ui-checkout release published to npm at version ${{ steps.update-version.outputs.new-version }}'
           status: ${{ job.status }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

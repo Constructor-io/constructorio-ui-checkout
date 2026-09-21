@@ -18,11 +18,11 @@ npm i @constructor-io/constructorio-ui-checkout
 
 ## Three integration paths, one core
 
-| Path              | Best for                          | Entry                                          |
-| ----------------- | --------------------------------- | ---------------------------------------------- |
-| React             | React apps with the full flow     | `<CioCheckoutProvider>` + `useCioCheckout()`  |
-| Vanilla JS (npm)  | Non-React SPAs or custom UIs      | `createCheckoutFlow(config)`                  |
-| Standalone bundle | Server-rendered sites, `<script>` | `window.CioCheckout.resume(config)`           |
+| Path              | Best for                          | Entry                                        |
+| ----------------- | --------------------------------- | -------------------------------------------- |
+| React             | React apps with the full flow     | `<CioCheckoutProvider>` + `useCioCheckout()` |
+| Vanilla JS (npm)  | Non-React SPAs or custom UIs      | `createCheckoutFlow(config)`                 |
+| Standalone bundle | Server-rendered sites, `<script>` | `window.CioCheckout.resume(config)`          |
 
 All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
 
@@ -57,8 +57,12 @@ function App() {
       onEvent={(event) => console.log(event)}
     >
       <StartButton />
-      <CioCheckoutStep id="cart"><MyCart /></CioCheckoutStep>
-      <CioCheckoutStep id="address"><MyAddressForm /></CioCheckoutStep>
+      <CioCheckoutStep id="cart">
+        <MyCart />
+      </CioCheckoutStep>
+      <CioCheckoutStep id="address">
+        <MyAddressForm />
+      </CioCheckoutStep>
       <CioCheckoutStep id={PAYMENT_STEP}>
         <CioStripePaymentStep uiMode="form" />
       </CioCheckoutStep>
@@ -67,7 +71,9 @@ function App() {
           onFulfill={() => fetch('/api/verify').then((r) => r.json())}
         />
       </CioCheckoutStep>
-      <CioCheckoutStep id="done"><MyConfirmation /></CioCheckoutStep>
+      <CioCheckoutStep id="done">
+        <MyConfirmation />
+      </CioCheckoutStep>
     </CioCheckoutProvider>
   );
 }
@@ -109,14 +115,14 @@ import CioCheckout from '@constructor-io/constructorio-ui-checkout/constructorio
 
 ### Standalone API
 
-| Member                                    | Description                                                                       |
-| ----------------------------------------- | --------------------------------------------------------------------------------- |
-| `CioCheckout.VERSION`                     | Library version string                                                            |
-| `CioCheckout.createCheckoutFlow`          | Factory returning the framework-agnostic checkout flow                            |
-| `CioCheckout.createSessionStorageAdapter` | Default sessionStorage-backed `CheckoutStorageAdapter`                            |
-| `CioCheckout.resume(config)`              | Creates + registers a flow with the sessionStorage adapter injected               |
-| `CioCheckout.reset()`                     | Destroys the registered flow                                                      |
-| `CioCheckout.cioCheckoutRegistry`         | Singleton registry — `register(flow)`, `getFlow()`, `hasFlow()`, `clear()`        |
+| Member                                    | Description                                                                |
+| ----------------------------------------- | -------------------------------------------------------------------------- |
+| `CioCheckout.VERSION`                     | Library version string                                                     |
+| `CioCheckout.createCheckoutFlow`          | Factory returning the framework-agnostic checkout flow                     |
+| `CioCheckout.createSessionStorageAdapter` | Default sessionStorage-backed `CheckoutStorageAdapter`                     |
+| `CioCheckout.resume(config)`              | Creates + registers a flow with the sessionStorage adapter injected        |
+| `CioCheckout.reset()`                     | Destroys the registered flow                                               |
+| `CioCheckout.cioCheckoutRegistry`         | Singleton registry — `register(flow)`, `getFlow()`, `hasFlow()`, `clear()` |
 
 ## Registry pattern
 

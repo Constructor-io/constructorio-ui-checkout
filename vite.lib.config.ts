@@ -9,11 +9,14 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const rootClass = '.cio-checkout-root';
 
-// Externalize CSS @import from node_modules in library builds.
-// Strips package @imports before Vite inline them, then prepends them back
-// as bare @import statements in the final CSS output.
+// Externalize CSS @import from node_modules and remote URLs in library builds.
+// Strips those @imports before Vite inline them, then prepends them back in
+// source order at the top of the final CSS output. url(...) imports must be
+// collected too: left in place, they end up after the package @import, which
+// consumers that inline the package (Turbopack, Lightning CSS) reject.
 function externalizeCssImports(): Plugin {
-  const importRe = /@import\s+['"]((?:@[\w-]+\/)?[\w-][^'"]*)['"]\s*;?\s*/g;
+  const importRe =
+    /@import\s+(url\(\s*)?['"]((?:@[\w-]+\/)?[\w-][^'"]*)['"]\s*\)?\s*;?\s*/g;
   const collected: string[] = [];
 
   return {
@@ -21,12 +24,18 @@ function externalizeCssImports(): Plugin {
     enforce: 'pre',
     transform(code, id) {
       if (!id.endsWith('.css')) return null;
-      const result = code.replace(importRe, (match, specifier: string) => {
-        if (specifier.startsWith('.') || specifier.startsWith('/'))
-          return match;
-        if (!collected.includes(specifier)) collected.push(specifier);
-        return '';
-      });
+      const result = code.replace(
+        importRe,
+        (match, url: string | undefined, specifier: string) => {
+          if (specifier.startsWith('.') || specifier.startsWith('/'))
+            return match;
+          const statement = url
+            ? `@import url('${specifier}');`
+            : `@import '${specifier}';`;
+          if (!collected.includes(statement)) collected.push(statement);
+          return '';
+        }
+      );
       return result !== code ? result : null;
     },
     writeBundle(options) {
@@ -34,7 +43,7 @@ function externalizeCssImports(): Plugin {
       const outDir = options.dir || 'dist';
       const cssPath = path.resolve(outDir, 'styles.css');
       if (fs.existsSync(cssPath)) {
-        const imports = collected.map((s) => `@import '${s}';`).join('\n');
+        const imports = collected.join('\n');
         const css = fs.readFileSync(cssPath, 'utf8');
         if (!css.includes(imports)) {
           fs.writeFileSync(cssPath, imports + '\n' + css);

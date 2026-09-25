@@ -34,6 +34,26 @@ describe(`${CioCheckoutProvider.name}: client`, () => {
       expect(() => void flow.next()).not.toThrow();
     });
 
+    it('exposes a live flow under StrictMode double-mount', async () => {
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <React.StrictMode>
+          <CioCheckoutProvider {...baseConfig} autoStart>
+            {children}
+          </CioCheckoutProvider>
+        </React.StrictMode>
+      );
+      const { result } = renderHook(() => useCioCheckout(), { wrapper });
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(result.current.isDestroyed()).toBe(false);
+      expect(result.current.state.currentStepId).toBe('cart');
+      await act(async () => {
+        await result.current.next();
+      });
+      expect(result.current.state.currentStepId).toBe('auth');
+    });
+
     it('autoStart triggers start on mount', async () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <CioCheckoutProvider {...baseConfig} autoStart>

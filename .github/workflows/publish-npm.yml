@@ -8,6 +8,9 @@ on:
         required: true
         type: string
 
+  # This workflow is intended to be called from the primary publish workflow
+  # automatically. The manual trigger is maintained for partially failed workflows
+  # or edge cases that require this be run independently.
   workflow_dispatch:
     inputs:
       version:
@@ -15,6 +18,9 @@ on:
         required: true
         type: string
 
+# It's required to set permissions to be able to:
+# - Authenticate to NPM with OIDC
+# See: https://docs.npmjs.com/trusted-publishers
 permissions:
   id-token: write
   contents: read
@@ -36,9 +42,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version-file: '.nvmrc'
-          registry-url: https://registry.npmjs.org/
-          scope: '@constructor-io'
+          node-version: 22.18.x
 
       - name: Install npm 11
         run: npm install -g npm@11
@@ -57,7 +61,10 @@ jobs:
       - name: Update package.json version field
         id: update-version
         run: |
-          jq --arg new_version "${{ steps.version.outputs.without_prefix }}" '.version = $new_version' package.json > tmp.json && mv tmp.json package.json
+          # updates the package.json version field
+          new_version="${{ steps.version.outputs.without_prefix }}"
+          jq --arg new_version "$new_version" '.version = $new_version' package.json > tmp.json && mv tmp.json package.json
+
           echo "new-version=$new_version" >> $GITHUB_OUTPUT
 
       - name: Publish to NPM

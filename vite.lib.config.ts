@@ -14,9 +14,10 @@ const rootClass = '.cio-checkout-root';
 // source order at the top of the final CSS output. url(...) imports must be
 // collected too: left in place, they end up after the package @import, which
 // consumers that inline the package (Turbopack, Lightning CSS) reject.
-function externalizeCssImports(): Plugin {
+// Media, supports() and layer() conditions after the specifier are kept.
+export function externalizeCssImports(): Plugin {
   const importRe =
-    /@import\s+(url\(\s*)?['"]((?:@[\w-]+\/)?[\w-][^'"]*)['"]\s*\)?\s*;?\s*/g;
+    /@import\s+(url\(\s*)?['"]((?:@[\w-]+\/)?[\w-][^'"]*)['"]\s*\)?([^;{}]*?)\s*(?:;|$)\s*/g;
   const collected: string[] = [];
 
   return {
@@ -26,12 +27,17 @@ function externalizeCssImports(): Plugin {
       if (!id.endsWith('.css')) return null;
       const result = code.replace(
         importRe,
-        (match, url: string | undefined, specifier: string) => {
+        (
+          match,
+          url: string | undefined,
+          specifier: string,
+          conditions: string
+        ) => {
           if (specifier.startsWith('.') || specifier.startsWith('/'))
             return match;
-          const statement = url
-            ? `@import url('${specifier}');`
-            : `@import '${specifier}';`;
+          const target = url ? `url('${specifier}')` : `'${specifier}'`;
+          const suffix = conditions.trim() ? ` ${conditions.trim()}` : '';
+          const statement = `@import ${target}${suffix};`;
           if (!collected.includes(statement)) collected.push(statement);
           return '';
         }

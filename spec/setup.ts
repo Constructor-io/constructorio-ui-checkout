@@ -6,8 +6,10 @@ import { afterEach, beforeEach } from 'vitest';
 // React 18 requires this for act() warnings
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 
-// jsdom does not implement showModal/close natively
+// jsdom does not implement showModal/close natively. Tests that run in the
+// node environment have no HTMLDialogElement, so skip the stub there.
 beforeEach(() => {
+  if (typeof HTMLDialogElement === 'undefined') return;
   HTMLDialogElement.prototype.showModal = vi.fn(function (
     this: HTMLDialogElement
   ) {

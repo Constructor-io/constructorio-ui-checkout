@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { CioCheckoutContext } from '@src/app/providers/CioCheckoutContext';
 import { createCheckoutFlow } from '@src/core/createCheckoutFlow';
@@ -34,11 +34,7 @@ export function CioCheckoutProvider<
   const propsRef = useRef(props);
   propsRef.current = props;
 
-  const flowRef = useRef<CheckoutFlowCore<TProvider, TState, TItem> | null>(
-    null
-  );
-
-  if (flowRef.current === null) {
+  const buildFlow = (): CheckoutFlowCore<TProvider, TState, TItem> => {
     const wrappedSteps: CheckoutStep<TItem>[] = props.steps.map((step) => ({
       ...step,
       guard: step.guard
@@ -77,18 +73,24 @@ export function CioCheckoutProvider<
         : undefined,
     };
 
-    flowRef.current = createCheckoutFlow<TProvider, TState, TItem>(config, {
+    return createCheckoutFlow<TProvider, TState, TItem>(config, {
       deferMount: true,
     });
-  }
-  const flow = flowRef.current;
+  };
+  const [flow, setFlow] = useState(buildFlow);
 
   useEffect(() => {
+    // StrictMode runs cleanup then this effect again on the same instance.
+    // The flow cannot come back after destroy(), so swap in a new one.
+    if (flow.isDestroyed()) {
+      setFlow(buildFlow());
+      return undefined;
+    }
     flow.mount();
     return () => {
       flow.destroy();
-      flowRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow]);
 
   useEffect(() => {

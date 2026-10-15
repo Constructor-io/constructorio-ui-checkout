@@ -1,0 +1,2 @@
+server: cd server && npx tsx watch index.ts
+client: cd client && npx vite

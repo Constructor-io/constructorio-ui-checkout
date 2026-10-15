@@ -1,0 +1,107 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Guides/Versioning & Migration" />
+
+# Versioning & Migration
+
+The library follows semantic versioning. A major version can remove or rename public API. Minor and patch versions do not.
+
+This page covers the move from 1.x to 2.0. Most apps need a few import changes and nothing else.
+
+## Upgrade checklist
+
+1. Use Node.js 20 or newer.
+2. Search your code for the names in [Breaking changes](#breaking-changes) and update each one.
+3. If you load the `-standalone` subpath, switch to `-bundled`.
+4. If you pass a no-op `storage` adapter only to keep persistence off, remove it.
+5. If you build `CheckoutFlowState` objects by hand, add `cartTotal` and `paymentInProgress`.
+6. Run your type checker. Every removed or renamed export fails at compile time.
+7. Optional: replace hand-written session effects with `useCioCheckoutSession()`.
+
+## Node.js 20
+
+`engines.node` is now `>=20`, the same as PIA and ASA. Node 18 is past end of life. Upgrade your build and server to Node 20 or newer.
+
+## Breaking changes
+
+### Stripe option types are renamed
+
+Three types only apply to the built-in Stripe step, so their names now say so. The values and the prop names (`uiMode`, `redirectBehavior`, `layout`) are the same.
+
+| 1.x                        | 2.0                              |
+| -------------------------- | -------------------------------- |
+| `CheckoutUiMode`           | `CheckoutStripeUiMode`           |
+| `CheckoutRedirectBehavior` | `CheckoutStripeRedirectBehavior` |
+| `CheckoutLayout`           | `CheckoutStripeLayout`           |
+
+**What to change:** rename the types in your imports.
+
+### The script-tag subpath is renamed
+
+The bundled build now matches PIA and ASA.
+
+| 1.x                                                           | 2.0                                                        |
+| ------------------------------------------------------------- | ---------------------------------------------------------- |
+| `@constructor-io/constructorio-ui-checkout/constructorio-ui-checkout-standalone` | `@constructor-io/constructorio-ui-checkout/constructorio-ui-checkout-bundled` |
+| `dist/standalone/constructorio-ui-checkout.standalone.js`     | `dist/constructorio-ui-checkout-bundled.js`                |
+
+`window.CioCheckout` is the same. The CDN URL is the same, because the CDN file is named by version.
+
+**What to change:** update the import path, or the file path if you copy the file out of `node_modules`.
+
+### `CioCheckoutContext` is no longer exported
+
+The React context is an internal detail.
+
+**What to change:** read the flow with `useCioCheckout()` inside `<CioCheckoutProvider>`. Remove any `useContext(CioCheckoutContext)`.
+
+### `CREATE_SESSION_STEP` is removed
+
+Nothing in the library used it.
+
+**What to change:** delete the import. If you compared against it, use the string `'createSession'`.
+
+### `CioCheckoutRegistry` is a type only
+
+There is one registry per page. The class can no longer be created from outside.
+
+**What to change:** use the `cioCheckoutRegistry` singleton. Keep `CioCheckoutRegistry` only in type positions, for example `import type { CioCheckoutRegistry }`.
+
+### `defaultTranslations` and `t` are no longer exported
+
+They were internal helpers.
+
+**What to change:** delete the imports. Pass your strings through the `translations` prop. Keep your own copy of any default text you relied on.
+
+### `createCheckoutFlow` defaults to the built-in provider type
+
+`createCheckoutFlow` now defaults its provider type to `BuiltInPaymentProvider`, the same as the hook and the provider. This is a type change only. Nothing changes at runtime.
+
+**What to change:** if you call `createCheckoutFlow` for a custom provider and relied on `string` inference, pass the generic: `createCheckoutFlow<'my-psp'>({ provider: 'my-psp', ... })`.
+
+### `CheckoutFlowState` has two new fields
+
+`cartTotal: number` and `paymentInProgress: boolean` are required on the type. Stored states from 1.x still load, because the library fills both in.
+
+**What to change:** add both fields where you build a `CheckoutFlowState` by hand, for example in tests or in a call to `flow.hydrate()`.
+
+## Behaviour changes
+
+These are not breaking, but you may notice them.
+
+- **`storage` without `storageKey` now works.** In 1.x it emitted a `storage` error and left persistence off. Now it saves under `DEFAULT_STORAGE_KEY` (`'cio-checkout-flow'`). Persistence stays off when you do not pass `storage`. `storageKey` without `storage` still emits the error.
+- **`CioStripePaymentStep` shows a loader.** While the session is being created, it shows "Preparing checkout..." instead of nothing.
+- **`CioStripePaymentStep` shows confirm errors.** In `'elements'` mode, a failed payment shows Stripe's message above the pay button. `onError` still fires.
+- **`CioStripePaymentStep` reports a missing `onCreateSession`.** It shows a configuration error and emits one `session.create` error.
+- **The bundled build loads fonts with `<link>` tags.** The Google Fonts `@import` lines are no longer inside the injected CSS.
+
+## New in 2.0
+
+- **`onCreateSession` is optional.** Leave it out for providers that create their session in their own widget. See [Custom Payment Provider](?path=/docs/guides-custom-payment-provider--docs).
+- **`useCioCheckoutSession()`.** Creates the session in a payment step. Returns `{ session, sessionStatus, missingSession, retry }`. See [Hooks](?path=/docs/components-utilities-hooks--docs).
+- **`flow.setPaymentInProgress()` and `state.paymentInProgress`.** Block `back()` and `goTo()` while a charge runs.
+- **`state.cartTotal`.** The cart subtotal, kept up to date by the flow.
+- **`cioCheckoutRegistry.getFlow(provider)`.** Returns `null` when the stored flow is for another provider.
+- **`CioFulfillmentStep` `recreateSessionOnRetry`.** Starts a fresh session before retrying.
+- **New exports.** `DEFAULT_STORAGE_KEY`, `CheckoutLoaderRenderProps`, `UseCioCheckoutSessionReturn`, and the types `CreateCheckoutFlowOptions`, `CheckoutFlowCoreBase`, `RequireAccessorsIfNeeded` and `KeyOfType`.
+- **More translation keys and a `loader` override slot.** Every built-in label can be replaced. See [Utilities](?path=/docs/components-utilities-utilities--docs#translation-keys).

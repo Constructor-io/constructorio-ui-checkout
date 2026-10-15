@@ -1,0 +1,141 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import * as Stories from './CioStripePaymentStep.stories';
+
+<Meta of={Stories} />
+
+# CioStripePaymentStep
+
+The built-in Stripe payment step. It creates the session, loads Stripe.js, renders Stripe's payment UI, and calls `flow.next()` when the payment succeeds. Mount it inside a `<CioCheckoutProvider provider="stripe">`.
+
+```tsx
+import {
+  CioCheckoutProvider,
+  CioCheckoutStep,
+  CioStripePaymentStep,
+  PAYMENT_STEP,
+} from '@constructor-io/constructorio-ui-checkout';
+
+<CioCheckoutProvider
+  provider="stripe"
+  steps={[{ id: 'cart' }, { id: PAYMENT_STEP }, { id: 'done' }]}
+  onCreateSession={() =>
+    fetch('/api/checkout-session', { method: 'POST' }).then((r) => r.json())
+  }
+>
+  <CioCheckoutStep id={PAYMENT_STEP}>
+    <CioStripePaymentStep uiMode="elements" onError={(err) => report(err)} />
+  </CioCheckoutStep>
+</CioCheckoutProvider>;
+```
+
+The stories on this page stop before a session exists, so they never load Stripe. To see the payment UI, run it against your own test backend.
+
+## UI modes
+
+`uiMode` must match the `ui_mode` your server passes to `stripe.checkout.sessions.create`.
+
+| `uiMode`           | What renders                                                                                 | Notes                                             |
+| ------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `'form'` (default) | Stripe's embedded Checkout Form. Stripe draws the whole form, its errors and its pay button. | Beta. Stripe must enable it on your account.      |
+| `'elements'`       | Stripe's Payment Element, plus a currency selector when the session has more than one currency, plus our pay button. | Our pay button and confirm errors can be changed. |
+
+## Props
+
+| Prop                 | Type                                     | Default         | Description                                                                                      |
+| -------------------- | ---------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------ |
+| `uiMode`             | `'form' \| 'elements'`                   | `'form'`        | Which Stripe UI to render. See UI modes.                                                         |
+| `redirectBehavior`   | `'always' \| 'if_required'`              | `'if_required'` | Passed to Stripe's `confirm`. With `'if_required'`, Stripe only redirects when the method needs it. |
+| `onError`            | `(error: Error) => void`                 |                 | Called for `session.create` and `payment.confirm` errors.                                        |
+| `translations`       | `Translations`                           |                 | Replaces built-in labels. See Translation keys.                                                  |
+| `componentOverrides` | `CheckoutComponentOverrides`             |                 | Replaces the `loader` and, in `'elements'` mode, the `payButton`. See Overrides.                 |
+| Stripe options       | `CheckoutStripeOptions`                  |                 | Every field below is also a prop.                                                                |
+
+### Stripe options
+
+These are passed to Stripe when the session loads.
+
+| Field                 | Modes             | Description                                                                 |
+| --------------------- | ----------------- | --------------------------------------------------------------------------- |
+| `appearance`          | both              | Stripe Appearance API object, without `rules`.                              |
+| `loader`              | both              | Stripe's own skeleton: `'auto'`, `'always'` or `'never'`.                   |
+| `fonts`               | both              | Custom fonts for Stripe's iframes.                                          |
+| `savedPaymentMethod`  | both              | Saved payment method options.                                               |
+| `defaultValues`       | both              | Prefill `billingAddress`, `shippingAddress`, `email` and `phoneNumber`.     |
+| `layout`              | `'form'`          | `'expanded'` or `'compact'`.                                                |
+| `adaptivePricing`     | `'elements'`      | Stripe Adaptive Pricing options.                                            |
+| `syncAddressCheckbox` | `'elements'`      | Stripe's "billing same as shipping" checkbox setting.                       |
+
+## States
+
+The step shows one of these, in this order of priority.
+
+**No `onCreateSession`.** Stripe always needs a session. When the flow has no `onCreateSession`, the step shows a configuration error with no Retry button. It also emits one `error` event with `source: 'session.create'`.
+
+<Canvas of={Stories.MissingHandler} />
+
+**Session error.** `onCreateSession` rejected or returned an invalid shape. The step shows an error with a Retry button. Retry calls `flow.recreate()`.
+
+<Canvas of={Stories.SessionError} />
+
+**Preparing.** The session is being created, or recreated after it expired. The step shows a loader. In `'elements'` mode the loader also shows while Stripe.js loads.
+
+<Canvas of={Stories.Preparing} />
+
+**Ready.** Stripe's UI renders. In `'elements'` mode, if confirming the payment fails, Stripe's message shows between the Payment Element and the pay button. It clears when the shopper edits the payment details or clicks Pay again. In `'form'` mode, Stripe shows its own errors.
+
+**Expired.** When Stripe reports the session expired, the step calls `flow.markExpired()` and then creates a new session. No wiring needed.
+
+## Overrides
+
+Both slots take `{ reactNode: (props) => ReactNode }`.
+
+**`loader`** receives `{ label: string }`, the translated loading text.
+
+<Canvas of={Stories.CustomLoader} />
+
+**`payButton`** (`'elements'` mode only) receives `PayButtonRenderProps`:
+
+| Prop           | Type         | Description                                          |
+| -------------- | ------------ | ---------------------------------------------------- |
+| `isSubmitting` | `boolean`    | A confirm is in flight.                              |
+| `isDisabled`   | `boolean`    | Stripe is loading, a confirm is in flight, or the payment details are not complete. |
+| `amount`       | `string`     | The formatted total from Stripe, for example `$49.99`. |
+| `onClick`      | `() => void` | Starts the confirm.                                  |
+
+```tsx
+<CioStripePaymentStep
+  uiMode="elements"
+  componentOverrides={{
+    payButton: {
+      reactNode: ({ amount, isDisabled, isSubmitting, onClick }) => (
+        <MyButton disabled={isDisabled} onClick={onClick}>
+          {isSubmitting ? 'Working...' : `Pay ${amount}`}
+        </MyButton>
+      ),
+    },
+  }}
+/>
+```
+
+## Translation keys
+
+| Key                                         | Default                                                | Where                     |
+| ------------------------------------------- | ------------------------------------------------------ | ------------------------- |
+| `CioCheckout.checkout.preparingLabel`       | `Preparing checkout...`                                | Loader                    |
+| `CioCheckout.session.errorLabel`            | `Failed to prepare checkout. Please try again.`        | Session error             |
+| `CioCheckout.session.retryLabel`            | `Retry`                                                | Session error button      |
+| `CioCheckout.session.missingLabel`          | `This payment step needs an onCreateSession handler.`  | No `onCreateSession`      |
+| `CioCheckout.checkout.payButtonLabel`       | `Pay`                                                  | Pay button, `'elements'`  |
+| `CioCheckout.checkout.payButtonLoadingLabel` | `Processing...`                                       | Pay button, `'elements'`  |
+
+<Canvas of={Stories.CustomLabels} />
+
+## CSS classes
+
+| Class                          | Element                                      |
+| ------------------------------ | -------------------------------------------- |
+| `cio-checkout-loader`          | Loader                                       |
+| `cio-checkout-session-error`   | Session error and missing-handler error      |
+| `cio-checkout-form`            | Wrapper around Stripe's UI                   |
+| `cio-checkout-pay-button`      | Pay button, `'elements'` mode                |
+| `cio-checkout-confirm-error`   | Confirm error, `'elements'` mode             |

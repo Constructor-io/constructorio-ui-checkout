@@ -1,10 +1,23 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Getting Started/Integration Guide" />
+<Meta title="Guides/Integration Guide" />
 
 # Integration Guide
 
 A headless checkout core with a built-in Stripe payment step. The library runs the steps, the payment session, storage and routing. Your app renders the UI.
+
+## Install
+
+```bash
+npm i @constructor-io/constructorio-ui-checkout
+```
+
+Requirements:
+
+- Node.js >= 20
+- React and React DOM >= 16.12.0
+- `@stripe/stripe-js` >= 9.3.1 and `@stripe/react-stripe-js` >= 6.6.0, for the built-in Stripe step
+- `@constructor-io/constructorio-ui-components` >= 1.4.0
 
 ## Three integration paths, one core
 
@@ -68,6 +81,40 @@ function StartButton() {
   return <button onClick={() => flow.start()}>Checkout</button>;
 }
 ```
+
+## Server-side setup (Stripe)
+
+Your backend creates the Stripe Checkout Session and returns `{ clientSecret, publishableKey }`. The server `ui_mode` must match the `uiMode` you pass to `<CioStripePaymentStep>`: `'form'` (beta) or `'elements'`.
+
+```js
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+app.post('/api/checkout-session', async (req, res) => {
+  const session = await stripe.checkout.sessions.create({
+    ui_mode: 'form', // use 'elements' for the elements uiMode
+    mode: 'payment',
+    line_items: [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: { name: 'Product Name' },
+          unit_amount: 4999,
+        },
+        quantity: 1,
+      },
+    ],
+    return_url:
+      'https://example.com/order-confirm?session_id={CHECKOUT_SESSION_ID}',
+  });
+
+  res.json({
+    clientSecret: session.client_secret,
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+  });
+});
+```
+
+This needs the `stripe` SDK v18 or newer. `ui_mode: 'form'` is in beta, and Stripe must enable it on your account.
 
 ## When to show the trigger
 
@@ -177,7 +224,40 @@ await flow.start();
 </script>
 ```
 
-`resume()` creates a flow with a sessionStorage adapter and registers it globally — the flow rehydrates automatically on every page load.
+`resume()` creates a flow with a sessionStorage adapter and registers it globally. The flow rehydrates on every page load.
+
+Using a bundler? Import the same bundle from its subpath. It has the same `CioCheckout` API:
+
+```js
+import CioCheckout from '@constructor-io/constructorio-ui-checkout/constructorio-ui-checkout-bundled';
+```
+
+| Member                                    | Description                                                         |
+| ----------------------------------------- | ------------------------------------------------------------------- |
+| `CioCheckout.VERSION`                     | Library version string                                              |
+| `CioCheckout.createCheckoutFlow`          | Creates a flow without registering it                               |
+| `CioCheckout.createSessionStorageAdapter` | The default sessionStorage `CheckoutStorageAdapter`                 |
+| `CioCheckout.resume(config)`              | Creates and registers a flow with the sessionStorage adapter        |
+| `CioCheckout.reset()`                     | Destroys the registered flow                                        |
+| `CioCheckout.cioCheckoutRegistry`         | The shared registry: `register`, `getFlow`, `hasFlow`, `clear`      |
+
+## Registry
+
+When another Constructor library on the page (for example PIA) needs the active checkout flow, register it once. Other code then reads it with `getFlow()`:
+
+```ts
+import {
+  createCheckoutFlow,
+  cioCheckoutRegistry,
+} from '@constructor-io/constructorio-ui-checkout';
+
+const flow = createCheckoutFlow({ provider: 'stripe', steps, onCreateSession });
+cioCheckoutRegistry.register(flow);
+
+// Elsewhere:
+const active = cioCheckoutRegistry.getFlow('stripe'); // null if the provider differs
+active?.syncCart(newItems);
+```
 
 ## Events
 

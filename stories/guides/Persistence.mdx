@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Adapters/Persistence" />
+<Meta title="Guides/Persistence" />
 
 # Persistence & Resume
 
@@ -213,7 +213,7 @@ Everything in `CheckoutFlowState`:
 - `metadata`: reserved for the library. Empty today.
 - `schemaVersion`: used to reject incompatible saves
 
-**What isn't saved: the in-memory `session` (`clientSecret`).** That lives only in RAM. On hydrate with `sessionStatus: 'active'`, the library downgrades to `sessionStatus: 'idle'` so the next `CioStripePaymentStep` mount calls `onCreateSession` again to recover. See [Sessions](./?path=/docs/core-sessions--docs#sessions-and-persistence) for the full explanation.
+**What isn't saved: the in-memory `session` (`clientSecret`).** That lives only in RAM. On hydrate with `sessionStatus: 'active'`, the library downgrades to `sessionStatus: 'idle'` so the next `CioStripePaymentStep` mount calls `onCreateSession` again to recover. See [Sessions](./?path=/docs/guides-sessions--docs#sessions-and-persistence) for the full explanation.
 
 ## Storage precedence over deep links
 

@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Core/Steps" />
+<Meta title="Guides/Steps" />
 
 # Steps
 
@@ -83,7 +83,7 @@ steps: [
 />
 ```
 
-See [Auth — Sending users to /login](./?path=/docs/core-auth--docs#sending-users-to-login-with-a-returnto) for the full pattern.
+See [Auth — Sending users to /login](./?path=/docs/guides-auth--docs#sending-users-to-login-with-a-returnto) for the full pattern.
 
 Do not use `optional` for A/B branching — that is a guard concern, not an optionality concern.
 
@@ -157,7 +157,7 @@ Registering two separate steps for "guest" and "loggedIn" is almost always the w
 
 ## Custom step components
 
-`<CioCheckoutStep>` is a three-line convenience — a gate that renders children when `state.currentStepId` matches. Replace it with any gate that reads the hook. See [Hook-only composition](./?path=/docs/getting-started-hook-only-composition--docs) for the escape-hatch pattern.
+`<CioCheckoutStep>` is a three-line convenience — a gate that renders children when `state.currentStepId` matches. Replace it with any gate that reads the hook. See [Hook-only composition](./?path=/docs/guides-hook-only-composition--docs) for the escape-hatch pattern.
 
 For steps that own their side effects, pair a gate with a hook-driven component. A custom payment step can create its session with `useCioCheckoutSession()`. See [Sessions](./?path=/docs/guides-sessions--docs#bootstrapping-the-session-in-a-step). A fulfillment poll looks like this:
 
@@ -192,10 +192,10 @@ While `state.paymentInProgress` is `true`, `back()` and `goTo()` do nothing and 
 
 ## Persistence and completed steps
 
-`completedStepIds` is persisted (see [Persistence](./?path=/docs/adapters-persistence--docs)). When a user hydrates into an in-progress flow, `completedStepIds` reflects everything finished before pausing. The current step's guard still runs on resume — a user who paused just after signing in but whose session expired overnight re-hits the auth guard.
+`completedStepIds` is persisted (see [Persistence](./?path=/docs/guides-persistence--docs)). When a user hydrates into an in-progress flow, `completedStepIds` reflects everything finished before pausing. The current step's guard still runs on resume — a user who paused just after signing in but whose session expired overnight re-hits the auth guard.
 
 ## What steps aren't
 
 - **Not screens.** A step is a state — one step can render multiple screens (e.g. review + edit modal), and multiple steps can share screens.
 - **Not routes.** The `path` field syncs a step to a URL, but a step without `path` is legal (single-page or modal flows).
-- **Not multi-substep containers.** For an "auth" step with three substeps (email → OTP → 2FA), model them inside the step component rather than as three top-level flow steps. See [Auth — Multi-step auth](./?path=/docs/core-auth--docs#multi-step-auth-otp-2fa-passkey-mfa) for the pattern.
+- **Not multi-substep containers.** For an "auth" step with three substeps (email → OTP → 2FA), model them inside the step component rather than as three top-level flow steps. See [Auth — Multi-step auth](./?path=/docs/guides-auth--docs#multi-step-auth-otp-2fa-passkey-mfa) for the pattern.

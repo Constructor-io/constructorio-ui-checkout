@@ -1,6 +1,7 @@
 import type { BaseCartItem, PaymentSessionFor } from '@src/types';
 
 import type { FlowContext } from './context';
+import { computeCartTotal } from './helpers';
 import type { createSessionManager } from './sessionManager';
 
 export function createCartManager<
@@ -11,7 +12,7 @@ export function createCartManager<
   ctx: FlowContext<TProvider, TState, TItem>,
   session: ReturnType<typeof createSessionManager<TProvider, TState, TItem>>
 ) {
-  const { config, store, isDestroyed } = ctx;
+  const { config, store, isDestroyed, accessors } = ctx;
   const debounceMs = config.cartDebounceMs ?? 400;
 
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -33,7 +34,11 @@ export function createCartManager<
     if (isDestroyed()) return Promise.resolve(null);
     clearDebounce();
     if (!session.getSession()) {
-      store.setState((prev) => ({ ...prev, cartSnapshot: items.slice() }));
+      store.setState((prev) => ({
+        ...prev,
+        cartSnapshot: items.slice(),
+        cartTotal: computeCartTotal(items, accessors),
+      }));
       const pendingCreate = session.getCreateInFlight();
       if (pendingCreate !== null) {
         return pendingCreate.then(() => {

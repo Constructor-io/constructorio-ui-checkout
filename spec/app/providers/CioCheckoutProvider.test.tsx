@@ -22,6 +22,23 @@ const baseConfig: CheckoutFlowConfig = {
 
 describe(`${CioCheckoutProvider.name}: client`, () => {
   describe('lifecycle', () => {
+    it('works without onCreateSession', async () => {
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <CioCheckoutProvider
+          provider="stripe"
+          steps={[{ id: 'cart' }, { id: 'pay' }]}
+        >
+          {children}
+        </CioCheckoutProvider>
+      );
+      const { result } = renderHook(() => useCioCheckout(), { wrapper });
+      await act(async () => {
+        await result.current.createSession();
+      });
+      expect(result.current.state.sessionStatus).toBe('active');
+      expect(result.current.getSession()).toBeNull();
+    });
+
     it('destroys the flow on unmount', () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <CioCheckoutProvider {...baseConfig}>{children}</CioCheckoutProvider>

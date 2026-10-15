@@ -45,6 +45,36 @@ describe(`${validateFlowState.name}: client`, () => {
     });
   });
 
+  describe('fields added after schemaVersion 1', () => {
+    it('accepts a state without cartTotal or paymentInProgress', () => {
+      expect(validateFlowState(validState())).not.toBeNull();
+    });
+
+    it('accepts a finite cartTotal and a boolean paymentInProgress', () => {
+      expect(
+        validateFlowState({
+          ...validState(),
+          cartTotal: 1250,
+          paymentInProgress: true,
+        })
+      ).not.toBeNull();
+    });
+
+    it('rejects a non-finite or non-number cartTotal', () => {
+      for (const cartTotal of [Number.NaN, Infinity, '10', null]) {
+        expect(validateFlowState({ ...validState(), cartTotal })).toBeNull();
+      }
+    });
+
+    it('rejects a non-boolean paymentInProgress', () => {
+      for (const paymentInProgress of ['true', 1, null]) {
+        expect(
+          validateFlowState({ ...validState(), paymentInProgress })
+        ).toBeNull();
+      }
+    });
+  });
+
   describe('rejections', () => {
     it('rejects non-object input', () => {
       expect(validateFlowState(null)).toBeNull();

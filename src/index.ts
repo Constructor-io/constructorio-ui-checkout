@@ -21,7 +21,11 @@ export type {
   CreateCheckoutFlowOptions,
   RequireAccessorsIfNeeded,
 } from './core/types';
-export { FLOW_SCHEMA_VERSION, PAYMENT_STEP } from './core/types';
+export {
+  DEFAULT_STORAGE_KEY,
+  FLOW_SCHEMA_VERSION,
+  PAYMENT_STEP,
+} from './core/types';
 
 // React adapter
 export type { CioCheckoutStepProps } from './app/components/CioCheckoutStep';

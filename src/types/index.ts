@@ -1,12 +1,6 @@
 import type { ComponentOverrideProps } from '@constructor-io/constructorio-ui-components';
-import type {
-  Appearance,
-  CssFontSource,
-  CustomFontSource,
-  SavedPaymentMethodOption,
-  StripeCheckoutContact,
-  StripeCheckoutElementsSdkOptions,
-} from '@stripe/stripe-js';
+
+import type { StripePaymentSession } from './stripe';
 
 export interface Translations {
   'CioCheckout.checkout.title'?: string;
@@ -41,11 +35,6 @@ export interface BasePaymentSession {
   sessionId?: string;
 }
 
-export interface StripePaymentSession extends BasePaymentSession {
-  clientSecret: string;
-  publishableKey: string;
-}
-
 export interface PaymentSessionMap {
   stripe: StripePaymentSession;
 }
@@ -59,33 +48,6 @@ export type PaymentSessionFor<TProvider extends string> =
     ? PaymentSessionMap[TProvider]
     : BasePaymentSession;
 
-/** Stripe Checkout UI mode. Applies to the built-in Stripe payment step only. */
-export type CheckoutStripeUiMode = 'elements' | 'form';
-
-/** Stripe redirect behavior after payment confirmation. Applies to the built-in Stripe payment step only. */
-export type CheckoutStripeRedirectBehavior = 'always' | 'if_required';
-
-/** Stripe Payment Element layout. Applies to the built-in Stripe payment step only. */
-export type CheckoutStripeLayout = 'expanded' | 'compact';
-
-export interface CheckoutStripeOptions {
-  appearance?: Omit<Appearance, 'rules'>;
-  loader?: 'auto' | 'always' | 'never';
-  fonts?: Array<CssFontSource | CustomFontSource>;
-  layout?: CheckoutStripeLayout;
-  defaultValues?: {
-    billingAddress?: StripeCheckoutContact;
-    shippingAddress?: StripeCheckoutContact;
-    email?: string;
-    phoneNumber?: string;
-  };
-  savedPaymentMethod?: SavedPaymentMethodOption;
-  adaptivePricing?: StripeCheckoutElementsSdkOptions['adaptivePricing'];
-  syncAddressCheckbox?: NonNullable<
-    StripeCheckoutElementsSdkOptions['elementsOptions']
-  >['syncAddressCheckbox'];
-}
-
 export interface PayButtonRenderProps {
   isSubmitting: boolean;
   isDisabled: boolean;
@@ -96,3 +58,5 @@ export interface PayButtonRenderProps {
 export interface CheckoutComponentOverrides {
   payButton?: ComponentOverrideProps<PayButtonRenderProps>;
 }
+
+export * from './stripe';

@@ -1,3 +1,4 @@
+import { getProviderAdapter } from '@src/providers';
 import type {
   BaseCartItem,
   BasePaymentSession,
@@ -47,26 +48,7 @@ export function isValidSessionResponse(
   provider: string
 ): r is BasePaymentSession {
   if (r === null || typeof r !== 'object' || Array.isArray(r)) return false;
-  if (provider === 'stripe') {
-    const s = r as { clientSecret?: unknown; publishableKey?: unknown };
-    if (typeof s.clientSecret !== 'string' || s.clientSecret.length === 0) {
-      return false;
-    }
-    if (typeof s.publishableKey !== 'string' || s.publishableKey.length === 0) {
-      return false;
-    }
-  }
-  return true;
-}
-
-export function extractSessionId(
-  clientSecret: string | null | undefined
-): string | null {
-  if (typeof clientSecret !== 'string' || clientSecret.length === 0)
-    return null;
-  const idx = clientSecret.indexOf('_secret_');
-  if (idx <= 0) return null;
-  return clientSecret.slice(0, idx);
+  return getProviderAdapter(provider)?.validateSession(r) ?? true;
 }
 
 export function getSessionIdFromResponse(
@@ -76,11 +58,7 @@ export function getSessionIdFromResponse(
   if (typeof session.sessionId === 'string' && session.sessionId.length > 0) {
     return session.sessionId;
   }
-  if (provider === 'stripe') {
-    const clientSecret = (session as { clientSecret?: unknown }).clientSecret;
-    if (typeof clientSecret === 'string') return extractSessionId(clientSecret);
-  }
-  return null;
+  return getProviderAdapter(provider)?.getSessionId(session) ?? null;
 }
 
 export function compileCartItemAccessors<TItem>(

@@ -40,6 +40,26 @@ describe(`${CioCheckoutRegistry.name}: client`, () => {
     expect(cioCheckoutRegistry.getFlow()).toBe(flow);
   });
 
+  it('getFlow returns the flow when the provider matches', () => {
+    const flow = createCheckoutFlow({
+      provider: 'stripe',
+      steps: [{ id: 'a' }],
+      onCreateSession: stubSession,
+    });
+    cioCheckoutRegistry.register(flow);
+    expect(cioCheckoutRegistry.getFlow('stripe')).toBe(flow);
+  });
+
+  it('getFlow returns null when the provider does not match', () => {
+    const flow = createCheckoutFlow({
+      provider: 'stripe',
+      steps: [{ id: 'a' }],
+      onCreateSession: stubSession,
+    });
+    cioCheckoutRegistry.register(flow);
+    expect(cioCheckoutRegistry.getFlow('fiserv')).toBeNull();
+  });
+
   it('register destroys the previous flow when replacing', () => {
     const first = createCheckoutFlow({
       provider: 'stripe',

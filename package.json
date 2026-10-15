@@ -32,9 +32,9 @@
       "require": "./dist/index.cjs.js"
     },
     "./styles.css": "./dist/styles.css",
-    "./constructorio-ui-checkout-standalone": {
-      "import": "./dist/standalone/constructorio-ui-checkout.standalone.js",
-      "require": "./dist/standalone/constructorio-ui-checkout.standalone.js"
+    "./constructorio-ui-checkout-bundled": {
+      "import": "./dist/constructorio-ui-checkout-bundled.js",
+      "require": "./dist/constructorio-ui-checkout-bundled.js"
     }
   },
   "files": [
@@ -51,9 +51,9 @@
   },
   "scripts": {
     "build:lib": "vite build --config vite.lib.config.ts",
-    "build:standalone": "vite build --config vite.standalone.config.ts",
+    "build:bundled": "vite build --config vite.bundled.config.ts",
     "build:types": "tsc -p tsconfig.build.json --emitDeclarationOnly && tsc-alias -p tsconfig.build.json",
-    "build": "npm run build:lib && npm run build:standalone && npm run build:types",
+    "build": "npm run build:lib && npm run build:bundled && npm run build:types",
     "lint": "eslint src spec stories .storybook",
     "lint:fix": "eslint src spec stories .storybook --fix",
     "check-types": "tsc -p tsconfig.json --noEmit",

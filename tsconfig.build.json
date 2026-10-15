@@ -22,7 +22,7 @@
     "**/*.spec.tsx",
     "**/*.stories.ts",
     "**/*.stories.tsx",
-    "src/standalone.tsx",
+    "src/bundled.tsx",
     "**/__tests__/**",
     "**/__mocks__/**"
   ]

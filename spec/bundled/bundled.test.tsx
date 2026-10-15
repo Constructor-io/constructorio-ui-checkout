@@ -1,5 +1,5 @@
+import CioCheckout from '@src/bundled';
 import cioCheckoutRegistry from '@src/manager/CioCheckoutRegistry';
-import CioCheckout from '@src/standalone';
 import type { StripePaymentSession } from '@src/types';
 
 import {

@@ -18,9 +18,9 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: path.resolve(dirname, 'src/standalone.tsx'),
+      entry: path.resolve(dirname, 'src/bundled.tsx'),
       name: 'CioCheckout',
-      fileName: () => 'constructorio-ui-checkout.standalone.js',
+      fileName: () => 'constructorio-ui-checkout-bundled.js',
       formats: ['umd'],
     },
     rollupOptions: {
@@ -29,6 +29,7 @@ export default defineConfig({
         globals: {},
       },
     },
-    outDir: 'dist/standalone',
+    outDir: 'dist',
+    emptyOutDir: false,
   },
 });

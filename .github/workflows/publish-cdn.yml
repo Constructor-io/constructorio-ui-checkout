@@ -55,7 +55,7 @@ jobs:
         shell: bash
         run: |
           mkdir s3_dist
-          cp dist/standalone/constructorio-ui-checkout.standalone.js s3_dist/${{ steps.version.outputs.without_prefix }}.js
+          cp dist/constructorio-ui-checkout-bundled.js s3_dist/${{ steps.version.outputs.without_prefix }}.js
           aws s3 sync s3_dist s3://constructor-frontend-prod/ui/checkout --cache-control 'public, max-age=1800' --acl 'public-read'
 
       - name: Notify Slack about new publish to CDN

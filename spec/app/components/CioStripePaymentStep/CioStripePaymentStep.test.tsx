@@ -237,4 +237,52 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
       expect(onCreateSession).toHaveBeenCalledTimes(2);
     });
   });
+
+  it('renders custom session error labels from translations', async () => {
+    render(
+      <CioCheckoutProvider
+        provider="stripe"
+        steps={[{ id: PAYMENT_STEP }]}
+        onCreateSession={() => Promise.reject(new Error('boom'))}
+        autoStart
+      >
+        <CioCheckoutStep id={PAYMENT_STEP}>
+          <CioStripePaymentStep
+            onError={vi.fn()}
+            translations={{
+              'CioCheckout.session.errorLabel': 'Could not start',
+              'CioCheckout.session.retryLabel': 'Try again',
+            }}
+          />
+        </CioCheckoutStep>
+      </CioCheckoutProvider>
+    );
+    expect(await screen.findByText('Could not start')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Try again' })
+    ).toBeInTheDocument();
+  });
+
+  it('renders a configuration error when the flow has no onCreateSession', async () => {
+    const onError = vi.fn();
+    render(
+      <CioCheckoutProvider
+        provider="stripe"
+        steps={[{ id: PAYMENT_STEP }]}
+        autoStart
+      >
+        <CioCheckoutStep id={PAYMENT_STEP}>
+          <CioStripePaymentStep onError={onError} />
+        </CioCheckoutStep>
+      </CioCheckoutProvider>
+    );
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveClass('cio-checkout-session-error');
+    expect(alert).toHaveTextContent(
+      'This payment step needs an onCreateSession handler.'
+    );
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+  });
 });

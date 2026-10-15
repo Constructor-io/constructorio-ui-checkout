@@ -41,6 +41,8 @@ export type { CioStripePaymentStepProps } from './app/components/CioStripePaymen
 export { CioStripePaymentStep } from './app/components/CioStripePaymentStep';
 export type { UseCioCheckoutReturn } from './app/hooks/useCioCheckout';
 export { useCioCheckout } from './app/hooks/useCioCheckout';
+export type { UseCioCheckoutSessionReturn } from './app/hooks/useCioCheckoutSession';
+export { useCioCheckoutSession } from './app/hooks/useCioCheckoutSession';
 export type { CioCheckoutProviderProps } from './app/providers/CioCheckoutProvider';
 export { CioCheckoutProvider } from './app/providers/CioCheckoutProvider';
 

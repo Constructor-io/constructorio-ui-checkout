@@ -13,7 +13,7 @@ import type { StripePaymentElementChangeEvent } from '@stripe/stripe-js';
 
 import type {
   CheckoutComponentOverrides,
-  CheckoutRedirectBehavior,
+  CheckoutStripeRedirectBehavior,
   PayButtonRenderProps,
   Translations,
 } from '@src/types';
@@ -27,7 +27,7 @@ interface CheckoutFormElementsProps {
   onSessionExpired?: () => void;
   translations?: Translations;
   componentOverrides?: CheckoutComponentOverrides;
-  redirectBehavior?: CheckoutRedirectBehavior;
+  redirectBehavior?: CheckoutStripeRedirectBehavior;
 }
 
 export default function CheckoutFormElements({

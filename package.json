@@ -1,7 +1,7 @@
 {
   "name": "@constructor-io/constructorio-ui-checkout",
   "version": "0.0.0",
-  "description": "Constructor.io Stripe Embedded Checkout UI library for web applications",
+  "description": "Provider-neutral headless checkout core (state machine, sessions, storage, routing) with a built-in Stripe payment step",
   "author": "Constructor.io Corporation",
   "license": "MIT",
   "homepage": "https://github.com/Constructor-io/constructorio-ui-checkout#readme",
@@ -32,9 +32,9 @@
       "require": "./dist/index.cjs.js"
     },
     "./styles.css": "./dist/styles.css",
-    "./constructorio-ui-checkout-standalone": {
-      "import": "./dist/standalone/constructorio-ui-checkout.standalone.js",
-      "require": "./dist/standalone/constructorio-ui-checkout.standalone.js"
+    "./constructorio-ui-checkout-bundled": {
+      "import": "./dist/constructorio-ui-checkout-bundled.js",
+      "require": "./dist/constructorio-ui-checkout-bundled.js"
     }
   },
   "files": [
@@ -47,17 +47,16 @@
     "use-sync-external-store": "^1.7.0"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
     "build:lib": "vite build --config vite.lib.config.ts",
-    "build:standalone": "vite build --config vite.standalone.config.ts",
+    "build:bundled": "vite build --config vite.bundled.config.ts",
     "build:types": "tsc -p tsconfig.build.json --emitDeclarationOnly && tsc-alias -p tsconfig.build.json",
-    "build": "npm run build:lib && npm run build:standalone && npm run build:types",
+    "build": "npm run build:lib && npm run build:bundled && npm run build:types",
     "lint": "eslint src spec stories .storybook",
     "lint:fix": "eslint src spec stories .storybook --fix",
     "check-types": "tsc -p tsconfig.json --noEmit",
-    "prepare": "husky",
     "check-license": "license-checker --production --onlyAllow 'Apache-2.0;BSD-3-Clause;MIT;0BSD;BSD-2-Clause;ISC' --excludePackages 'lightningcss@1.32.0;lightningcss-darwin-arm64@1.32.0;lightningcss-linux-x64-gnu@1.32.0;lightningcss-linux-x64-musl@1.32.0'",
     "dev": "storybook dev -p 6008",
     "build-storybook": "storybook build --docs -o 'docs'",
@@ -104,6 +103,7 @@
     "@vitest/browser-playwright": "^4.1.11",
     "@vitest/coverage-v8": "^4.1.2",
     "@vitest/eslint-plugin": "^1.6.23",
+    "cspell": "10.4.0",
     "eslint": "^9.39.3",
     "eslint-config-prettier": "^10.1.1",
     "eslint-import-resolver-typescript": "^4.4.4",
@@ -118,7 +118,6 @@
     "eslint-plugin-testing-library": "^7.16.2",
     "fishery": "^2.4.0",
     "globals": "^16.0.0",
-    "husky": "^9.1.7",
     "jsdom": "^29.0.1",
     "license-checker": "^25.0.1",
     "playwright": "^1.63.0",
@@ -136,9 +135,5 @@
     "vite-plugin-css-injected-by-js": "^3.5.2",
     "vitest": "^4.1.2",
     "vitest-fail-on-console": "^0.10.1"
-  },
-  "volta": {
-    "node": "22.18.0",
-    "npm": "10.9.3"
   }
 }

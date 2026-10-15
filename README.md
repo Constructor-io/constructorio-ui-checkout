@@ -6,7 +6,7 @@
 
 ## Introduction
 
-Headless primitives for building multi-step checkout on top of Stripe. The library owns the state machine, session lifecycle, storage, routing, and the default Stripe surface — your app composes the UI (cart, address, review, confirmation, custom steps).
+A provider-neutral headless checkout core (state machine, sessions, storage, routing) with a built-in Stripe payment step. The library owns the state machine, session lifecycle, storage, routing, and the default Stripe surface — your app composes the UI (cart, address, review, confirmation, custom steps).
 
 Our [Storybook Docs](https://constructor-io.github.io/constructorio-ui-checkout) are the best place to explore behavior, adapters, and full integration recipes.
 
@@ -92,7 +92,7 @@ You own the button, the layout, and every non-Stripe step. See the [Integration 
 A framework-agnostic bundle for non-React SPAs, server-rendered sites, or `<script>`-tag integrations. The bundle exposes `window.CioCheckout` — a state-only namespace; you drive your own DOM.
 
 ```html
-<script src="/path/to/constructorio-ui-checkout.standalone.js"></script>
+<script src="/path/to/constructorio-ui-checkout-bundled.js"></script>
 <script>
   const flow = CioCheckout.resume({
     steps: [{ id: 'cart' }, { id: 'payment' }, { id: 'done' }],
@@ -108,7 +108,7 @@ A framework-agnostic bundle for non-React SPAs, server-rendered sites, or `<scri
 Consuming through a bundler? Import the same bundle via subpath — same `CioCheckout` surface:
 
 ```js
-import CioCheckout from '@constructor-io/constructorio-ui-checkout/constructorio-ui-checkout-standalone';
+import CioCheckout from '@constructor-io/constructorio-ui-checkout/constructorio-ui-checkout-bundled';
 ```
 
 `CioCheckout.resume(config)` creates a checkout flow backed by a `sessionStorage` adapter (auto-hydrates on page load) and registers it as the active flow so any other CIO library on the page can reach it.

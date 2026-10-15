@@ -1,7 +1,7 @@
 import type { Stripe } from '@stripe/stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 
-import type { CheckoutUiMode } from '@src/types';
+import type { CheckoutStripeUiMode } from '@src/types';
 
 const CHECKOUT_FORM_BETA = 'custom_checkout_payment_form_1';
 
@@ -10,7 +10,7 @@ class CheckoutManager {
 
   getStripe(
     publishableKey: string,
-    uiMode: CheckoutUiMode = 'form'
+    uiMode: CheckoutStripeUiMode = 'form'
   ): Promise<Stripe | null> {
     const cacheKey = `${publishableKey}:${uiMode}`;
     const existing = this.stripeInstances.get(cacheKey);
@@ -25,7 +25,10 @@ class CheckoutManager {
     return stripePromise;
   }
 
-  clearStripe(publishableKey: string, uiMode: CheckoutUiMode = 'form'): void {
+  clearStripe(
+    publishableKey: string,
+    uiMode: CheckoutStripeUiMode = 'form'
+  ): void {
     this.stripeInstances.delete(`${publishableKey}:${uiMode}`);
   }
 

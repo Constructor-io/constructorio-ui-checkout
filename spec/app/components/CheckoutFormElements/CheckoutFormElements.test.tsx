@@ -93,6 +93,80 @@ describe(`${CheckoutFormElements.name}: client`, () => {
     });
   });
 
+  const mockConfirm = (confirm: ReturnType<typeof vi.fn>) => {
+    vi.mocked(stripeCheckout.useCheckoutElements).mockReturnValue({
+      type: 'success' as const,
+      checkout: {
+        status: { type: 'open' },
+        confirm,
+        total: { total: { amount: '$49.99' } },
+        currencyOptions: [],
+      },
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutElements>);
+  };
+
+  it('renders the confirm error message when confirm returns an error', async () => {
+    mockConfirm(
+      vi.fn().mockResolvedValue({
+        type: 'error',
+        error: { message: 'An email address is required' },
+      })
+    );
+
+    render(<CheckoutFormElements onComplete={onComplete} onError={onError} />);
+    fireEvent.click(screen.getByTestId('stripe-payment-element'));
+    fireEvent.click(screen.getByRole('button'));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('An email address is required');
+    expect(alert).toHaveClass('cio-checkout-confirm-error');
+  });
+
+  it('renders the confirm error message when confirm throws', async () => {
+    mockConfirm(vi.fn().mockRejectedValue(new Error('Network failure')));
+
+    render(<CheckoutFormElements onComplete={onComplete} onError={onError} />);
+    fireEvent.click(screen.getByTestId('stripe-payment-element'));
+    fireEvent.click(screen.getByRole('button'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Network failure'
+    );
+  });
+
+  it('clears the confirm error when the payment element changes', async () => {
+    mockConfirm(
+      vi.fn().mockResolvedValue({
+        type: 'error',
+        error: { message: 'Card declined' },
+      })
+    );
+
+    render(<CheckoutFormElements onComplete={onComplete} onError={onError} />);
+    fireEvent.click(screen.getByTestId('stripe-payment-element'));
+    fireEvent.click(screen.getByRole('button'));
+    await screen.findByRole('alert');
+
+    fireEvent.click(screen.getByTestId('stripe-payment-element'));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('shows the loader while Stripe.js is loading', () => {
+    vi.mocked(stripeCheckout.useCheckoutElements).mockReturnValue({
+      type: 'loading' as const,
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutElements>);
+
+    render(<CheckoutFormElements onComplete={onComplete} />);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Preparing checkout...'
+    );
+  });
+
+  it('does not show the loader once Stripe.js has loaded', () => {
+    render(<CheckoutFormElements onComplete={onComplete} />);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('calls onError when confirm throws an Error', async () => {
     const confirmMock = vi.fn().mockRejectedValue(new Error('Network failure'));
     vi.mocked(stripeCheckout.useCheckoutElements).mockReturnValue({

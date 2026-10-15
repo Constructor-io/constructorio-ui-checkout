@@ -105,7 +105,9 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
     });
   });
 
-  it('renders nothing while session is being created', async () => {
+  const renderPending = (
+    props: Parameters<typeof CioStripePaymentStep>[0] = {}
+  ) =>
     render(
       <CioCheckoutProvider
         provider="stripe"
@@ -116,13 +118,59 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
         autoStart
       >
         <CioCheckoutStep id={PAYMENT_STEP}>
-          <CioStripePaymentStep />
+          <CioStripePaymentStep {...props} />
         </CioCheckoutStep>
       </CioCheckoutProvider>
     );
-    await waitFor(() => {
-      expect(screen.queryByTestId('stripe-provider')).not.toBeInTheDocument();
+
+  it('renders the loader with the default label while the session is being created', async () => {
+    renderPending();
+    const loader = await screen.findByRole('status');
+    expect(loader).toHaveTextContent('Preparing checkout...');
+    expect(loader).toHaveClass('cio-checkout-loader');
+    expect(screen.queryByTestId('stripe-provider')).not.toBeInTheDocument();
+  });
+
+  it('renders a custom loader label from translations', async () => {
+    renderPending({
+      translations: { 'CioCheckout.checkout.preparingLabel': 'One moment' },
     });
+    expect(await screen.findByRole('status')).toHaveTextContent('One moment');
+  });
+
+  it('renders a componentOverrides.loader override instead of the default', async () => {
+    renderPending({
+      componentOverrides: {
+        loader: {
+          reactNode: ({ label }) => (
+            <span data-testid="custom-loader">{label} (custom)</span>
+          ),
+        },
+      },
+    });
+    expect(await screen.findByTestId('custom-loader')).toHaveTextContent(
+      'Preparing checkout... (custom)'
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('renders the error block, not the loader, when the session fails', async () => {
+    render(
+      <CioCheckoutProvider
+        provider="stripe"
+        steps={[{ id: PAYMENT_STEP }]}
+        onCreateSession={() => Promise.reject(new Error('boom'))}
+        autoStart
+      >
+        <CioCheckoutStep id={PAYMENT_STEP}>
+          <CioStripePaymentStep onError={vi.fn()} />
+        </CioCheckoutStep>
+      </CioCheckoutProvider>
+    );
+    expect(await screen.findByRole('alert')).toHaveClass(
+      'cio-checkout-session-error'
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('shows error UI with Retry when createSession rejects, and recovers on retry', async () => {
@@ -188,5 +236,53 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
     await waitFor(() => {
       expect(onCreateSession).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('renders custom session error labels from translations', async () => {
+    render(
+      <CioCheckoutProvider
+        provider="stripe"
+        steps={[{ id: PAYMENT_STEP }]}
+        onCreateSession={() => Promise.reject(new Error('boom'))}
+        autoStart
+      >
+        <CioCheckoutStep id={PAYMENT_STEP}>
+          <CioStripePaymentStep
+            onError={vi.fn()}
+            translations={{
+              'CioCheckout.session.errorLabel': 'Could not start',
+              'CioCheckout.session.retryLabel': 'Try again',
+            }}
+          />
+        </CioCheckoutStep>
+      </CioCheckoutProvider>
+    );
+    expect(await screen.findByText('Could not start')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Try again' })
+    ).toBeInTheDocument();
+  });
+
+  it('renders a configuration error when the flow has no onCreateSession', async () => {
+    const onError = vi.fn();
+    render(
+      <CioCheckoutProvider
+        provider="stripe"
+        steps={[{ id: PAYMENT_STEP }]}
+        autoStart
+      >
+        <CioCheckoutStep id={PAYMENT_STEP}>
+          <CioStripePaymentStep onError={onError} />
+        </CioCheckoutStep>
+      </CioCheckoutProvider>
+    );
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveClass('cio-checkout-session-error');
+    expect(alert).toHaveTextContent(
+      'This payment step needs an onCreateSession handler.'
+    );
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
   });
 });

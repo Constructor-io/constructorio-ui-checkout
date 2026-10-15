@@ -4,6 +4,7 @@ import { createCartManager } from './flow/cartManager';
 import type { FlowContext } from './flow/context';
 import {
   compileCartItemAccessors,
+  computeCartTotal,
   findStepIndex,
   makeInitialState,
 } from './flow/helpers';
@@ -46,17 +47,16 @@ export function createCheckoutFlow<
     seen.add(step.id);
   }
 
-  if (typeof config.onCreateSession !== 'function') {
-    throw new Error('createCheckoutFlow: `onCreateSession` is required');
-  }
-
+  const accessors = compileCartItemAccessors<TItem>(config.cartItemFields);
   const initialState = makeInitialState<TItem>();
-  if (config.cart) initialState.cartSnapshot = config.cart.slice();
+  if (config.cart) {
+    initialState.cartSnapshot = config.cart.slice();
+    initialState.cartTotal = computeCartTotal(config.cart, accessors);
+  }
   if (config.currency !== undefined) initialState.currency = config.currency;
   const store = createStore<CheckoutFlowState<TItem>>(initialState);
   const events = createEmitter<TItem>();
   const steps = config.steps.slice();
-  const accessors = compileCartItemAccessors<TItem>(config.cartItemFields);
   let integratorState = config.initialState ?? ({} as TState);
   let destroyed = false;
 
@@ -187,9 +187,14 @@ export function createCheckoutFlow<
       sessionManager.getSession() === null &&
       (validated.sessionStatus === 'active' ||
         validated.sessionStatus === 'creating');
+    const restored: CheckoutFlowState<TItem> = {
+      ...validated,
+      cartTotal: computeCartTotal(validated.cartSnapshot, accessors),
+      paymentInProgress: false,
+    };
     const next = needsRecovery
-      ? { ...validated, sessionStatus: 'idle' as const, sessionId: null }
-      : validated;
+      ? { ...restored, sessionStatus: 'idle' as const, sessionId: null }
+      : restored;
     store.setState(() => next);
   };
 
@@ -234,6 +239,14 @@ export function createCheckoutFlow<
     updateSession: (patch) => sessionManager.updateSession(patch),
     recreate: () => sessionManager.recreate(),
     markExpired: () => sessionManager.markExpired(),
+    setPaymentInProgress: (value) => {
+      if (isDead()) return;
+      store.setState((prev) =>
+        prev.paymentInProgress === value
+          ? prev
+          : { ...prev, paymentInProgress: value }
+      );
+    },
     syncCart: (items) => cartManager.syncCart(items),
     setCart: (items) => cartManager.setCart(items),
     getIntegratorState: () => integratorState,

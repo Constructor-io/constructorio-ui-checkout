@@ -38,6 +38,19 @@ export function validateFlowState<TItem = unknown>(
     return null;
   }
   if (!isPlainObject(input.metadata)) return null;
+  // Added after schemaVersion 1 shipped, so older stored states may omit them.
+  if (
+    input.cartTotal !== undefined &&
+    !(typeof input.cartTotal === 'number' && Number.isFinite(input.cartTotal))
+  ) {
+    return null;
+  }
+  if (
+    input.paymentInProgress !== undefined &&
+    typeof input.paymentInProgress !== 'boolean'
+  ) {
+    return null;
+  }
 
   return input as unknown as CheckoutFlowState<TItem>;
 }

@@ -1,6 +1,7 @@
 import {
   compileCartItemAccessors,
   computeCartDiff,
+  computeCartTotal,
   findStepIndex,
   getSessionIdFromResponse,
   isValidSessionResponse,
@@ -19,9 +20,11 @@ describe(`${makeInitialState.name}: client`, () => {
       currentStepId: null,
       completedStepIds: [],
       cartSnapshot: [],
+      cartTotal: 0,
       currency: null,
       sessionId: null,
       sessionStatus: 'idle',
+      paymentInProgress: false,
       metadata: {},
       schemaVersion: FLOW_SCHEMA_VERSION,
     });
@@ -159,6 +162,24 @@ describe(`${getSessionIdFromResponse.name}: client`, () => {
 
   it('returns null when sessionId is an empty string', () => {
     expect(getSessionIdFromResponse({ sessionId: '' }, 'fiserv')).toBeNull();
+  });
+});
+
+describe(`${computeCartTotal.name}: client`, () => {
+  it('returns 0 for an empty cart', () => {
+    expect(computeCartTotal([], accessors)).toBe(0);
+  });
+
+  it('sums unitAmount * quantity', () => {
+    expect(
+      computeCartTotal(
+        [
+          { id: 'a', name: 'A', unitAmount: 1000, quantity: 2 },
+          { id: 'b', name: 'B', unitAmount: 250, quantity: 3 },
+        ],
+        accessors
+      )
+    ).toBe(2750);
   });
 });
 

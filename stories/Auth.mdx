@@ -130,7 +130,7 @@ function sanitizeReturnTo(value: string | null | undefined): string {
 
 **Deep link to `/checkout/payment` while logged out.**
 
-- `flow.state.currentStepId` — flow hydrates toward stripe, guard blocks, pushes `/login` (`currentStepId` becomes `'auth'`)
+- `flow.state.currentStepId` — flow hydrates toward the payment step, guard blocks, pushes `/login` (`currentStepId` becomes `'auth'`)
 - After sign-in — `flow.next()` continues to `/checkout/payment`
 
 ## Auth-gating with guards
@@ -153,7 +153,7 @@ Behavior:
 
 - User advances from `cart` → flow enters `auth` (routed to `/login`).
 - User signs in, `LoginPage` calls `flow.next()`.
-- Guard on `stripe` runs — `isSignedIn()` returns `true` → payment step entered.
+- Guard on the payment step runs — `isSignedIn()` returns `true` → payment step entered.
 
 A signed-in user starting checkout should not land on `/login` at all. **`optional: true` alone is not enough** — the flow does not auto-skip optional steps on entry; it only permits `next({ skip: true })` from within them. Three patterns, in order of preference:
 

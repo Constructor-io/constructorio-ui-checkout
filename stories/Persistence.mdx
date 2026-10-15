@@ -4,7 +4,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Persistence & Resume
 
-By default the flow is in-memory only. Pass a `storage` adapter and `storageKey` and the library serializes `CheckoutFlowState` on every change (debounced) and hydrates on the next mount. This powers refresh survival, deep-link resume, B2B pause/resume, and emailed abandoned-cart links.
+By default the flow is in-memory only. Pass a `storage` adapter and the library serializes `CheckoutFlowState` on every change (debounced) and hydrates on the next mount. `storageKey` is optional. Without it, the key is `DEFAULT_STORAGE_KEY` (`'cio-checkout-flow'`). This powers refresh survival, deep-link resume, B2B pause/resume, and emailed abandoned-cart links.
 
 ## Full example
 
@@ -204,12 +204,14 @@ The key namespaces the persisted entry. Two rules:
 
 Everything in `CheckoutFlowState`:
 
-- `currentStepId` — where the user was
-- `completedStepIds` — which steps they finished
-- `cartSnapshot` — cart items
+- `currentStepId`: where the user was
+- `completedStepIds`: which steps they finished
+- `cartSnapshot`: cart items
+- `cartTotal`: the cart subtotal. Recomputed from `cartSnapshot` on hydrate.
 - `sessionId` and `sessionStatus`
-- `metadata` — your integrator state key
-- `schemaVersion` — used to reject incompatible saves
+- `paymentInProgress`: always saved as `false`. A payment cannot survive a reload.
+- `metadata`: reserved for the library. Empty today.
+- `schemaVersion`: used to reject incompatible saves
 
 **What isn't saved: the in-memory `session` (`clientSecret`).** That lives only in RAM. On hydrate with `sessionStatus: 'active'`, the library downgrades to `sessionStatus: 'idle'` so the next `CioStripePaymentStep` mount calls `onCreateSession` again to recover. See [Sessions](./?path=/docs/core-sessions--docs#sessions-and-persistence) for the full explanation.
 
@@ -284,7 +286,9 @@ To distinguish "storage disabled" from "storage failed", wrap the adapter and pr
 
 `CheckoutFlowState.schemaVersion` is currently `1`. When the library bumps it, entries saved under the old version are dropped on load — buyers start fresh instead of hydrating into a broken shape.
 
-When extending `CheckoutFlowState` through `metadata` or `integratorState` and later changing that schema, apply the same rule: bump `storageKey` to invalidate old entries.
+`cartTotal` and `paymentInProgress` were added in v2 without a version bump. Entries saved without them still load.
+
+Custom state (`integratorState`) is not persisted, so changing its shape does not affect stored entries.
 
 ## Security
 
@@ -306,8 +310,7 @@ same origin.
   contracts).
 - `currency` — the currency code passed to the Provider (or `null` if
   unset).
-- `metadata` — merchant-owned, serialized verbatim. See "PII in metadata"
-  below.
+- `metadata`: reserved for the library. Empty today.
 
 ### What is never persisted
 
@@ -319,12 +322,12 @@ same origin.
 - **PSP credentials.** API keys, publishable keys, and any tokens returned
   by the PSP's client SDK are not stored.
 
-### PII in metadata
+### PII in cart items
 
-`metadata` is the primary exposure surface because merchants fill it and the
-library stores it verbatim. An email or shipping address written to
-`metadata` lands in sessionStorage — readable by any script on the origin,
-including installed browser extensions with page-content permissions.
+`cartSnapshot` is stored as you passed it, including any extra fields on your
+item type. An email or shipping address added to a cart item lands in
+sessionStorage. Any script on the origin can read it, including browser
+extensions with page-content permissions.
 
 Three options if PII must move across steps:
 
@@ -334,8 +337,8 @@ Three options if PII must move across steps:
 - **Encrypted adapter.** Wrap the built-in adapter so `save` encrypts and
   `load` decrypts. Fetch the key from your backend per session; embedding it
   in the bundle moves the exposure rather than removing it.
-- **Skip persistence.** Omit `storage` / `storageKey`. The flow runs
-  in-memory; refresh starts over.
+- **Skip persistence.** Omit `storage`. The flow runs in memory; refresh
+  starts over.
 
 ### Threat model
 

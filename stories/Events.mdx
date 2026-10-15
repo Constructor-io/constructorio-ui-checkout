@@ -28,7 +28,7 @@ Every flow action — starting, transitioning, creating sessions, hitting errors
 | `flow.completed`    | —                  | `flow.complete()` called or `flow.next()` past the final step                              |
 | `step.entered`      | `StepTransition`   | Any transition into a step (start / next / back / goTo / resume)                           |
 | `step.exited`       | `StepTransition`   | Paired with `step.entered` on transition                                                   |
-| `session.created`   | `SessionRef`       | `onCreateSession` resolves                                                                 |
+| `session.created`   | `SessionRef`       | `onCreateSession` resolves with a session that has an id                                   |
 | `session.updated`   | `SessionUpdate`    | `onUpdateSession` resolves (cart change, address, tax, shipping, coupon, …)                |
 | `session.expired`   | `SessionRef`       | Stripe reports session expiry, or `flow.markExpired()` is called                           |
 | `session.recreated` | `SessionRecreated` | `flow.recreate()` succeeds after expiry                                                    |
@@ -58,13 +58,13 @@ type CheckoutError = {
 
 The `error` event's `source` identifies where the failure originated:
 
-- `'session.create'` — `onCreateSession` threw or rejected
-- `'session.update'` — `onUpdateSession` threw or rejected
-- `'payment.confirm'` — Stripe `checkout.confirm()` threw or returned an error
-- `'storage'` — the storage adapter's `save` / `load` / `clear` threw
-- `'router'` — the router adapter's `push` threw or an unsafe path was rejected
-- `'guard'` — a step's `guard` returned `false` or threw
-- `'authenticate'` — the `authenticate` config callback threw
+- `'session.create'`: `onCreateSession` threw or rejected. `<CioStripePaymentStep>` also emits it once when the flow has no `onCreateSession`.
+- `'session.update'`: `onUpdateSession` threw or rejected
+- `'payment.confirm'`: Stripe `checkout.confirm()` threw or returned an error
+- `'storage'`: the storage adapter's `save` / `load` / `clear` threw
+- `'router'`: the router adapter's `push` threw or an unsafe path was rejected
+- `'guard'`: a step's `guard` threw; or a guard returned `false` during `goTo()`, a routed `start()`, or resume; or `next({ skip: true })` was called on a required step; or `back()` / `goTo()` ran while `paymentInProgress` was `true`. A guard that returns `false` during a plain `next()` does not emit an error.
+- `'authenticate'`: the `authenticate` config callback threw or returned `null`
 
 Some errors include a `retry` function that re-runs the failed operation. `session.create` and `session.update` are the retryable sources.
 
@@ -172,7 +172,7 @@ onEvent={(event) => {
 ## Ordering guarantees
 
 - `step.exited` always fires before `step.entered` on a transition.
-- `session.created` fires before `step.entered` on the payment step when `<CioStripePaymentStep>` auto-creates the session.
+- `session.created` fires after `step.entered` on the payment step. The step creates the session when it mounts, through `useCioCheckoutSession()`.
 - `flow.completed` fires after the last `step.entered` for the terminal step.
 - `error` events fire _instead of_ the success event for the failed operation — a failed `onCreateSession` emits `error` with `source: 'session.create'`, not `session.created`.
 

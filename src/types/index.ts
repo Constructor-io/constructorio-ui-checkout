@@ -12,6 +12,22 @@ export interface Translations {
   'CioCheckout.checkout.payButtonLoadingLabel'?: string;
   /** Shown while the payment step prepares the checkout session. */
   'CioCheckout.checkout.preparingLabel'?: string;
+  /** Payment step: shown when the session could not be created. */
+  'CioCheckout.session.errorLabel'?: string;
+  /** Payment step: retry button after a session error. */
+  'CioCheckout.session.retryLabel'?: string;
+  /** Payment step: shown when the flow has no `onCreateSession` handler. */
+  'CioCheckout.session.missingLabel'?: string;
+  /** Fulfillment step: shown while `onFulfill` runs. */
+  'CioCheckout.fulfillment.pendingLabel'?: string;
+  /** Fulfillment step: shown on success when the result has no message. */
+  'CioCheckout.fulfillment.successLabel'?: string;
+  /** Fulfillment step: shown on failure when the result has no message. */
+  'CioCheckout.fulfillment.failedLabel'?: string;
+  /** Fulfillment step: retry button after a failure. */
+  'CioCheckout.fulfillment.retryLabel'?: string;
+  /** Fulfillment step: message used when `onFulfill` throws a non-Error. */
+  'CioCheckout.fulfillment.errorFallbackLabel'?: string;
 }
 
 export interface BaseCartItem {

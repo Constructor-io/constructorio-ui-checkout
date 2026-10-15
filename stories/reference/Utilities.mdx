@@ -1,0 +1,150 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Components & Utilities/Utilities" />
+
+# Utilities
+
+Exported alongside the components.
+
+## `createCheckoutFlow`
+
+Creates a flow with no React. The provider uses it under the hood.
+
+```ts
+import { createCheckoutFlow } from '@constructor-io/constructorio-ui-checkout';
+
+const flow = createCheckoutFlow(
+  {
+    provider: 'stripe',
+    steps: [{ id: 'cart' }, { id: 'payment' }],
+    onCreateSession: () => fetch('/api/session').then((r) => r.json()),
+  },
+  { deferMount: false }
+);
+
+flow.subscribe((state) => render(state));
+await flow.start();
+```
+
+Config fields (the provider takes the same ones as props):
+
+| Field                    | Type                                         | Description                                                                 |
+| ------------------------ | -------------------------------------------- | --------------------------------------------------------------------------- |
+| `provider`               | `string`                                     | Required. `'stripe'` or your own provider name.                             |
+| `steps`                  | `CheckoutStep[]`                             | Required. Non-empty, with unique ids.                                       |
+| `onCreateSession`        | `(state) => Promise<session>`                | Creates the payment session. Optional. Omit it for providers that create their own session. |
+| `onUpdateSession`        | `(patch) => Promise<session>`                | Updates the session when the cart changes.                                  |
+| `onEvent`                | `(event) => void`                            | Receives every event.                                                       |
+| `cart`                   | `TItem[]`                                    | Starting cart.                                                              |
+| `cartItemFields`         | `CartItemAccessors<TItem>`                   | Maps your cart item fields. See [Cart](?path=/docs/guides-cart--docs).      |
+| `currency`               | `string`                                     | Stored in `state.currency`.                                                 |
+| `cartDebounceMs`         | `number`                                     | Wait before `setCart` syncs. Default `400`.                                 |
+| `storage`                | `CheckoutStorageAdapter`                     | Turns on persistence.                                                       |
+| `storageKey`             | `string`                                     | Key for the stored entry. Default `DEFAULT_STORAGE_KEY`.                    |
+| `storageSaveDebounceMs`  | `number`                                     | Wait before a save. Default `150`.                                          |
+| `storageAutoResume`      | `boolean`                                    | Restore from storage on `start()`. Default `true`.                          |
+| `router`                 | `CheckoutRouterAdapter`                      | Keeps the URL in sync. See [Routing](?path=/docs/guides-routing--docs).     |
+| `authenticate`           | `() => Promise<CheckoutAuthResult \| null>`  | Runs before `start()`. `null` stops the flow.                               |
+| `initialState`           | `TState`                                     | Starting custom state.                                                      |
+| `autoStart`              | `boolean`                                    | Calls `start()` after mount.                                                |
+
+Options (second argument):
+
+| Option       | Type      | Description                                                                                         |
+| ------------ | --------- | --------------------------------------------------------------------------------------------------- |
+| `deferMount` | `boolean` | When `true`, the flow does not subscribe to the router or auto-start until you call `flow.mount()`. The provider passes `true` and calls `mount()` from an effect. |
+
+The returned flow has the methods listed under [Hooks](?path=/docs/components-utilities-hooks--docs).
+
+## `createSessionStorageAdapter`
+
+A `CheckoutStorageAdapter` backed by `sessionStorage`. Entries live until the tab closes. When `sessionStorage` is not available (server rendering, some private modes), every call resolves and nothing is saved.
+
+```ts
+import {
+  CioCheckoutProvider,
+  createSessionStorageAdapter,
+} from '@constructor-io/constructorio-ui-checkout';
+
+<CioCheckoutProvider provider="stripe" storage={createSessionStorageAdapter()} ... />;
+```
+
+See [Persistence](?path=/docs/guides-persistence--docs) for backend adapters.
+
+## `cioCheckoutRegistry`
+
+One shared slot for the active flow, so other Constructor libraries on the page can reach it.
+
+| Method                | Description                                                                         |
+| --------------------- | ----------------------------------------------------------------------------------- |
+| `register(flow)`      | Stores the flow. Destroys the previous one if it is different.                      |
+| `getFlow(provider?)`  | The stored flow, or `null`. With `provider`, returns `null` when it does not match. |
+| `hasFlow()`           | Whether a flow is stored.                                                           |
+| `clear()`             | Destroys and removes the stored flow.                                               |
+| `resume(config)`      | Creates a flow with the sessionStorage adapter (unless `storage` is given), registers it and returns it. |
+
+```ts
+import { cioCheckoutRegistry } from '@constructor-io/constructorio-ui-checkout';
+
+const flow = cioCheckoutRegistry.getFlow('stripe');
+flow?.syncCart(items);
+```
+
+## Constants
+
+| Name                  | Value                 | Description                                                    |
+| --------------------- | --------------------- | -------------------------------------------------------------- |
+| `PAYMENT_STEP`        | `'payment'`           | The step id these docs use for the payment step.               |
+| `DEFAULT_STORAGE_KEY` | `'cio-checkout-flow'` | Storage key used when `storage` is passed without `storageKey`. |
+| `FLOW_SCHEMA_VERSION` | `1`                   | Version written to `state.schemaVersion`. Stored entries with another version are ignored. |
+
+## Translation keys
+
+Pass any of these through `translations` on `CioStripePaymentStep` or `CioFulfillmentStep`.
+
+| Key                                          | Default                                               | Used by                          |
+| -------------------------------------------- | ----------------------------------------------------- | -------------------------------- |
+| `CioCheckout.checkout.preparingLabel`        | `Preparing checkout...`                               | `CioStripePaymentStep` loader    |
+| `CioCheckout.checkout.payButtonLabel`        | `Pay`                                                 | `CioStripePaymentStep`, elements |
+| `CioCheckout.checkout.payButtonLoadingLabel` | `Processing...`                                       | `CioStripePaymentStep`, elements |
+| `CioCheckout.session.errorLabel`             | `Failed to prepare checkout. Please try again.`       | `CioStripePaymentStep`           |
+| `CioCheckout.session.retryLabel`             | `Retry`                                               | `CioStripePaymentStep`           |
+| `CioCheckout.session.missingLabel`           | `This payment step needs an onCreateSession handler.` | `CioStripePaymentStep`           |
+| `CioCheckout.fulfillment.pendingLabel`       | `Verifying your order...`                             | `CioFulfillmentStep`             |
+| `CioCheckout.fulfillment.successLabel`       | `Order confirmed`                                     | `CioFulfillmentStep`             |
+| `CioCheckout.fulfillment.failedLabel`        | `Verification failed`                                 | `CioFulfillmentStep`             |
+| `CioCheckout.fulfillment.retryLabel`         | `Retry`                                               | `CioFulfillmentStep`             |
+| `CioCheckout.fulfillment.errorFallbackLabel` | `Fulfillment failed`                                  | `CioFulfillmentStep`             |
+
+`Translations` also has `CioCheckout.checkout.title`, `cancelLabel`, `closeLabel`, `buttonLabel` and `buttonLoadingLabel`. No built-in component uses them today.
+
+## Bundled build and `window.CioCheckout`
+
+A single file with everything inside, including the CSS. Use it from a `<script>` tag or a bundler.
+
+```html
+<script src="/path/to/constructorio-ui-checkout-bundled.js"></script>
+<script>
+  const flow = CioCheckout.resume({
+    provider: 'stripe',
+    steps: [{ id: 'cart' }, { id: 'payment' }],
+    onCreateSession: () => fetch('/api/session').then((r) => r.json()),
+  });
+  flow.start();
+</script>
+```
+
+```js
+import CioCheckout from '@constructor-io/constructorio-ui-checkout/constructorio-ui-checkout-bundled';
+```
+
+| Member                                    | Description                                                    |
+| ----------------------------------------- | -------------------------------------------------------------- |
+| `CioCheckout.VERSION`                     | Library version string                                         |
+| `CioCheckout.createCheckoutFlow`          | Same as `createCheckoutFlow`                                   |
+| `CioCheckout.createSessionStorageAdapter` | Same as `createSessionStorageAdapter`                          |
+| `CioCheckout.resume(config)`              | Same as `cioCheckoutRegistry.resume(config)`                   |
+| `CioCheckout.reset()`                     | Same as `cioCheckoutRegistry.clear()`                          |
+| `CioCheckout.cioCheckoutRegistry`         | The shared registry                                            |
+
+The bundle has no React components. It is the core only. When it loads, it adds the library CSS and two Google Fonts `<link>` tags to `<head>`.

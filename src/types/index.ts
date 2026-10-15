@@ -10,6 +10,8 @@ export interface Translations {
   'CioCheckout.checkout.buttonLoadingLabel'?: string;
   'CioCheckout.checkout.payButtonLabel'?: string;
   'CioCheckout.checkout.payButtonLoadingLabel'?: string;
+  /** Shown while the payment step prepares the checkout session. */
+  'CioCheckout.checkout.preparingLabel'?: string;
 }
 
 export interface BaseCartItem {
@@ -55,8 +57,19 @@ export interface PayButtonRenderProps {
   onClick: () => void;
 }
 
+/** Props passed to a `loader` override. */
+export interface CheckoutLoaderRenderProps {
+  /** Translated loading text, from `CioCheckout.checkout.preparingLabel`. */
+  label: string;
+}
+
 export interface CheckoutComponentOverrides {
   payButton?: ComponentOverrideProps<PayButtonRenderProps>;
+  /**
+   * Replaces the loading state shown while the payment step prepares the
+   * session or while Stripe.js loads.
+   */
+  loader?: ComponentOverrideProps<CheckoutLoaderRenderProps>;
 }
 
 export * from './stripe';

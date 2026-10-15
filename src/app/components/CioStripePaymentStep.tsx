@@ -7,6 +7,7 @@ import {
 
 import CheckoutForm from '@src/app/components/CheckoutForm';
 import CheckoutFormElements from '@src/app/components/CheckoutFormElements';
+import CheckoutLoader from '@src/app/components/CheckoutLoader';
 import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
 import stripeLoader from '@src/providers/stripe/stripeLoader';
 import type {
@@ -154,7 +155,12 @@ export function CioStripePaymentStep({
   }
 
   if (!session || !stripePromise || !providerOptions) {
-    return null;
+    return (
+      <CheckoutLoader
+        translations={translations}
+        componentOverrides={componentOverrides}
+      />
+    );
   }
 
   const Provider =

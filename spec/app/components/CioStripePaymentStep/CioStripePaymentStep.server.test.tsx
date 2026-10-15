@@ -42,4 +42,18 @@ describe(`${CioStripePaymentStep.name}: server`, () => {
     );
     expect(view).not.toContain('stripe-provider');
   });
+
+  it('renders the loader when there is no session yet', () => {
+    const view = renderToString(
+      <CioCheckoutProvider
+        provider="stripe"
+        steps={[{ id: PAYMENT_STEP }]}
+        onCreateSession={stubSession}
+      >
+        <CioStripePaymentStep />
+      </CioCheckoutProvider>
+    );
+    expect(view).toContain('cio-checkout-loader');
+    expect(view).toContain('Preparing checkout...');
+  });
 });

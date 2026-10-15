@@ -11,17 +11,17 @@ import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
 import checkoutManager from '@src/manager/CheckoutManager';
 import type {
   CheckoutComponentOverrides,
-  CheckoutRedirectBehavior,
   CheckoutStripeOptions,
-  CheckoutUiMode,
+  CheckoutStripeRedirectBehavior,
+  CheckoutStripeUiMode,
   Translations,
 } from '@src/types';
 
 import './CioStripePaymentStep.css';
 
 export interface CioStripePaymentStepProps extends CheckoutStripeOptions {
-  uiMode?: CheckoutUiMode;
-  redirectBehavior?: CheckoutRedirectBehavior;
+  uiMode?: CheckoutStripeUiMode;
+  redirectBehavior?: CheckoutStripeRedirectBehavior;
   translations?: Translations;
   componentOverrides?: CheckoutComponentOverrides;
   onError?: (error: Error) => void;

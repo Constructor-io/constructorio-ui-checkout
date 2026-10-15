@@ -57,10 +57,10 @@ export type { BaseCartItem, CartItemAccessors } from './types';
 // Render / SDK types
 export type {
   CheckoutComponentOverrides,
-  CheckoutLayout,
-  CheckoutRedirectBehavior,
+  CheckoutStripeLayout,
   CheckoutStripeOptions,
-  CheckoutUiMode,
+  CheckoutStripeRedirectBehavior,
+  CheckoutStripeUiMode,
   PayButtonRenderProps,
   Translations,
 } from './types';

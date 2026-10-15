@@ -59,17 +59,20 @@ export type PaymentSessionFor<TProvider extends string> =
     ? PaymentSessionMap[TProvider]
     : BasePaymentSession;
 
-export type CheckoutUiMode = 'elements' | 'form';
+/** Stripe Checkout UI mode. Applies to the built-in Stripe payment step only. */
+export type CheckoutStripeUiMode = 'elements' | 'form';
 
-export type CheckoutRedirectBehavior = 'always' | 'if_required';
+/** Stripe redirect behavior after payment confirmation. Applies to the built-in Stripe payment step only. */
+export type CheckoutStripeRedirectBehavior = 'always' | 'if_required';
 
-export type CheckoutLayout = 'expanded' | 'compact';
+/** Stripe Payment Element layout. Applies to the built-in Stripe payment step only. */
+export type CheckoutStripeLayout = 'expanded' | 'compact';
 
 export interface CheckoutStripeOptions {
   appearance?: Omit<Appearance, 'rules'>;
   loader?: 'auto' | 'always' | 'never';
   fonts?: Array<CssFontSource | CustomFontSource>;
-  layout?: CheckoutLayout;
+  layout?: CheckoutStripeLayout;
   defaultValues?: {
     billingAddress?: StripeCheckoutContact;
     shippingAddress?: StripeCheckoutContact;

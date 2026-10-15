@@ -6,7 +6,10 @@ import {
 } from '@stripe/react-stripe-js/checkout';
 import type { StripeCheckoutFormConfirmEvent } from '@stripe/stripe-js';
 
-import type { CheckoutLayout, CheckoutRedirectBehavior } from '@src/types';
+import type {
+  CheckoutStripeLayout,
+  CheckoutStripeRedirectBehavior,
+} from '@src/types';
 
 import './CheckoutForm.css';
 
@@ -14,8 +17,8 @@ interface CheckoutFormProps {
   onComplete: () => void;
   onError?: (error: Error) => void;
   onSessionExpired?: () => void;
-  layout?: CheckoutLayout;
-  redirectBehavior?: CheckoutRedirectBehavior;
+  layout?: CheckoutStripeLayout;
+  redirectBehavior?: CheckoutStripeRedirectBehavior;
 }
 
 export default function CheckoutForm({

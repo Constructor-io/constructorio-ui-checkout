@@ -1,0 +1,34 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Components & Utilities/CioCheckoutStep" />
+
+# CioCheckoutStep
+
+Renders its children only while the flow is on the step with the given `id`. Otherwise it renders nothing.
+
+```tsx
+import {
+  CioCheckoutStep,
+  PAYMENT_STEP,
+} from '@constructor-io/constructorio-ui-checkout';
+
+<CioCheckoutStep id="cart">
+  <MyCart />
+</CioCheckoutStep>
+<CioCheckoutStep id={PAYMENT_STEP}>
+  <CioStripePaymentStep />
+</CioCheckoutStep>
+```
+
+## Props
+
+| Prop       | Type             | Description                                                     |
+| ---------- | ---------------- | --------------------------------------------------------------- |
+| `id`       | `CheckoutStepId` | The step id from the `steps` list on the provider.              |
+| `children` | `ReactNode`      | Rendered when `state.currentStepId === id`.                     |
+
+## Notes
+
+- It must be inside a `<CioCheckoutProvider>`.
+- Children unmount when the flow leaves the step. Any state inside them is lost. Keep values you need later in your own store or in [custom state](?path=/docs/guides-custom-state--docs).
+- It is a convenience. Any component that reads `useCioCheckout().state.currentStepId` can do the same job. See [Hook-only Composition](?path=/docs/guides-hook-only-composition--docs).

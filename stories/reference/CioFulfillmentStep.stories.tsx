@@ -17,7 +17,7 @@ const stubSession = () =>
   });
 
 const meta: Meta<typeof CioFulfillmentStep> = {
-  title: 'Components/CioFulfillmentStep',
+  title: 'Components & Utilities/CioFulfillmentStep',
   component: CioFulfillmentStep,
   tags: ['autodocs'],
   parameters: { layout: 'padded' },
@@ -96,7 +96,7 @@ export const Failure: Story = {
     docs: {
       description: {
         story:
-          '`onFulfill` rejects — the step renders the failure banner with a Retry button. Retry re-runs `onFulfill` without touching session state.',
+          '`onFulfill` rejects — the step renders the failure banner with a Retry button. Retry re-runs `onFulfill` without touching session state. Set `recreateSessionOnRetry` to start a fresh session first.',
       },
     },
   },

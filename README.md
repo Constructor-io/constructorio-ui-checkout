@@ -4,36 +4,25 @@
 [![NPM Version](https://img.shields.io/npm/v/@constructor-io/constructorio-ui-checkout)](https://www.npmjs.com/package/@constructor-io/constructorio-ui-checkout)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Constructor-io/constructorio-ui-checkout/blob/main/LICENSE)
 
-## Introduction
+A headless checkout core with a built-in Stripe payment step. The library runs the steps, the payment session, storage and routing. Your app renders the cart, address, review and confirmation views.
 
-A provider-neutral headless checkout core (state machine, sessions, storage, routing) with a built-in Stripe payment step. The library owns the state machine, session lifecycle, storage, routing, and the default Stripe surface — your app composes the UI (cart, address, review, confirmation, custom steps).
+It works with React, with plain JavaScript, or as a `<script>` tag bundle. Payment providers other than Stripe plug in through the same core.
 
-Our [Storybook Docs](https://constructor-io.github.io/constructorio-ui-checkout) are the best place to explore behavior, adapters, and full integration recipes.
+**[Documentation →](https://constructor-io.github.io/constructorio-ui-checkout)**
 
-## Installation
+## Install
 
 ```bash
 npm i @constructor-io/constructorio-ui-checkout
 ```
 
-## Three integration paths, one core
-
-| Path              | Best for                          | Entry                                        |
-| ----------------- | --------------------------------- | -------------------------------------------- |
-| React             | React apps with the full flow     | `<CioCheckoutProvider>` + `useCioCheckout()` |
-| Vanilla JS (npm)  | Non-React SPAs or custom UIs      | `createCheckoutFlow(config)`                 |
-| Standalone bundle | Server-rendered sites, `<script>` | `window.CioCheckout.resume(config)`          |
-
-All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
-
-## Quick start (React)
+## Usage
 
 ```tsx
 import {
   CioCheckoutProvider,
   CioCheckoutStep,
   CioStripePaymentStep,
-  CioFulfillmentStep,
   PAYMENT_STEP,
   useCioCheckout,
 } from '@constructor-io/constructorio-ui-checkout';
@@ -43,33 +32,17 @@ function App() {
   return (
     <CioCheckoutProvider
       provider="stripe"
-      steps={[
-        { id: 'cart' },
-        { id: 'address' },
-        { id: PAYMENT_STEP },
-        { id: 'fulfill' },
-        { id: 'done' },
-      ]}
-      onCreateSession={async () => {
-        const res = await fetch('/api/checkout-session', { method: 'POST' });
-        return res.json(); // must return { clientSecret, publishableKey }
-      }}
-      onEvent={(event) => console.log(event)}
+      steps={[{ id: 'cart' }, { id: PAYMENT_STEP }, { id: 'done' }]}
+      onCreateSession={() =>
+        fetch('/api/checkout-session', { method: 'POST' }).then((r) => r.json())
+      }
     >
       <StartButton />
       <CioCheckoutStep id="cart">
         <MyCart />
       </CioCheckoutStep>
-      <CioCheckoutStep id="address">
-        <MyAddressForm />
-      </CioCheckoutStep>
       <CioCheckoutStep id={PAYMENT_STEP}>
-        <CioStripePaymentStep uiMode="form" />
-      </CioCheckoutStep>
-      <CioCheckoutStep id="fulfill">
-        <CioFulfillmentStep
-          onFulfill={() => fetch('/api/verify').then((r) => r.json())}
-        />
+        <CioStripePaymentStep />
       </CioCheckoutStep>
       <CioCheckoutStep id="done">
         <MyConfirmation />
@@ -85,147 +58,29 @@ function StartButton() {
 }
 ```
 
-You own the button, the layout, and every non-Stripe step. See the [Integration Guide](https://constructor-io.github.io/constructorio-ui-checkout/?path=/docs/getting-started-integration-guide--docs) for routed multi-step, modal presentation, guards, guest vs. login, and mid-flow cart updates.
-
-## Standalone bundle
-
-A framework-agnostic bundle for non-React SPAs, server-rendered sites, or `<script>`-tag integrations. The bundle exposes `window.CioCheckout` — a state-only namespace; you drive your own DOM.
-
-```html
-<script src="/path/to/constructorio-ui-checkout-bundled.js"></script>
-<script>
-  const flow = CioCheckout.resume({
-    provider: 'stripe',
-    steps: [{ id: 'cart' }, { id: 'payment' }, { id: 'done' }],
-    onCreateSession: () =>
-      fetch('/api/checkout-session', { method: 'POST' }).then((r) => r.json()),
-    onEvent: (e) => console.log(e),
-  });
-
-  flow.start();
-</script>
-```
-
-Consuming through a bundler? Import the same bundle via subpath — same `CioCheckout` surface:
-
-```js
-import CioCheckout from '@constructor-io/constructorio-ui-checkout/constructorio-ui-checkout-bundled';
-```
-
-`CioCheckout.resume(config)` creates a checkout flow backed by a `sessionStorage` adapter (auto-hydrates on page load) and registers it as the active flow so any other CIO library on the page can reach it.
-
-### Standalone API
-
-| Member                                    | Description                                                                |
-| ----------------------------------------- | -------------------------------------------------------------------------- |
-| `CioCheckout.VERSION`                     | Library version string                                                     |
-| `CioCheckout.createCheckoutFlow`          | Factory returning the framework-agnostic checkout flow                     |
-| `CioCheckout.createSessionStorageAdapter` | Default sessionStorage-backed `CheckoutStorageAdapter`                     |
-| `CioCheckout.resume(config)`              | Creates + registers a flow with the sessionStorage adapter injected        |
-| `CioCheckout.reset()`                     | Destroys the registered flow                                               |
-| `CioCheckout.cioCheckoutRegistry`         | Singleton registry — `register(flow)`, `getFlow()`, `hasFlow()`, `clear()` |
-
-## Registry pattern
-
-For multi-library setups where another CIO library (e.g. `pia`) needs to reach the active checkout flow, register once and let others call `getFlow()`:
-
-```ts
-import {
-  createCheckoutFlow,
-  cioCheckoutRegistry,
-} from '@constructor-io/constructorio-ui-checkout';
-
-const flow = createCheckoutFlow({ provider: 'stripe', steps, onCreateSession, ... });
-cioCheckoutRegistry.register(flow);
-
-// Elsewhere:
-const active = cioCheckoutRegistry.getFlow();
-active?.syncCart(newItems);
-```
-
-## Persistence & resume
-
-Persistence is opt-in. Pass a `storage` adapter (and optionally a `storageKey`) to `CioCheckoutProvider` (or `createCheckoutFlow`) and the library serializes `CheckoutFlowState` on every change and hydrates on next mount:
-
-```tsx
-import { createSessionStorageAdapter } from '@constructor-io/constructorio-ui-checkout';
-
-<CioCheckoutProvider
-  provider="stripe"
-  storage={createSessionStorageAdapter()}
-  storageKey={`checkout-${userId}`}
-  ...
-/>
-```
-
-Supply your own adapter (Redis, DynamoDB, your API) for B2B pause/resume, cross-device recovery, or emailed abandoned-cart links. See [Persistence & Resume](https://constructor-io.github.io/constructorio-ui-checkout/?path=/docs/adapters-persistence--docs) for the full recipe.
+Server setup, routing, persistence, custom payment providers and the `<script>` tag bundle are in the [docs](https://constructor-io.github.io/constructorio-ui-checkout).
 
 ## Local Development
 
-### Development scripts
+### Development Scripts
 
 ```bash
-npm ci                  # install dependencies for local dev
-npm run dev             # start a local Storybook dev server
-npm run lint            # run linter
-npm run lint:fix        # run linter with auto-fix
-npm run check-types     # run TypeScript type checking
-npm run test            # run tests
-npm run test:coverage   # run tests with coverage report
-npm run check-license   # check dependency licenses
-npm run build           # build the library
-npm run build-storybook # build Storybook for deployment
+npm ci                  # Install dependencies for local dev
+npm run dev             # Start a local Storybook dev server
+npm run lint            # Run lint
+npm run lint:fix        # Run lint with auto-fix
+npm run check-types     # Run TypeScript type checking
+npm run test            # Run tests
+npm run test:coverage   # Run tests with the coverage threshold
+npm run check-license   # Check dependency licenses
 ```
 
-## Server-side setup
+### Library Maintenance
 
-Your backend creates the Stripe Checkout Session and returns `{ clientSecret, publishableKey }` to the library. The server `ui_mode` must match the client `uiMode` you pass to `<CioStripePaymentStep>`: `'form'` (beta) or `'elements'` (GA).
-
-```js
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
-app.post('/api/checkout-session', async (req, res) => {
-  const session = await stripe.checkout.sessions.create({
-    ui_mode: 'form', // use 'elements' for the elements uiMode
-    mode: 'payment',
-    line_items: [
-      {
-        price_data: {
-          currency: 'usd',
-          product_data: { name: 'Product Name' },
-          unit_amount: 4999,
-        },
-        quantity: 1,
-      },
-    ],
-    return_url:
-      'https://example.com/order-confirm?session_id={CHECKOUT_SESSION_ID}',
-  });
-
-  res.json({
-    clientSecret: session.client_secret,
-    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
-  });
-});
+```bash
+npm run build             # Build the library into dist
+npm run build-storybook   # Build the Storybook static site for GitHub Pages
 ```
-
-> **Note:** Requires `stripe` SDK v18+. `ui_mode: 'form'` is in beta and requires Stripe to enable it on the account.
-
-## Requirements
-
-- Node.js >= 20
-- React >= 16.12.0
-- React DOM >= 16.12.0
-- @stripe/stripe-js >= 9.3.1
-- @stripe/react-stripe-js >= 6.6.0
-- @constructor-io/constructorio-ui-components >= 1.4.0
-
-## Supporting Docs
-
-- [Stripe Custom Checkout (embedded components)](https://docs.stripe.com/payments/checkout/how-checkout-works?payment-ui=embedded-components)
-- [Stripe Checkout Form (embedded form, beta)](https://docs.stripe.com/payments/checkout/how-checkout-works?payment-ui=embedded-form)
-- [Stripe Embedded Checkout — Quickstart](https://docs.stripe.com/checkout/embedded/quickstart)
-- [Constructor.io](https://constructor.com)
 
 ## Publishing New Versions
 
@@ -245,17 +100,31 @@ This workflow will automatically:
 
 #### Note: Please don't manually increase the package.json version or create new git tags.
 
-The library version is tracked by releases and git tags. This intentionally avoids pushing version bumps to the `main` branch, sidestepping branch-protection rule exceptions.
+The library version is tracked by releases and git tags. This avoids pushing version bumps to the `main` branch, so no branch-protection exceptions are needed.
+
+## New Storybook Version
+
+Dispatch the [Deploy Storybook](https://github.com/Constructor-io/constructorio-ui-checkout/actions/workflows/deploy-storybook.yml) workflow in GitHub Actions.
+
+#### Note: This is already done automatically when publishing a new version.
+
+## Related Libraries
+
+- [@constructor-io/constructorio-ui-pia](https://github.com/Constructor-io/constructorio-ui-pia) - AI Product Insights Agent UI library
+- [@constructor-io/constructorio-ui-asa](https://github.com/Constructor-io/constructorio-ui-asa) - AI Shopping Agent UI library
+- [@constructor-io/constructorio-client-javascript](https://github.com/Constructor-io/constructorio-client-javascript) - JavaScript client for Constructor.io API
+- [@constructor-io/constructorio-ui-autocomplete](https://github.com/Constructor-io/constructorio-ui-autocomplete) - Autocomplete UI library
+- [@constructor-io/constructorio-ui-plp](https://github.com/Constructor-io/constructorio-ui-plp) - Product Listing Page UI library
 
 ## Contributing
 
 1. Fork the repo and create a new branch.
 2. Run `npm ci` to install dependencies.
 3. Make your changes.
-4. Run `npm run lint` and `npm test` to verify.
+4. Run `npm run lint` and `npm run test` to verify.
 5. Submit a PR for review.
 
-Please avoid committing anything sensitive — API keys, Stripe secret keys, customer data, or internal URLs. The default `.gitignore` excludes `.env*` files; keep it that way.
+Please avoid committing anything sensitive: API keys, Stripe secret keys, customer data, or internal URLs. The default `.gitignore` excludes `.env*` files. Keep it that way.
 
 ## License
 

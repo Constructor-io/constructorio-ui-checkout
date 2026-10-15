@@ -1,0 +1,300 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Guides/Custom Payment Provider" />
+
+# Custom Payment Provider
+
+This guide builds a checkout for a provider the library has no UI for. It uses a fake provider called FakePay. Swap in your provider's SDK where FakePay appears.
+
+You keep the steps, the session lifecycle, the cart, storage, routing and events. You own the payment widget.
+
+The finished code runs in [Examples / Full Flow with a Custom Provider](?path=/story/examples-full-flow-with-a-custom-provider--full-flow).
+
+## 1. Declare the session type
+
+Tell TypeScript what your `onCreateSession` returns. Add your provider to `PaymentSessionMap` once, in any `.ts` file your app compiles.
+
+```ts
+import type { BasePaymentSession } from '@constructor-io/constructorio-ui-checkout';
+
+export interface FakePaySession extends BasePaymentSession {
+  token: string;
+}
+
+declare module '@constructor-io/constructorio-ui-checkout' {
+  interface PaymentSessionMap {
+    'fake-pay': FakePaySession;
+  }
+}
+```
+
+Now `provider="fake-pay"` types `onCreateSession` and `getSession()` as `FakePaySession`.
+
+Return a `sessionId` when your provider has one. The library puts it in `session.created` and the other session events.
+
+## 2. Wire the provider
+
+```tsx
+import {
+  CioCheckoutProvider,
+  CioCheckoutStep,
+  PAYMENT_STEP,
+} from '@constructor-io/constructorio-ui-checkout';
+
+<CioCheckoutProvider
+  provider="fake-pay"
+  steps={[{ id: 'cart' }, { id: PAYMENT_STEP }, { id: 'fulfill' }, { id: 'done' }]}
+  cart={cart}
+  onCreateSession={() =>
+    fetch('/api/fake-pay/session', { method: 'POST' }).then((r) => r.json())
+  }
+>
+  <CioCheckoutStep id={PAYMENT_STEP}>
+    <FakePayPaymentStep />
+  </CioCheckoutStep>
+</CioCheckoutProvider>;
+```
+
+## 3. Build the payment step
+
+The step does four things:
+
+- Creates the session with `useCioCheckoutSession()`.
+- Mounts the provider's widget once the session exists.
+- Marks the payment as running with `flow.setPaymentInProgress(true)`. While it is `true`, `back()` and `goTo()` are blocked, so the shopper cannot leave mid-charge.
+- On success, clears the flag and calls `flow.next()`. On failure, clears the flag and calls `flow.emitError('payment.confirm', error)`.
+
+```tsx
+import {
+  useCioCheckout,
+  useCioCheckoutSession,
+} from '@constructor-io/constructorio-ui-checkout';
+
+function FakePayPaymentStep() {
+  const flow = useCioCheckout<'fake-pay'>();
+  const { session, sessionStatus, retry } = useCioCheckoutSession<'fake-pay'>();
+
+  if (sessionStatus === 'error') {
+    return <button onClick={retry}>Could not start FakePay. Retry</button>;
+  }
+  if (!session) return <p role="status">Preparing FakePay...</p>;
+
+  return (
+    <FakePayWidget
+      token={session.token}
+      amount={flow.state.cartTotal}
+      onSubmit={() => flow.setPaymentInProgress(true)}
+      onSuccess={() => {
+        flow.setPaymentInProgress(false);
+        flow.next();
+      }}
+      onFailure={(error) => {
+        flow.setPaymentInProgress(false);
+        flow.emitError('payment.confirm', error);
+      }}
+    />
+  );
+}
+```
+
+`flow.state.cartTotal` is the cart subtotal in the cart's units. Pass it to widgets that show an amount.
+
+When the session expires, call `flow.markExpired()`. The hook then creates a new one.
+
+## 4. Confirm the order (optional)
+
+Add `<CioFulfillmentStep>` after payment when your server confirms the order. Some providers use up the session on a failed charge. For those, set `recreateSessionOnRetry` so Retry starts a fresh session first.
+
+```tsx
+import { CioFulfillmentStep } from '@constructor-io/constructorio-ui-checkout';
+
+<CioCheckoutStep id="fulfill">
+  <CioFulfillmentStep
+    onFulfill={() => fetch('/api/fake-pay/verify').then((r) => r.json())}
+    recreateSessionOnRetry
+  />
+</CioCheckoutStep>;
+```
+
+## Providers with no session before payment
+
+Some providers (Shop Pay, for example) create their session inside their own popup. Leave out `onCreateSession`. The flow then marks the session `active` at once, with no session object.
+
+In the payment step, `useCioCheckoutSession()` returns `session: null` and `missingSession: true`. For these providers that is expected. Render the widget straight away.
+
+```tsx
+function ShopPayStep() {
+  const flow = useCioCheckout<'shop-pay'>();
+  return (
+    <ShopPayButton
+      onStart={() => flow.setPaymentInProgress(true)}
+      onComplete={() => {
+        flow.setPaymentInProgress(false);
+        flow.next();
+      }}
+    />
+  );
+}
+```
+
+## Popup providers: confirming after payment
+
+With a popup provider, the popup can close before your server has the receipt. Handle this inside your payment step. The library does not do it for you.
+
+- After the popup reports success, keep the payment step mounted and show a "Processing payment" state.
+- Poll your server for the receipt. Stop when it arrives or after a timeout.
+- Keep `paymentInProgress` set to `true` while you poll.
+- Remember the payment token you already handled. Ignore a second success callback with the same token, so one payment never advances the flow twice.
+- Call `flow.next()` once the receipt is in. On timeout, call `flow.emitError('payment.confirm', error)` and show your own retry.
+
+A built-in "confirming" phase in the core is being decided in AGI-418.
+
+## Complete sample
+
+All the pieces together, using FakePay. The fake API resolves after a short delay, so it runs with no backend.
+
+```tsx
+import { useState } from 'react';
+import {
+  CioCheckoutProvider,
+  CioCheckoutStep,
+  CioFulfillmentStep,
+  PAYMENT_STEP,
+  useCioCheckout,
+  useCioCheckoutSession,
+} from '@constructor-io/constructorio-ui-checkout';
+import type {
+  BaseCartItem,
+  BasePaymentSession,
+} from '@constructor-io/constructorio-ui-checkout';
+
+interface FakePaySession extends BasePaymentSession {
+  token: string;
+}
+
+declare module '@constructor-io/constructorio-ui-checkout' {
+  interface PaymentSessionMap {
+    'fake-pay': FakePaySession;
+  }
+}
+
+const CART: BaseCartItem[] = [
+  { id: 'sku-1', name: 'Trail runner', unitAmount: 8900, quantity: 1 },
+  { id: 'sku-2', name: 'Wool socks', unitAmount: 1200, quantity: 2 },
+];
+
+const wait = <T,>(value: T) =>
+  new Promise<T>((resolve) => setTimeout(() => resolve(value), 150));
+
+let sessions = 0;
+const fakePayApi = {
+  createSession: () => {
+    sessions += 1;
+    return wait<FakePaySession>({
+      sessionId: `fp_session_${sessions}`,
+      token: `fp_token_${sessions}`,
+    });
+  },
+  charge: (token: string) => wait({ ok: token.length > 0 }),
+  verifyOrder: () => wait({ success: true, message: 'Order FP-1001 confirmed' }),
+};
+
+const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+
+function FakePayWidget(props: {
+  session: FakePaySession;
+  amount: number;
+  onSubmit: () => void;
+  onSuccess: () => void;
+  onFailure: (error: Error) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const pay = async () => {
+    setBusy(true);
+    props.onSubmit();
+    const result = await fakePayApi.charge(props.session.token);
+    setBusy(false);
+    if (result.ok) props.onSuccess();
+    else props.onFailure(new Error('Payment failed'));
+  };
+  return (
+    <button onClick={pay} disabled={busy}>
+      {busy ? 'Paying...' : `Pay ${money(props.amount)}`}
+    </button>
+  );
+}
+
+function StartButton() {
+  const flow = useCioCheckout<'fake-pay'>();
+  if (flow.state.currentStepId !== null) return null;
+  return <button onClick={() => flow.start()}>Start checkout</button>;
+}
+
+function CartStep() {
+  const flow = useCioCheckout<'fake-pay'>();
+  return (
+    <div>
+      <p>Subtotal: {money(flow.state.cartTotal)}</p>
+      <button onClick={() => flow.next()}>Continue to payment</button>
+    </div>
+  );
+}
+
+function FakePayPaymentStep() {
+  const flow = useCioCheckout<'fake-pay'>();
+  const { session, sessionStatus, retry } = useCioCheckoutSession<'fake-pay'>();
+
+  if (sessionStatus === 'error') return <button onClick={retry}>Retry</button>;
+  if (!session) return <p role="status">Preparing FakePay...</p>;
+
+  return (
+    <FakePayWidget
+      session={session}
+      amount={flow.state.cartTotal}
+      onSubmit={() => flow.setPaymentInProgress(true)}
+      onSuccess={() => {
+        flow.setPaymentInProgress(false);
+        flow.next();
+      }}
+      onFailure={(error) => {
+        flow.setPaymentInProgress(false);
+        flow.emitError('payment.confirm', error);
+      }}
+    />
+  );
+}
+
+export function FakePayCheckout() {
+  return (
+    <CioCheckoutProvider
+      provider="fake-pay"
+      steps={[{ id: 'cart' }, { id: PAYMENT_STEP }, { id: 'fulfill' }, { id: 'done' }]}
+      cart={CART}
+      onCreateSession={fakePayApi.createSession}
+    >
+      <StartButton />
+      <CioCheckoutStep id="cart">
+        <CartStep />
+      </CioCheckoutStep>
+      <CioCheckoutStep id={PAYMENT_STEP}>
+        <FakePayPaymentStep />
+      </CioCheckoutStep>
+      <CioCheckoutStep id="fulfill">
+        <CioFulfillmentStep onFulfill={fakePayApi.verifyOrder} recreateSessionOnRetry />
+      </CioCheckoutStep>
+      <CioCheckoutStep id="done">
+        <p>Thank you</p>
+      </CioCheckoutStep>
+    </CioCheckoutProvider>
+  );
+}
+```
+
+## Checklist
+
+- `PaymentSessionMap` has your provider, or you cast the session at the boundary.
+- `onCreateSession` returns your session shape, or is left out for popup providers.
+- The payment step calls `useCioCheckoutSession()` and only mounts on the payment step.
+- `setPaymentInProgress(true)` before the charge, `false` after it, on success and on failure.
+- `flow.next()` on success, `flow.emitError('payment.confirm', error)` on failure.
+- `recreateSessionOnRetry` on the fulfillment step if a failed charge uses up the session.

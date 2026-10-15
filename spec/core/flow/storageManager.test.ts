@@ -154,9 +154,11 @@ describe(`${createStorageManager.name}: client`, () => {
         currentStepId: 'b',
         completedStepIds: ['a'],
         cartSnapshot: [],
+        cartTotal: 0,
         currency: null,
         sessionId: null,
         sessionStatus: 'idle',
+        paymentInProgress: false,
         metadata: {},
         schemaVersion: 1,
       });
@@ -186,9 +188,11 @@ describe(`${createStorageManager.name}: client`, () => {
         currentStepId: 'b',
         completedStepIds: ['a'],
         cartSnapshot: [],
+        cartTotal: 0,
         currency: null,
         sessionId: null,
         sessionStatus: 'idle',
+        paymentInProgress: false,
         metadata: {},
         schemaVersion: 1,
       };

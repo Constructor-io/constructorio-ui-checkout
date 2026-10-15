@@ -22,6 +22,12 @@ export function createNavigator<
 
   let navVersion = 0;
 
+  const blockedByPayment = (): boolean => {
+    if (!store.getState().paymentInProgress) return false;
+    emitError('guard', new Error('navigation blocked: payment in progress'));
+    return true;
+  };
+
   const enterStep = (stepId: CheckoutStepId, from: CheckoutStepId | null) => {
     store.setState((prev) => ({ ...prev, currentStepId: stepId }));
     events.emit({ type: 'step.entered', stepId, from });
@@ -189,6 +195,7 @@ export function createNavigator<
 
   const back = (): Promise<void> => {
     if (isDestroyed()) return Promise.resolve();
+    if (blockedByPayment()) return Promise.resolve();
     const state = store.getState();
     if (state.currentStepId === null) return Promise.resolve();
     const idx = findStepIndex(steps, state.currentStepId);
@@ -209,6 +216,7 @@ export function createNavigator<
 
   const goTo = async (stepId: CheckoutStepId): Promise<void> => {
     if (isDestroyed()) return;
+    if (blockedByPayment()) return;
     const targetIdx = findStepIndex(steps, stepId);
     if (targetIdx === -1) {
       emitError('guard', new Error(`Unknown step id "${stepId}"`));

@@ -10,9 +10,11 @@ const valid = (): CheckoutFlowState => ({
   currentStepId: 'a',
   completedStepIds: [],
   cartSnapshot: [],
+  cartTotal: 0,
   currency: null,
   sessionId: null,
   sessionStatus: 'idle',
+  paymentInProgress: false,
   metadata: {},
   schemaVersion: FLOW_SCHEMA_VERSION,
 });

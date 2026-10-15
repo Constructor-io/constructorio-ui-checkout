@@ -4,7 +4,7 @@ import type {
   CheckoutFlowConfig,
   CheckoutFlowState,
 } from '@src/core/types';
-import { FLOW_SCHEMA_VERSION } from '@src/core/types';
+import { DEFAULT_STORAGE_KEY, FLOW_SCHEMA_VERSION } from '@src/core/types';
 
 const stubSession = () =>
   Promise.resolve({ clientSecret: 'cs_test', publishableKey: 'pk_test' });
@@ -59,11 +59,10 @@ describe(`${createCheckoutFlow.name}: client`, () => {
       ).toThrow(/duplicate step id/);
     });
 
-    it('throws when onCreateSession is missing', () => {
+    it('does not throw when onCreateSession is omitted', () => {
       expect(() =>
-        // @ts-expect-error intentional shape violation
         createCheckoutFlow({ provider: 'stripe', steps: [{ id: 'a' }] })
-      ).toThrow(/onCreateSession/);
+      ).not.toThrow();
     });
 
     it('starts with a null currentStepId (modal-friendly)', () => {
@@ -104,9 +103,11 @@ describe(`${createCheckoutFlow.name}: client`, () => {
       currentStepId: 'b',
       completedStepIds: ['a'],
       cartSnapshot: [],
+      cartTotal: 0,
       currency: null,
       sessionId: 'cs_test_1',
       sessionStatus: 'active',
+      paymentInProgress: false,
       metadata: {},
       schemaVersion: FLOW_SCHEMA_VERSION,
     });
@@ -211,6 +212,255 @@ describe(`${createCheckoutFlow.name}: client`, () => {
       flow.destroy();
       await flow.start();
       expect(events.filter((e) => e.type === 'error')).toHaveLength(0);
+    });
+  });
+
+  describe('without onCreateSession (C2)', () => {
+    const noSessionConfig = (overrides: Partial<CheckoutFlowConfig> = {}) =>
+      minimalConfig({ onCreateSession: undefined, ...overrides });
+
+    it('createSession resolves null and marks the session active', async () => {
+      const { events, onEvent } = recordEvents();
+      const flow = createCheckoutFlow(noSessionConfig({ onEvent }));
+      await expect(flow.createSession()).resolves.toBeNull();
+      expect(flow.getSession()).toBeNull();
+      expect(flow.getState().sessionStatus).toBe('active');
+      expect(flow.getState().sessionId).toBeNull();
+      expect(
+        events.filter(
+          (e) => e.type === 'error' || e.type.startsWith('session.')
+        )
+      ).toHaveLength(0);
+    });
+
+    it('does not emit a state change when already active', async () => {
+      const flow = createCheckoutFlow(noSessionConfig());
+      await flow.createSession();
+      const listener = vi.fn();
+      flow.subscribe(listener);
+      await flow.createSession();
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('recreate behaves the same', async () => {
+      const flow = createCheckoutFlow(noSessionConfig());
+      await expect(flow.recreate()).resolves.toBeNull();
+      expect(flow.getState().sessionStatus).toBe('active');
+    });
+
+    it('updateSession without onUpdateSession keeps the error', async () => {
+      const { events, onEvent } = recordEvents();
+      const flow = createCheckoutFlow(noSessionConfig({ onEvent }));
+      await flow.createSession();
+      await expect(flow.updateSession({ items: [] })).resolves.toBeNull();
+      const error = events.find((e) => e.type === 'error');
+      expect(error).toMatchObject({ source: 'session.update' });
+    });
+  });
+
+  describe('paymentInProgress (C4)', () => {
+    it('defaults to false', () => {
+      const flow = createCheckoutFlow(minimalConfig());
+      expect(flow.getState().paymentInProgress).toBe(false);
+    });
+
+    it('blocks back() and goTo() with a guard error, but next() still works', async () => {
+      const { events, onEvent } = recordEvents();
+      const flow = createCheckoutFlow(minimalConfig({ onEvent }));
+      await flow.start();
+      await flow.next();
+      flow.setPaymentInProgress(true);
+      expect(flow.getState().paymentInProgress).toBe(true);
+
+      await flow.back();
+      await flow.goTo('a');
+      expect(flow.getState().currentStepId).toBe('b');
+      const guardErrors = events.filter(
+        (e) => e.type === 'error' && e.source === 'guard'
+      );
+      expect(guardErrors).toHaveLength(2);
+      expect(guardErrors[0]).toMatchObject({
+        error: new Error('navigation blocked: payment in progress'),
+      });
+
+      await flow.next();
+      expect(flow.getState().currentStepId).toBe('c');
+    });
+
+    it('allows navigation again once cleared', async () => {
+      const flow = createCheckoutFlow(minimalConfig());
+      await flow.start();
+      await flow.next();
+      flow.setPaymentInProgress(true);
+      flow.setPaymentInProgress(false);
+      await flow.back();
+      expect(flow.getState().currentStepId).toBe('a');
+    });
+
+    it('does not emit a state change when the value is unchanged', () => {
+      const flow = createCheckoutFlow(minimalConfig());
+      const listener = vi.fn();
+      flow.subscribe(listener);
+      flow.setPaymentInProgress(false);
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op after destroy', () => {
+      const flow = createCheckoutFlow(minimalConfig());
+      flow.destroy();
+      flow.setPaymentInProgress(true);
+      expect(flow.getState().paymentInProgress).toBe(false);
+    });
+
+    it('hydrate forces it to false', () => {
+      const flow = createCheckoutFlow(minimalConfig());
+      flow.hydrate({ ...flow.getState(), paymentInProgress: true });
+      expect(flow.getState().paymentInProgress).toBe(false);
+    });
+
+    it('hydrate accepts an older stored state without the new fields', () => {
+      const flow = createCheckoutFlow(minimalConfig());
+      const legacy = {
+        currentStepId: 'b',
+        completedStepIds: ['a'],
+        cartSnapshot: [{ id: 'x', name: 'X', unitAmount: 250, quantity: 2 }],
+        currency: null,
+        sessionId: null,
+        sessionStatus: 'idle',
+        metadata: {},
+        schemaVersion: FLOW_SCHEMA_VERSION,
+      } as unknown as CheckoutFlowState;
+      flow.hydrate(legacy);
+      expect(flow.getState().currentStepId).toBe('b');
+      expect(flow.getState().paymentInProgress).toBe(false);
+      expect(flow.getState().cartTotal).toBe(500);
+    });
+  });
+
+  describe('cartTotal (C5)', () => {
+    const item = (id: string, unitAmount: number, quantity: number) => ({
+      id,
+      name: id,
+      unitAmount,
+      quantity,
+    });
+
+    it('is 0 for an empty cart', () => {
+      const flow = createCheckoutFlow(minimalConfig());
+      expect(flow.getState().cartTotal).toBe(0);
+    });
+
+    it('is computed from the initial cart', () => {
+      const flow = createCheckoutFlow(
+        minimalConfig({ cart: [item('a', 1000, 2), item('b', 499, 1)] })
+      );
+      expect(flow.getState().cartTotal).toBe(2499);
+    });
+
+    it('is updated by syncCart before a session exists', async () => {
+      const flow = createCheckoutFlow(minimalConfig());
+      await flow.syncCart([item('a', 300, 3)]);
+      expect(flow.getState().cartTotal).toBe(900);
+    });
+
+    it('is updated by updateSession', async () => {
+      const flow = createCheckoutFlow(
+        minimalConfig({
+          cart: [item('a', 100, 1)],
+          onUpdateSession: stubSession,
+        })
+      );
+      await flow.createSession();
+      await flow.updateSession({ items: [item('a', 100, 4)] });
+      expect(flow.getState().cartTotal).toBe(400);
+    });
+
+    it('keeps the total when updateSession has no items', async () => {
+      const flow = createCheckoutFlow(
+        minimalConfig({
+          cart: [item('a', 100, 2)],
+          onUpdateSession: stubSession,
+        })
+      );
+      await flow.createSession();
+      await flow.updateSession({ metadata: { note: 'x' } });
+      expect(flow.getState().cartTotal).toBe(200);
+    });
+
+    it('is recomputed on hydrate, ignoring the stored value', () => {
+      const flow = createCheckoutFlow(minimalConfig());
+      flow.hydrate({
+        ...flow.getState(),
+        cartSnapshot: [item('a', 150, 2)],
+        cartTotal: 999_999,
+      });
+      expect(flow.getState().cartTotal).toBe(300);
+    });
+
+    it('uses cartItemFields accessors', async () => {
+      interface Line {
+        sku: string;
+        price: number;
+        qty: number;
+      }
+      const flow = createCheckoutFlow<'stripe', unknown, Line>({
+        provider: 'stripe',
+        steps: [{ id: 'a' }],
+        onCreateSession: stubSession,
+        cart: [{ sku: 's1', price: 700, qty: 2 }],
+        cartItemFields: { id: 'sku', unitAmount: 'price', quantity: 'qty' },
+      });
+      expect(flow.getState().cartTotal).toBe(1400);
+      await flow.syncCart([{ sku: 's1', price: 700, qty: 3 }]);
+      expect(flow.getState().cartTotal).toBe(2100);
+    });
+  });
+
+  describe('storage without storageKey (C6a)', () => {
+    const memoryAdapter = () => {
+      const save = vi.fn(() => Promise.resolve());
+      const load = vi.fn(() => Promise.resolve(null));
+      const clear = vi.fn(() => Promise.resolve());
+      return { save, load, clear };
+    };
+
+    it('enables persistence with DEFAULT_STORAGE_KEY and emits no error', async () => {
+      const { events, onEvent } = recordEvents();
+      const adapter = memoryAdapter();
+      const flow = createCheckoutFlow(
+        minimalConfig({ storage: adapter, storageSaveDebounceMs: 0, onEvent })
+      );
+      await flow.start();
+      await vi.waitFor(() => expect(adapter.save).toHaveBeenCalled());
+      expect(adapter.load).toHaveBeenCalledWith(DEFAULT_STORAGE_KEY);
+      expect(adapter.save).toHaveBeenCalledWith(
+        DEFAULT_STORAGE_KEY,
+        expect.anything()
+      );
+      expect(events.filter((e) => e.type === 'error')).toHaveLength(0);
+    });
+
+    it('storageKey without storage still emits a storage error', () => {
+      const { events, onEvent } = recordEvents();
+      createCheckoutFlow(minimalConfig({ storageKey: 'k', onEvent }));
+      expect(events).toContainEqual(
+        expect.objectContaining({ type: 'error', source: 'storage' })
+      );
+    });
+
+    it('saves paymentInProgress as false', async () => {
+      const adapter = memoryAdapter();
+      const flow = createCheckoutFlow(
+        minimalConfig({ storage: adapter, storageSaveDebounceMs: 0 })
+      );
+      flow.setPaymentInProgress(true);
+      await vi.waitFor(() => expect(adapter.save).toHaveBeenCalled());
+      const saved = adapter.save.mock.lastCall as unknown as [
+        string,
+        CheckoutFlowState,
+      ];
+      expect(saved[1].paymentInProgress).toBe(false);
+      expect(flow.getState().paymentInProgress).toBe(true);
     });
   });
 });

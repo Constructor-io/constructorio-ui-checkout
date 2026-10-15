@@ -5,6 +5,7 @@ import type { CheckoutSessionUpdatePatch } from '../types';
 import type { FlowContext } from './context';
 import {
   computeCartDiff,
+  computeCartTotal,
   getSessionIdFromResponse,
   isValidSessionResponse,
   toError,
@@ -57,11 +58,24 @@ export function createSessionManager<
     if (session !== null) return Promise.resolve(session);
     if (createInFlight !== null) return createInFlight;
 
+    const { onCreateSession } = config;
+    if (!onCreateSession) {
+      // The provider creates its session inside its own widget, so the
+      // payment step is ready at once.
+      store.setState((prev) =>
+        prev.sessionStatus === 'active' && prev.sessionId === null
+          ? prev
+          : { ...prev, sessionStatus: 'active', sessionId: null }
+      );
+      opts.onSessionActive();
+      return Promise.resolve(null);
+    }
+
     const gen = ++requestGen;
     const run = async (): Promise<Session | null> => {
       store.setState((prev) => ({ ...prev, sessionStatus: 'creating' }));
       try {
-        const response = await config.onCreateSession(store.getState());
+        const response = await onCreateSession(store.getState());
         if (isDestroyed() || gen !== requestGen) return null;
         if (!isValidSessionResponse(response, config.provider)) {
           throw new Error(
@@ -129,6 +143,9 @@ export function createSessionManager<
         ...prev,
         sessionId,
         cartSnapshot: patch.items ? patch.items.slice() : prev.cartSnapshot,
+        cartTotal: patch.items
+          ? computeCartTotal(patch.items, accessors)
+          : prev.cartTotal,
       }));
       if (sessionId) {
         events.emit({

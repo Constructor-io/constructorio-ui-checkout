@@ -21,9 +21,11 @@ export function makeInitialState<
     currentStepId: null,
     completedStepIds: [],
     cartSnapshot: [],
+    cartTotal: 0,
     currency: null,
     sessionId: null,
     sessionStatus: 'idle',
+    paymentInProgress: false,
     metadata: {},
     schemaVersion: FLOW_SCHEMA_VERSION,
   };
@@ -80,12 +82,20 @@ export function compileCartItemAccessors<TItem>(
   };
 }
 
+export function computeCartTotal<TItem>(
+  items: TItem[],
+  accessors: CompiledCartItemAccessors<TItem>
+): number {
+  const { getQuantity, getUnitAmount } = accessors;
+  return items.reduce((sum, i) => sum + getUnitAmount(i) * getQuantity(i), 0);
+}
+
 export function computeCartDiff<TItem>(
   before: TItem[],
   after: TItem[],
   accessors: CompiledCartItemAccessors<TItem>
 ): CheckoutSessionDiff<TItem> {
-  const { getId, getQuantity, getUnitAmount } = accessors;
+  const { getId, getQuantity } = accessors;
 
   const beforeMap = new Map<string, TItem>();
   for (const item of before) beforeMap.set(getId(item), item);
@@ -112,14 +122,8 @@ export function computeCartDiff<TItem>(
     if (!afterMap.has(id)) removed.push(item);
   }
 
-  const totalBefore = before.reduce(
-    (sum, i) => sum + getUnitAmount(i) * getQuantity(i),
-    0
-  );
-  const totalAfter = after.reduce(
-    (sum, i) => sum + getUnitAmount(i) * getQuantity(i),
-    0
-  );
+  const totalBefore = computeCartTotal(before, accessors);
+  const totalAfter = computeCartTotal(after, accessors);
 
   const diff: CheckoutSessionDiff<TItem> = {};
   if (added.length > 0) diff.added = added;

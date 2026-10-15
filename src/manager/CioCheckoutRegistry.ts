@@ -5,6 +5,7 @@ import type {
   CheckoutFlowCore,
   CheckoutFlowCoreBase,
 } from '@src/core/types';
+import { DEFAULT_STORAGE_KEY } from '@src/core/types';
 import type { BaseCartItem, BuiltInPaymentProvider } from '@src/types';
 
 class CioCheckoutRegistry {
@@ -47,7 +48,7 @@ class CioCheckoutRegistry {
     config: CheckoutFlowConfig<TProvider, TState, TItem>
   ): CheckoutFlowCore<TProvider, TState, TItem> {
     const storage = config.storage ?? createSessionStorageAdapter<TItem>();
-    const storageKey = config.storageKey ?? 'cio-checkout-flow';
+    const storageKey = config.storageKey ?? DEFAULT_STORAGE_KEY;
     const flow = createCheckoutFlow<TProvider, TState, TItem>({
       ...config,
       storage,

@@ -8,6 +8,7 @@ export const defaultTranslations: Required<Translations> = {
   'CioCheckout.checkout.buttonLoadingLabel': 'Loading...',
   'CioCheckout.checkout.payButtonLabel': 'Pay',
   'CioCheckout.checkout.payButtonLoadingLabel': 'Processing...',
+  'CioCheckout.checkout.preparingLabel': 'Preparing checkout...',
 };
 
 export function t(

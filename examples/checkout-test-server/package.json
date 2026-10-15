@@ -1,0 +1,19 @@
+{
+  "name": "checkout-test-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Test server and client for constructorio-ui-checkout",
+  "scripts": {
+    "dev": "overmind start",
+    "dev:server": "cd server && npx tsx watch index.ts",
+    "dev:client": "cd client && npx vite",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "volta": {
+    "node": "22.18.0",
+    "npm": "10.9.3"
+  }
+}

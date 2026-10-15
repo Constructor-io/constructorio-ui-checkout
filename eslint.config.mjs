@@ -21,6 +21,7 @@ export default tseslint.config(
       'lib/**/*.d.ts',
       'docs/**/*.js',
       'spec/setup.ts',
+      'spec/setup.server.ts',
       'spec/__mocks__/**',
       'node_modules/',
       'dist/',

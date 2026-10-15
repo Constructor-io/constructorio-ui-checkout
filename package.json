@@ -63,9 +63,9 @@
     "test-storybook": "vitest run --project storybook",
     "test-storybook:watch": "vitest --project storybook",
     "test-storybook:ci": "vitest run --project storybook",
-    "test": "vitest --project unit",
-    "test:unit": "vitest --project unit",
-    "test:coverage": "vitest run --project unit --coverage",
+    "test": "vitest --project unit --project server",
+    "test:unit": "vitest --project unit --project server",
+    "test:coverage": "vitest run --project unit --project server --coverage",
     "storybook-docs-dev": "storybook dev --docs -p 6009"
   },
   "peerDependencies": {
@@ -93,6 +93,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "@types/jsdom": "28.0.3",
     "@types/node": "^25.5.0",
     "@types/postcss-prefix-selector": "^1.16.3",
     "@types/react": "^19.0.10",

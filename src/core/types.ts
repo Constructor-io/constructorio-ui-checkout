@@ -195,6 +195,5 @@ export type RequireAccessorsIfNeeded<TItem> = TItem extends BaseCartItem
   ? { cartItemFields?: CartItemAccessors<TItem> }
   : { cartItemFields: CartItemAccessors<TItem> };
 
-export const CREATE_SESSION_STEP: CheckoutStepId = 'createSession';
 export const PAYMENT_STEP: CheckoutStepId = 'payment';
 export const FLOW_SCHEMA_VERSION = 1 as const;

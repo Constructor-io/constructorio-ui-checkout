@@ -6,7 +6,7 @@
 
 ## Introduction
 
-Headless primitives for building multi-step checkout on top of Stripe. The library owns the state machine, session lifecycle, storage, routing, and the default Stripe surface — your app composes the UI (cart, address, review, confirmation, custom steps).
+A provider-neutral headless checkout core (state machine, sessions, storage, routing) with a built-in Stripe payment step. The library owns the state machine, session lifecycle, storage, routing, and the default Stripe surface — your app composes the UI (cart, address, review, confirmation, custom steps).
 
 Our [Storybook Docs](https://constructor-io.github.io/constructorio-ui-checkout) are the best place to explore behavior, adapters, and full integration recipes.
 

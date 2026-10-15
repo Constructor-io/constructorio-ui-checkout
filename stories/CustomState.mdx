@@ -6,7 +6,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 Most checkouts carry flow-scoped state that doesn't fit in the cart, session, or step id — a gift-wrap toggle, the shipping method picked on step 2, a coupon draft, a "same as billing" checkbox. Custom state is a typed slot on the flow for exactly that.
 
-The library persists it, restores it on resume, and exposes typed getters and setters. Use it in place of a parallel React store for anything scoped to the checkout flow.
+The library keeps it in memory for the life of the flow and exposes typed getters and setters. It is not saved by the storage adapter. Use it in place of a parallel React store for values that only matter while the flow is open.
 
 ## Under the hood
 
@@ -27,7 +27,7 @@ interface CheckoutFlowCore<TState = unknown> {
 }
 ```
 
-- `initialState` — the value used if nothing hydrates from storage. Required in the type when `TState` is not `undefined`-compatible.
+- `initialState`: the starting value. Optional. When omitted, the value starts as `{}`.
 - `getIntegratorState()` — synchronous read of the current value.
 - `setIntegratorState(updater)` — functional setter, same shape as React's `setState(prev => next)`.
 
@@ -84,18 +84,9 @@ The generic on `useCioCheckout<'stripe', MyCheckoutState>()` matches the one pas
 
 ## When state changes trigger re-renders
 
-`setIntegratorState` mutates the flow store through the same subscription mechanism as `state.currentStepId` or `cartSnapshot`. Components using `useCioCheckout()` re-render on every custom state change.
+`setIntegratorState` notifies the flow store the same way a change to `state.currentStepId` or `cartSnapshot` does. Every component that calls `useCioCheckout()` re-renders on each custom state change.
 
-For a large custom state where granular re-renders matter, select the field you need:
-
-```tsx
-const shippingMethod = useCioCheckout<
-  'stripe',
-  MyCheckoutState
->().getIntegratorState().shippingMethod;
-```
-
-React bails out of the update when `shippingMethod` is referentially equal to the previous render. For heavy trees, wrap the read in `useMemo` or use a memoized selector.
+For a large tree where re-renders matter, call `useCioCheckout()` in small leaf components and pass plain values down to memoized children.
 
 ## Custom state vs `metadata`
 
@@ -105,11 +96,11 @@ The library exposes two ways to carry extra data. They are not interchangeable.
 | ---------------- | ----------------------------------------------- | -------------------------------------------------------------- |
 | **Type**         | Fully typed via `TState`                        | `Record<string, unknown>`                                      |
 | **Access**       | `getIntegratorState()` / `setIntegratorState()` | `flow.state.metadata` (read-only from your side)               |
-| **Written by**   | Your code, via `setIntegratorState`             | The library (session hooks, auth), not you                     |
-| **Persisted**    | Yes                                             | Yes                                                            |
-| **Intended for** | Merchant-owned flow-scoped state                | Library-internal metadata + your `initialState`-adjacent hints |
+| **Written by**   | Your code, via `setIntegratorState`             | Nothing today. It starts as `{}`                               |
+| **Persisted**    | No, in memory only                              | Yes, as part of `CheckoutFlowState`                            |
+| **Intended for** | Merchant-owned flow-scoped state                | Reserved for the library                                       |
 
-Use custom state for anything you mutate. `metadata` is a slot the library writes into and you read from.
+Use custom state for anything you mutate. Do not rely on `metadata`.
 
 ## Custom state vs your app's Redux/Zustand store
 
@@ -118,19 +109,17 @@ Custom state is scoped to _this specific flow instance_. For global state that o
 Reach for custom state when:
 
 - The value is only meaningful during the checkout flow (gift-wrap choice on this order).
-- The value should persist alongside `CheckoutFlowState` and hydrate on resume.
 - Multiple steps read and write it.
 
 Skip custom state when:
 
 - The value is app-wide (auth token, user id).
-- The value is a derived read-only projection of props (cart total).
+- The value is a derived read-only projection of props. For the cart subtotal, read `state.cartTotal`.
+- The value must survive a page reload. Keep it in your own store or on your server.
 
 ## Persistence
 
-Custom state lives under `CheckoutFlowState.metadata` — persisted by the configured `CheckoutStorageAdapter`, hydrated on resume. Everything in [Persistence](./?path=/docs/adapters-persistence--docs) about backend storage, encryption, and abandoned-cart recovery applies unchanged.
-
-When renaming or restructuring `TState`, bump `storageKey` to invalidate stored entries. Otherwise a resumed flow hydrates with a shape that no longer matches the new type.
+Custom state is not part of `CheckoutFlowState`, so the storage adapter does not save it. After a reload or a resume from storage, it starts again from `initialState`. If a value must survive a reload, keep it in your own store, or send it to your server and read it back in `onCreateSession`.
 
 ## Reading in `onCreateSession`
 

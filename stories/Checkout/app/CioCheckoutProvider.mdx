@@ -4,13 +4,13 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Integration Guide
 
-Headless primitives for building multi-step checkout on top of Stripe. The library gives you the state machine, session lifecycle, storage, and Stripe surface — your app composes the UI.
+A headless checkout core with a built-in Stripe payment step. The library runs the steps, the payment session, storage and routing. Your app renders the UI.
 
 ## Three integration paths, one core
 
 - **React** — `<CioCheckoutProvider provider="stripe">` + `useCioCheckout()` + `<CioCheckoutStep>` + `<CioStripePaymentStep>` / `<CioFulfillmentStep>`
 - **Vanilla JS (npm)** — `createCheckoutFlow(config)` from `@constructor-io/constructorio-ui-checkout`
-- **Standalone bundle** — `<script>` tag exposes `window.CioCheckout` with the same class
+- **Bundled script**: a `<script>` tag exposes `window.CioCheckout`, with `createCheckoutFlow` and `resume`
 
 All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
 
@@ -71,7 +71,7 @@ function StartButton() {
 
 ## When to show the trigger
 
-The old library shipped `<CheckoutTrigger>`, `trigger`, `triggerLabel`, and `triggerWhen`. The new design leaves the button to you — place it anywhere, style it any way, and gate it on any state:
+The button that starts checkout is yours. Place it anywhere, style it any way, and show it based on any state:
 
 ```tsx
 function BuyButton() {
@@ -85,7 +85,7 @@ function BuyButton() {
 
 ## Modal vs. inline
 
-There is no `displayMode` prop — wrap the `stripe` step in your own modal or render it inline:
+There is no `displayMode` prop. Wrap the payment step in your own modal or render it inline:
 
 ```tsx
 <CioCheckoutStep id={PAYMENT_STEP}>
@@ -122,7 +122,7 @@ Steps with a `path` participate in URL sync; steps without one render inline/mod
 
 ## Persistence and resume
 
-Pass a `storage` adapter and `storageKey` to auto-save state and hydrate on the next mount. The default `createSessionStorageAdapter()` survives page reloads in the same tab. For B2B pause/resume (approver on a different device), supply a custom async adapter backed by your server.
+Pass a `storage` adapter to auto-save state and hydrate on the next mount. `storageKey` is optional and defaults to `DEFAULT_STORAGE_KEY`. The default `createSessionStorageAdapter()` survives page reloads in the same tab. For B2B pause/resume (approver on a different device), supply a custom async adapter backed by your server.
 
 ```tsx
 <CioCheckoutProvider
@@ -147,7 +147,7 @@ import { createCheckoutFlow } from '@constructor-io/constructorio-ui-checkout';
 
 const flow = createCheckoutFlow({
   provider: 'stripe',
-  steps: [{ id: 'createSession' }, { id: 'payment' }],
+  steps: [{ id: 'cart' }, { id: 'payment' }],
   onCreateSession: () => fetch('/api/session').then((r) => r.json()),
 });
 
@@ -155,7 +155,7 @@ flow.subscribe((state) => renderMyUI(state));
 await flow.start();
 ```
 
-## Standalone bundle
+## Bundled script
 
 ```html
 <script src="/path/to/constructorio-ui-checkout-bundled.js"></script>
@@ -188,7 +188,3 @@ Subscribe through `onEvent`:
 - `session.created`, `session.updated` (with `reason` and `diff`), `session.expired`, `session.recreated`
 - `state.changed`
 - `error` (discriminated by `source`: `session.create` / `session.update` / `payment.confirm` / `storage` / `router` / `guard` / `authenticate`)
-
-## Migration from 1.x
-
-The 2.0 rewrite removes the prescriptive UI components (`CioCheckout`, `useCheckoutSession`, `CheckoutTrigger`, `CheckoutOverlay`, `CheckoutInline`, `CheckoutStatus`) in favor of headless primitives. Every 1.x feature has an equivalent, mostly expressed through normal React with the new hook.

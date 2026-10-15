@@ -95,6 +95,7 @@ A framework-agnostic bundle for non-React SPAs, server-rendered sites, or `<scri
 <script src="/path/to/constructorio-ui-checkout-bundled.js"></script>
 <script>
   const flow = CioCheckout.resume({
+    provider: 'stripe',
     steps: [{ id: 'cart' }, { id: 'payment' }, { id: 'done' }],
     onCreateSession: () =>
       fetch('/api/checkout-session', { method: 'POST' }).then((r) => r.json()),
@@ -144,12 +145,13 @@ active?.syncCart(newItems);
 
 ## Persistence & resume
 
-Persistence is opt-in. Pass a `storage` adapter + `storageKey` to `CioCheckoutProvider` (or `createCheckoutFlow`) and the library serializes `CheckoutFlowState` on every change and hydrates on next mount:
+Persistence is opt-in. Pass a `storage` adapter (and optionally a `storageKey`) to `CioCheckoutProvider` (or `createCheckoutFlow`) and the library serializes `CheckoutFlowState` on every change and hydrates on next mount:
 
 ```tsx
 import { createSessionStorageAdapter } from '@constructor-io/constructorio-ui-checkout';
 
 <CioCheckoutProvider
+  provider="stripe"
   storage={createSessionStorageAdapter()}
   storageKey={`checkout-${userId}`}
   ...
@@ -159,8 +161,6 @@ import { createSessionStorageAdapter } from '@constructor-io/constructorio-ui-ch
 Supply your own adapter (Redis, DynamoDB, your API) for B2B pause/resume, cross-device recovery, or emailed abandoned-cart links. See [Persistence & Resume](https://constructor-io.github.io/constructorio-ui-checkout/?path=/docs/adapters-persistence--docs) for the full recipe.
 
 ## Local Development
-
-> **Note:** Local development requires Node.js >= 20. The consuming library supports Node.js >= 18, but the Storybook 9 toolchain requires Node.js >= 20.
 
 ### Development scripts
 
@@ -213,7 +213,7 @@ app.post('/api/checkout-session', async (req, res) => {
 
 ## Requirements
 
-- Node.js >= 18
+- Node.js >= 20
 - React >= 16.12.0
 - React DOM >= 16.12.0
 - @stripe/stripe-js >= 9.3.1

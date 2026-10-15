@@ -59,6 +59,14 @@ in-house, sandbox), you own the payment UI and drive the flow through
 </CioCheckoutProvider>
 ```
 
+Use `useCioCheckoutSession()` inside your payment step to create the session
+when the shopper reaches it. See
+[Sessions](./?path=/docs/guides-sessions--docs#bootstrapping-the-session-in-a-step).
+
+If your PSP creates its session inside its own widget (Shop Pay), leave out
+`onCreateSession`. The flow then marks the session `active` with no session
+object.
+
 Without further typing, the session is inferred as `BasePaymentSession`
 (`{ sessionId?: string }`). Read it out via `flow.getSession()` and cast at
 the boundary, or register a strongly-typed shape via module augmentation:

@@ -4,7 +4,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Sessions
 
-A Stripe session is what the flow creates to render the payment surface. It carries a `clientSecret` (identifies the session), a `publishableKey` (drives `loadStripe`), and a status the flow tracks in `state.sessionStatus`.
+A payment session is what the flow creates so the payment step can render. Its shape depends on the provider. For Stripe it carries a `clientSecret` (identifies the session) and a `publishableKey` (drives `loadStripe`). The flow tracks its status in `state.sessionStatus`.
 
 Most checkout bugs stem from misunderstanding the interaction between flow state, session state, and network state. This page walks through all three.
 
@@ -104,7 +104,7 @@ That is a complete wiring. The sections below unpack each piece.
 
 - **`idle`** — no session yet. Set on init and after `clearState()` or `recreate()`.
 - **`creating`** — `onCreateSession` is in flight.
-- **`active`** — a session exists and is usable for payment.
+- **`active`** — a session exists and is usable for payment. A flow without `onCreateSession` is also `active`, with no session object.
 - **`expired`** — the session was live but is no longer valid (Stripe reported expiry or `markExpired()` was called).
 - **`error`** — `onCreateSession` rejected or returned an invalid shape. Retry with `recreate()`.
 
@@ -131,7 +131,9 @@ The library calls `onCreateSession(state)` with the current `CheckoutFlowState` 
 }
 ```
 
-Reject the promise on failure. The library validates the shape — if `clientSecret` or `publishableKey` is not a string, the resolution is treated as a rejection.
+Reject the promise on failure. The library validates the shape. For Stripe, if `clientSecret` or `publishableKey` is missing or an empty string, the resolution is treated as a rejection. For other providers, any plain object passes.
+
+`onCreateSession` is optional. Leave it out for providers that create their session inside their own widget, such as Shop Pay. `createSession()` then resolves `null` at once and sets `sessionStatus` to `'active'`. `<CioStripePaymentStep>` always needs it.
 
 ```tsx
 const onCreateSession = async () => {
@@ -176,11 +178,38 @@ await flow.recreate();
 
 `recreate()` invalidates the old session, runs `onCreateSession` again with the _current_ state (so any cart mutations since expiry are included), and emits `session.recreated` with both old and new session IDs — useful when analytics is keyed by session id.
 
+## Bootstrapping the session in a step
+
+`useCioCheckoutSession()` creates the session when the status is `idle` and recreates it when it is `expired`. `<CioStripePaymentStep>` uses it. Use it in your own payment steps too.
+
+```tsx
+import { useCioCheckoutSession } from '@constructor-io/constructorio-ui-checkout';
+
+function MyPspPaymentStep() {
+  const { session, sessionStatus, missingSession, retry } =
+    useCioCheckoutSession<'my-psp'>();
+
+  if (missingSession) return <p>This step needs an onCreateSession handler.</p>;
+  if (sessionStatus === 'error') return <button onClick={retry}>Retry</button>;
+  if (!session) return <p>Preparing checkout...</p>;
+  return <MyPspWidget session={session} />;
+}
+```
+
+- `session` is the live session, or `null`.
+- `sessionStatus` is the same as `flow.state.sessionStatus`.
+- `missingSession` is `true` when the flow is `active` but has no session object. This happens when the flow has no `onCreateSession`. Steps that need a session should show a configuration error. Steps that do not need one can ignore it.
+- `retry()` calls `flow.recreate()`.
+
+Mount the hook only inside the payment step, so the session is created when the shopper reaches it.
+
 ## Handling creation errors
 
 `CioStripePaymentStep` handles this out of the box:
 
+- While the session is being prepared, it shows a loader with the text "Preparing checkout...".
 - When `sessionStatus === 'error'`, it renders an error state with a Retry button that calls `flow.recreate()`.
+- When the flow has no `onCreateSession`, it renders a configuration error with no Retry button.
 - It fires `onError(err)` once on transition into `error`; subsequent renders do not refire (tracked via a ref).
 
 For custom recovery UI, render conditionally on `sessionStatus`:
@@ -212,7 +241,7 @@ All errors emit through `onEvent` (and through `CioCheckoutProvider`'s error lis
 - **`payment.confirm`** — Stripe `checkout.confirm()` rejected or returned an error.
 - **`storage`** — storage adapter's save/load/clear threw or rejected.
 - **`router`** — `router.push` / `router.getCurrentPath` threw, or a `path` was refused as unsafe.
-- **`guard`** — a step guard threw (rejections count as "guard failed", not error).
+- **`guard`** — a step guard threw, or a navigation was blocked. See [Events](./?path=/docs/guides-events--docs#error-sources) for the full list.
 - **`authenticate`** — `authenticate` callback rejected or returned `null`.
 
 ```tsx
@@ -244,6 +273,6 @@ Two protections against double-charging if `onCreateSession` runs twice:
 
 ## Sessions and persistence
 
-When storage is enabled and state rehydrates with `sessionStatus === 'active'` or `'creating'`, the in-memory session (`clientSecret`) is gone — only flow state was persisted. The library detects this and downgrades to `sessionStatus: 'idle'` on hydrate, so the next `CioStripePaymentStep` mount calls `onCreateSession` again to recover.
+When storage is enabled and state rehydrates with `sessionStatus === 'active'` or `'creating'`, the in-memory session (`clientSecret`) is gone — only flow state was persisted. The library detects this and downgrades to `sessionStatus: 'idle'` on hydrate, so the next `CioStripePaymentStep` mount (or any step using `useCioCheckoutSession()`) calls `onCreateSession` again to recover.
 
 Multi-tab session sharing (both tabs using the same clientSecret) is outside the library's scope — persist the session through a separate channel (BroadcastChannel, server-pushed WebSocket) and pass it back in.

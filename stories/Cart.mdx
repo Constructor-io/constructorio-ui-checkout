@@ -21,6 +21,17 @@ interface BaseCartItem {
 
 All four fields are required. `id` is used as the stable identity key for diffing; `unitAmount * quantity` feeds the total-change detection. If your app's cart items already match this shape, no extra configuration is needed.
 
+## Cart total
+
+`state.cartTotal` is the sum of `unitAmount * quantity` over `state.cartSnapshot`. It is in the same units as `unitAmount`, so cents if your amounts are in cents. It is a subtotal: no tax or shipping. The flow updates it every time the cart changes, and recomputes it when state is restored from storage.
+
+```tsx
+const flow = useCioCheckout();
+const subtotal = flow.state.cartTotal;
+```
+
+With `cartItemFields`, the total uses your accessors.
+
 ## Custom cart item shape
 
 Real catalogs rarely use those exact field names. If your item is dictated by an upstream system (product API, GraphQL codegen, redux slice), pass `cartItemFields` to map from your shape without reshaping — the library reads via accessors, and `state.cartSnapshot` stays your native type end-to-end.

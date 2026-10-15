@@ -14,10 +14,13 @@ drive the flow from the hook directly.
 
 - **`<CioCheckoutStep id="x">`** — three lines. Returns `null` unless
   `state.currentStepId === 'x'`. Any gate does the same job.
-- **`<CioStripePaymentStep>`** — kicks off `flow.createSession()` on mount,
-  wraps children in `CheckoutFormProvider` or `CheckoutElementsProvider`, and
-  calls `flow.next()` on confirm. Reproducible in roughly 30 lines.
-- **`<CioFulfillmentStep>`** — polls `onFulfill` and advances on success.
+- **`<CioStripePaymentStep>`**: creates the session on mount with
+  `useCioCheckoutSession()`, wraps children in `CheckoutFormProvider` or
+  `CheckoutElementsProvider`, and calls `flow.next()` on confirm. Reproducible
+  in roughly 30 lines.
+- **`<CioFulfillmentStep>`**: runs `onFulfill` once, offers Retry on failure,
+  and advances on success. Set `recreateSessionOnRetry` when a failed charge
+  uses up the session.
 
 Bypassing them trades those 30 lines of boilerplate for full control over the
 render tree.
@@ -34,7 +37,7 @@ Pattern: mount `CheckoutFormProvider` above the router, render Stripe
 elements per route inside it, and use `useCioCheckout()` for navigation.
 
 ```tsx
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import {
   CheckoutFormProvider,
@@ -46,6 +49,7 @@ import { Route, Routes, Navigate, useNavigate } from 'react-router-dom';
 import {
   CioCheckoutProvider,
   useCioCheckout,
+  useCioCheckoutSession,
   PAYMENT_STEP,
 } from '@constructor-io/constructorio-ui-checkout';
 
@@ -75,14 +79,7 @@ function App() {
 
 // One Stripe session, one CheckoutFormProvider — shared across every route.
 function StripeShell() {
-  const flow = useCioCheckout();
-  const session = flow.getSession();
-  const status = flow.state.sessionStatus;
-
-  useEffect(() => {
-    if (status === 'idle') void flow.createSession();
-    if (status === 'expired') void flow.recreate();
-  }, [flow, status]);
+  const { session } = useCioCheckoutSession();
 
   const stripe = useMemo(
     () => (session ? loadStripe(session.publishableKey) : null),
@@ -197,21 +194,20 @@ function App() {
 
 function MyPspPaymentStep() {
   const flow = useCioCheckout<'my-psp'>();
-  const session = flow.getSession(); // MyPspSession | null
-  const status = flow.state.sessionStatus;
-
-  useEffect(() => {
-    if (status === 'idle') void flow.createSession();
-    if (status === 'expired') void flow.recreate();
-  }, [flow, status]);
-
   if (flow.state.currentStepId !== PAYMENT_STEP) return null;
+  return <MyPspPayment />;
+}
 
-  if (status === 'error') {
+// Mounted only on the payment step, so the session is created there.
+function MyPspPayment() {
+  const flow = useCioCheckout<'my-psp'>();
+  const { session, sessionStatus, retry } = useCioCheckoutSession<'my-psp'>(); // session: MyPspSession | null
+
+  if (sessionStatus === 'error') {
     return (
       <div role="alert">
         <p>Failed to prepare payment.</p>
-        <button onClick={() => flow.recreate()}>Retry</button>
+        <button onClick={retry}>Retry</button>
       </div>
     );
   }
@@ -222,8 +218,15 @@ function MyPspPaymentStep() {
     <MyPspSdkWidget
       approvalToken={session.approvalToken}
       merchantId={session.merchantId}
-      onComplete={() => flow.next()}
-      onError={(err) => console.error(err)}
+      onSubmit={() => flow.setPaymentInProgress(true)}
+      onComplete={() => {
+        flow.setPaymentInProgress(false);
+        flow.next();
+      }}
+      onError={(err) => {
+        flow.setPaymentInProgress(false);
+        flow.emitError('payment.confirm', err);
+      }}
       onExpired={() => flow.markExpired()}
     />
   );
@@ -243,7 +246,7 @@ dedicated component — the same reason the library ships
 | Concern           | Managed by the library                                                                  |
 | ----------------- | --------------------------------------------------------------------------------------- |
 | Navigation        | `flow.start()`, `flow.next()`, `flow.back()`, `flow.goTo()`, guards, optional steps     |
-| Session lifecycle | `flow.createSession()`, `flow.updateSession()`, `flow.recreate()`, `flow.markExpired()` |
+| Session lifecycle | `useCioCheckoutSession()`, `flow.updateSession()`, `flow.recreate()`, `flow.markExpired()` |
 | Cart              | `flow.setCart()`, `flow.syncCart()` — debounced, serialized against session updates     |
 | Persistence       | Any `CheckoutStorageAdapter` — sessionStorage default, or your own backend adapter      |
 | Routing           | Any `CheckoutRouterAdapter` — React Router, Next.js, TanStack, plain `window.location`  |
@@ -255,8 +258,8 @@ dedicated component — the same reason the library ships
   unusual wrapping — `<CioStripePaymentStep>` saves the boilerplate.
 - Steps that map 1:1 to component trees with no routing subtleties —
   `<CioCheckoutStep>` is a clean gate.
-- Fulfillment poll matching the default shape — `<CioFulfillmentStep>`
-  handles the retry/timeout logic.
+- Fulfillment check matching the default shape — `<CioFulfillmentStep>`
+  handles the pending, success, failure and retry states.
 
 Mix and match freely: keep `<CioCheckoutStep>` for gating and swap only
 `<CioStripePaymentStep>` for a hook-driven wrapper, or vice versa.

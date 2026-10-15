@@ -19,13 +19,13 @@ interface CheckoutStep {
 
 That is the entire surface. Nothing else on the step defines rendering — that happens via `<CioCheckoutStep id="x">` or a custom gate that reads `state.currentStepId`.
 
-## Two built-in step IDs
+## The built-in payment step ID
 
 ```ts
 import { PAYMENT_STEP } from '@constructor-io/constructorio-ui-checkout';
 ```
 
-- **`PAYMENT_STEP`** (`'stripe'`) — the ID the built-in `<CioStripePaymentStep>` looks for. Use the constant rather than the literal string so future renames stay backwards-compatible.
+- **`PAYMENT_STEP`** (`'payment'`) is the ID used for the payment step in these docs. Use the constant rather than the literal string.
 
 All other step IDs are merchant-defined.
 
@@ -89,15 +89,21 @@ Do not use `optional` for A/B branching — that is a guard concern, not an opti
 
 ## Guards
 
-`guard` runs before a transition _into_ the step. Return `false` (or reject) to block the transition; the flow stays put and emits an `error` event with `source: 'guard'`.
+`guard` runs before a transition _into_ the step. Return `false` to block the transition. The flow stays on the current step.
+
+Whether an `error` event fires depends on how the step was reached:
+
+- **`flow.next()`**: a guard that returns `false` blocks quietly. No event fires.
+- **`flow.goTo()`**, **`flow.start()` on a routed URL**, and **resume from storage**: a guard that returns `false` emits an `error` event with `source: 'guard'`.
+- **Any call**: a guard that throws or rejects emits an `error` event with `source: 'guard'`, and the transition is blocked.
 
 **Auth gate:**
 
 ```tsx
 {
   id: PAYMENT_STEP,
-  guard: async (state) => {
-    if (state.metadata.userId) return true;
+  guard: async () => {
+    if (isSignedIn()) return true;
     window.location.assign('/login?returnTo=/checkout/payment');
     return false;
   },
@@ -109,7 +115,7 @@ Do not use `optional` for A/B branching — that is a guard concern, not an opti
 ```tsx
 {
   id: PAYMENT_STEP,
-  guard: (state) => cartTotal(state.cartSnapshot) >= 100,
+  guard: (state) => state.cartTotal >= 10000, // cart units, here cents
 }
 ```
 
@@ -153,7 +159,7 @@ Registering two separate steps for "guest" and "loggedIn" is almost always the w
 
 `<CioCheckoutStep>` is a three-line convenience — a gate that renders children when `state.currentStepId` matches. Replace it with any gate that reads the hook. See [Hook-only composition](./?path=/docs/getting-started-hook-only-composition--docs) for the escape-hatch pattern.
 
-For steps that own their side effects (auto-creating a session, polling fulfillment), pair a gate with a hook-driven component:
+For steps that own their side effects, pair a gate with a hook-driven component. A custom payment step can create its session with `useCioCheckoutSession()`. See [Sessions](./?path=/docs/guides-sessions--docs#bootstrapping-the-session-in-a-step). A fulfillment poll looks like this:
 
 ```tsx
 <CioCheckoutStep id="fulfill">
@@ -178,6 +184,8 @@ function MyFulfillmentPoll() {
 - **`flow.next()`** — advance to the next step in the list, running its guard.
 - **`flow.next({ skip: true })`** — same, but skip an `optional` step without marking it completed.
 - **`flow.back()`** — return to the previous step. Guards do not run on back navigation.
+
+While `state.paymentInProgress` is `true`, `back()` and `goTo()` do nothing and emit an `error` event with `source: 'guard'`. `next()` still works. Call `flow.setPaymentInProgress(true)` when your payment widget starts a charge, and `false` when it ends.
 - **`flow.goTo(stepId)`** — jump to a specific step and run its guard. Use for "edit shipping" from a review page or "start payment" from a summary screen.
 
 `goTo` does not enforce that the target has been previously visited — it is the caller's responsibility not to jump to a step whose preconditions have not been met. Add guards on the destination step to enforce.

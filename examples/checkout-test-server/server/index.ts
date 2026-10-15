@@ -253,7 +253,7 @@ app.delete("/api/flow-state", (req, res) => {
 app.listen(PORT, () => {
   console.log(`\nCheckout test server running at http://localhost:${PORT}`);
   console.log(
-    `  POST   /api/login                        — Demo auth (${process.env.DEMO_USER_EMAIL} / ${process.env.DEMO_USER_PASSWORD})`,
+    `  POST   /api/login                        — Demo auth (${process.env.DEMO_USER_EMAIL}, password in .env)`,
   );
   console.log(
     `  GET    /api/addresses                    — Hardcoded address list`,

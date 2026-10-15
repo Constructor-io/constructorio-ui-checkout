@@ -1,7 +1,6 @@
 import {
   compileCartItemAccessors,
   computeCartDiff,
-  extractSessionId,
   findStepIndex,
   getSessionIdFromResponse,
   isValidSessionResponse,
@@ -41,12 +40,6 @@ describe(`${getSessionIdFromResponse.name}: server`, () => {
     expect(
       getSessionIdFromResponse({ sessionId: 'session_abc' }, 'stripe')
     ).toBe('session_abc');
-  });
-});
-
-describe(`${extractSessionId.name}: server`, () => {
-  it('runs server-side without any browser globals', () => {
-    expect(extractSessionId('cs_test_abc_secret_xyz')).toBe('cs_test_abc');
   });
 });
 

@@ -5,7 +5,7 @@ import type { CheckoutStripeUiMode } from '@src/types';
 
 const CHECKOUT_FORM_BETA = 'custom_checkout_payment_form_1';
 
-class CheckoutManager {
+class StripeLoader {
   private readonly stripeInstances = new Map<string, Promise<Stripe | null>>();
 
   getStripe(
@@ -37,5 +37,5 @@ class CheckoutManager {
   }
 }
 
-const checkoutManager = new CheckoutManager();
-export default checkoutManager;
+const stripeLoader = new StripeLoader();
+export default stripeLoader;

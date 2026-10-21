@@ -25,20 +25,12 @@ export interface CheckoutFlowState<TItem = BaseCartItem> {
   currentStepId: CheckoutStepId | null;
   completedStepIds: CheckoutStepId[];
   cartSnapshot: TItem[];
-  /**
-   * Sum of `unitAmount * quantity` over `cartSnapshot`, in the cart's units.
-   * A subtotal only: no tax or shipping. Recomputed by the flow whenever the
-   * cart changes.
-   */
+  /** Cart subtotal in the cart's units. No tax or shipping. */
   cartTotal: number;
   currency: string | null;
   sessionId: string | null;
   sessionStatus: CheckoutSessionStatus;
-  /**
-   * True while the payment provider is confirming a payment. While set,
-   * `back()` and `goTo()` are blocked. Never persisted: always saved and
-   * restored as `false`.
-   */
+  /** Blocks `back()` and `goTo()` while true. Never persisted. */
   paymentInProgress: boolean;
   metadata: Record<string, unknown>;
   schemaVersion: 1;
@@ -135,20 +127,12 @@ export interface CheckoutFlowConfig<
 > {
   provider: TProvider;
   steps: CheckoutStep<TItem>[];
-  /**
-   * Key passed to the storage adapter. Defaults to `DEFAULT_STORAGE_KEY`.
-   * Has no effect without `storage`.
-   */
+  /** Defaults to `DEFAULT_STORAGE_KEY`. */
   storageKey?: string;
-  /** Persistence is off unless a storage adapter is passed. */
   storage?: CheckoutStorageAdapter<TItem>;
   router?: CheckoutRouterAdapter;
   authenticate?: () => Promise<CheckoutAuthResult | null>;
-  /**
-   * Creates the payment session. Omit for providers that create their session
-   * inside their own widget (Shop Pay): the flow then marks the session
-   * `active` at once with no session object.
-   */
+  /** Omit for providers that create their own session (Shop Pay). */
   onCreateSession?: (
     state: CheckoutFlowState<TItem>
   ) => Promise<PaymentSessionFor<TProvider>>;
@@ -188,10 +172,7 @@ export interface CheckoutFlowCoreBase<
   createSession(): Promise<PaymentSessionFor<TProvider> | null>;
   recreate(): Promise<PaymentSessionFor<TProvider> | null>;
   markExpired(): void;
-  /**
-   * Marks a payment as in flight. While true, `back()` and `goTo()` emit a
-   * `guard` error and do nothing. `next()` still works.
-   */
+  /** While true, `back()` and `goTo()` are blocked. `next()` still works. */
   setPaymentInProgress(value: boolean): void;
   destroy(): void;
   isDestroyed(): boolean;
@@ -224,5 +205,4 @@ export type RequireAccessorsIfNeeded<TItem> = TItem extends BaseCartItem
 
 export const PAYMENT_STEP: CheckoutStepId = 'payment';
 export const FLOW_SCHEMA_VERSION = 1 as const;
-/** Storage key used when `storage` is passed without `storageKey`. */
 export const DEFAULT_STORAGE_KEY = 'cio-checkout-flow';

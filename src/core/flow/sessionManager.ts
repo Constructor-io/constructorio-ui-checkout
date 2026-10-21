@@ -60,8 +60,6 @@ export function createSessionManager<
 
     const { onCreateSession } = config;
     if (!onCreateSession) {
-      // The provider creates its session inside its own widget, so the
-      // payment step is ready at once.
       store.setState((prev) =>
         prev.sessionStatus === 'active' && prev.sessionId === null
           ? prev

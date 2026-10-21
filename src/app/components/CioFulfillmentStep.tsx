@@ -25,21 +25,15 @@ export interface CioFulfillmentStepProps {
   onFulfillComplete?: (result: CioFulfillmentResult) => void;
   advanceOnSuccess?: boolean;
   render?: (props: CioFulfillmentRenderProps) => React.ReactNode;
-  /**
-   * When true, `retry()` first calls `flow.recreate()` and only re-runs
-   * `onFulfill` once the new session is active. Use for providers that burn
-   * the session on a failed charge (Fiserv). If recreating fails, the step
-   * stays `failed` so the shopper can retry again. Defaults to `false`.
-   */
+  /** Retry starts a fresh session first. For providers that burn the session on a failed charge. */
   recreateSessionOnRetry?: boolean;
-  /** Overrides for the step's built-in labels. */
   translations?: Translations;
 }
 
 /**
  * Runs `onFulfill` once on mount, exposes status and retry via a render prop,
  * and advances the flow on success by default. Retry re-invokes `onFulfill`
- * without touching session state, unless `recreateSessionOnRetry` is set.
+ * without touching session state.
  */
 export function CioFulfillmentStep({
   onFulfill,

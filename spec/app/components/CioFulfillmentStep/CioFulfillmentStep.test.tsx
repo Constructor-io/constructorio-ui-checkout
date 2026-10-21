@@ -315,7 +315,6 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
         >
           <CioCheckoutStep id="fulfill">
             <CioFulfillmentStep
-              // A non-Error rejection is the case under test.
               // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
               onFulfill={() => Promise.reject('boom')}
               translations={{

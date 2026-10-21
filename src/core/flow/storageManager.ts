@@ -33,7 +33,6 @@ export function createStorageManager<
     );
   }
 
-  // A payment cannot survive a reload, so never persist the in-flight flag.
   const toPersisted = (
     state: CheckoutFlowState<TItem>
   ): CheckoutFlowState<TItem> =>

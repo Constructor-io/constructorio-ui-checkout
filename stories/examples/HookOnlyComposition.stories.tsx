@@ -50,7 +50,6 @@ function Payment() {
   );
 }
 
-// One component reads the hook and decides what to render for each step.
 function CheckoutScreens() {
   const flow = useCioCheckout<'fake-pay'>();
   const { currentStepId, cartTotal } = flow.state;

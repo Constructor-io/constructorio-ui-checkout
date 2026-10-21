@@ -13,12 +13,14 @@ interface CheckoutRouterAdapter {
   push(path: string): void;
   getCurrentPath(): string;
   subscribe?(cb: (path: string) => void): () => void;
+  replace?(path: string): void;
 }
 ```
 
 - `push` — called when the flow enters a step with a `path`.
 - `getCurrentPath` — called on mount to reconcile the flow to the current URL.
 - `subscribe` (optional) — the flow listens for browser back / external nav and re-syncs state.
+- `replace` (optional): puts the URL back on the current step when the flow refuses a back or forward click. Pass it whenever you pass `subscribe`.
 
 The library validates `path` for safety, rejecting `javascript:`, `data:`, `vbscript:`, and `file:` URLs.
 
@@ -40,6 +42,7 @@ function useReactRouterAdapter() {
   return useMemo(
     () => ({
       push: (path: string) => navigate(path),
+      replace: (path: string) => navigate(path, { replace: true }),
       getCurrentPath: () => location.pathname,
       subscribe: (cb: (p: string) => void) => {
         subscribers.add(cb);
@@ -80,6 +83,7 @@ function useNextRouterAdapter() {
   return useMemo(
     () => ({
       push: (path: string) => router.push(path),
+      replace: (path: string) => router.replace(path),
       getCurrentPath: () => pathname,
       subscribe: (cb: (p: string) => void) => {
         subscribers.add(cb);
@@ -109,6 +113,7 @@ function useTanStackRouterAdapter() {
   return useMemo(
     () => ({
       push: (path: string) => navigate({ to: path }),
+      replace: (path: string) => navigate({ to: path, replace: true }),
       getCurrentPath: () => location.pathname,
       subscribe: (cb: (p: string) => void) => {
         subscribers.add(cb);
@@ -148,6 +153,7 @@ flow.start();
 - **Deep link** from an email to `/checkout/payment`: same as refresh — the flow lands on `payment`. Combine with a `storage` adapter so completed prior steps (`cart`, `address`) are marked done and the payment step has the correct cart snapshot.
 - **Storage precedence when both are configured**: if a persisted flow state exists, `start()` restores it and pushes the stored step's path — the stored step overrides the current URL. An emailed deep link to `/checkout/payment` for a session whose persisted state points at `cart` resumes at `cart`. Call `clearState()` (or omit `storage`) to let deep links override storage.
 - **Browser back**: `subscribe(cb)` fires with the new path; the flow syncs its `currentStepId` to match. Steps without a `path` do not participate (modals are not deep-linkable by design).
+- **Refused back or forward**: if the flow will not move, because a payment is in progress or a guard says no, it calls `replace` with the current step's path. The URL stays in step with the page and no history entry is added. Without `replace`, the URL stays on the other step until the next step change.
 
 ## Mixed routed + non-routed steps
 

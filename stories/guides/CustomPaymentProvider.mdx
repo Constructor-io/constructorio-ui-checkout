@@ -61,7 +61,7 @@ The step does four things:
 
 - Creates the session with `useCioCheckoutSession()`.
 - Mounts the provider's widget once the session exists.
-- Marks the payment as running with `flow.setPaymentInProgress(true)`. While it is `true`, `back()` and `goTo()` are blocked, so the shopper cannot leave mid-charge.
+- Marks the payment as running with `flow.setPaymentInProgress(true)`. While it is `true`, `back()` and `goTo()` are blocked, so the shopper cannot leave mid-charge. The browser Back button is covered too when your router adapter has `replace`. See [Routing](?path=/docs/guides-routing--docs).
 - On success, clears the flag and calls `flow.next()`. On failure, clears the flag and calls `flow.emitError('payment.confirm', error)`.
 
 ```tsx

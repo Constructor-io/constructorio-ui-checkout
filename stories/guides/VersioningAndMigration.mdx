@@ -17,6 +17,7 @@ This page covers the move from 1.x to 2.0. Most apps need a few import changes a
 5. If you build `CheckoutFlowState` objects by hand, add `cartTotal` and `paymentInProgress`.
 6. Run your type checker. Every removed or renamed export fails at compile time.
 7. Optional: replace hand-written session effects with `useCioCheckoutSession()`.
+8. Optional: add `replace` to your router adapter.
 
 ## Node.js 20
 
@@ -73,6 +74,12 @@ They were internal helpers.
 
 **What to change:** delete the imports. Pass your strings through the `translations` prop. Keep your own copy of any default text you relied on.
 
+### Five unused translation keys are removed
+
+`CioCheckout.checkout.title`, `cancelLabel`, `closeLabel`, `buttonLabel` and `buttonLoadingLabel` were left over from the 1.0 modal UI. No component read them.
+
+**What to change:** delete them from your `translations` object.
+
 ### `createCheckoutFlow` defaults to the built-in provider type
 
 `createCheckoutFlow` now defaults its provider type to `BuiltInPaymentProvider`, the same as the hook and the provider. This is a type change only. Nothing changes at runtime.
@@ -94,6 +101,7 @@ These are not breaking, but you may notice them.
 - **`CioStripePaymentStep` shows confirm errors.** In `'elements'` mode, a failed payment shows Stripe's message above the pay button. `onError` still fires.
 - **`CioStripePaymentStep` reports a missing `onCreateSession`.** It shows a configuration error and emits one `session.create` error.
 - **The bundled build loads fonts with `<link>` tags.** The Google Fonts `@import` lines are no longer inside the injected CSS.
+- **A refused back or forward click restores the URL.** When a payment is in progress or a guard says no, the flow puts the URL back on the current step. Your router adapter needs `replace` for this. See [Routing](?path=/docs/guides-routing--docs).
 
 ## New in 2.0
 
@@ -101,6 +109,7 @@ These are not breaking, but you may notice them.
 - **`useCioCheckoutSession()`.** Creates the session in a payment step. Returns `{ session, sessionStatus, missingSession, retry }`. See [Hooks](?path=/docs/components-utilities-hooks--docs).
 - **`flow.setPaymentInProgress()` and `state.paymentInProgress`.** Block `back()` and `goTo()` while a charge runs.
 - **`state.cartTotal`.** The cart subtotal, kept up to date by the flow.
+- **`replace` on the router adapter.** Optional. Lets the flow undo a back or forward click it refused, without adding a history entry.
 - **`cioCheckoutRegistry.getFlow(provider)`.** Returns `null` when the stored flow is for another provider.
 - **`CioFulfillmentStep` `recreateSessionOnRetry`.** Starts a fresh session before retrying.
 - **New exports.** `DEFAULT_STORAGE_KEY`, `CheckoutLoaderRenderProps`, `UseCioCheckoutSessionReturn`, and the types `CreateCheckoutFlowOptions`, `CheckoutFlowCoreBase`, `RequireAccessorsIfNeeded` and `KeyOfType`.

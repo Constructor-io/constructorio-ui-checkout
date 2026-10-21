@@ -156,6 +156,7 @@ Pass a `router` adapter and give each step a `path`. The library keeps URL and s
   ]}
   router={{
     push: (path) => navigate(path),
+    replace: (path) => navigate(path, { replace: true }),
     getCurrentPath: () => location.pathname,
     subscribe: (cb) => registerNavListener(cb),
   }}

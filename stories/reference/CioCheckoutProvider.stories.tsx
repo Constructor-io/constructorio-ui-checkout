@@ -208,6 +208,7 @@ import type { CheckoutRouterAdapter } from '@constructor-io/constructorio-ui-che
 // Adapt your router (react-router, next/router, etc.) to CheckoutRouterAdapter.
 const router: CheckoutRouterAdapter = {
   push: (path) => navigate(path),
+  replace: (path) => navigate(path, { replace: true }),
   getCurrentPath: () => location.pathname,
   subscribe: (cb) => subscribeToLocationChanges(cb),
 };

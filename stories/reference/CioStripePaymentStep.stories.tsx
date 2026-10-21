@@ -5,9 +5,6 @@ import { CioCheckoutProvider } from '@src/app/providers/CioCheckoutProvider';
 import { PAYMENT_STEP } from '@src/core/types';
 import type { StripePaymentSession } from '@src/types';
 
-// These stories never reach Stripe: each one stops before a session exists,
-// so Stripe.js is never loaded.
-
 const neverResolves = () => new Promise<StripePaymentSession>(() => undefined);
 const alwaysFails = () =>
   Promise.reject<StripePaymentSession>(new Error('Session API down'));

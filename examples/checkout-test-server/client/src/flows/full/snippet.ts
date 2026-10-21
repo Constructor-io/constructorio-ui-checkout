@@ -32,6 +32,7 @@ import {
   router={{
     // Plug react-router into the flow so flow.next() pushes the URL.
     push: (path) => navigate(path),
+    replace: (path) => navigate(path, { replace: true }),
     getCurrentPath: () => location.pathname,
     subscribe: (cb) => {
       const h = () => cb(location.pathname);

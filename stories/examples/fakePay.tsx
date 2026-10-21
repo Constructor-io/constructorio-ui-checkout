@@ -2,9 +2,6 @@ import { useState } from 'react';
 
 import type { BaseCartItem, BasePaymentSession } from '@src/types';
 
-// A fake payment provider ("FakePay") so the examples run with no network
-// and no real payment SDK. Every call resolves after a short delay.
-
 export interface FakePaySession extends BasePaymentSession {
   token: string;
 }
@@ -44,7 +41,6 @@ interface FakePayWidgetProps {
   onFailure: (error: Error) => void;
 }
 
-// Stands in for a provider's own payment widget.
 export function FakePayWidget({
   session,
   amount,

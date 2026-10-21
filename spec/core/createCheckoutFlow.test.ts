@@ -3,6 +3,7 @@ import type {
   CheckoutEvent,
   CheckoutFlowConfig,
   CheckoutFlowState,
+  CheckoutRouterAdapter,
 } from '@src/core/types';
 import { DEFAULT_STORAGE_KEY, FLOW_SCHEMA_VERSION } from '@src/core/types';
 
@@ -202,6 +203,116 @@ describe(`${createCheckoutFlow.name}: client`, () => {
       expect((flow.getIntegratorState() as { counter: number }).counter).toBe(
         1
       );
+    });
+  });
+
+  describe('router back and forward', () => {
+    const routedSteps = [
+      { id: 'cart', path: '/cart' },
+      { id: 'payment', path: '/payment' },
+      { id: 'done', path: '/done' },
+    ];
+
+    const makeHistory = (withReplace = true) => {
+      let current = '/cart';
+      let listener: ((path: string) => void) | null = null;
+      const push = vi.fn((path: string) => {
+        current = path;
+      });
+      const replace = vi.fn((path: string) => {
+        current = path;
+      });
+      const router: CheckoutRouterAdapter = {
+        push,
+        getCurrentPath: () => current,
+        subscribe: (cb) => {
+          listener = cb;
+          return () => {
+            listener = null;
+          };
+        },
+        ...(withReplace ? { replace } : {}),
+      };
+      const browserNavigate = (path: string) => {
+        current = path;
+        listener?.(path);
+      };
+      return { router, push, replace, browserNavigate, url: () => current };
+    };
+
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    const startAtPayment = async (
+      router: CheckoutRouterAdapter,
+      steps: CheckoutFlowConfig['steps'] = routedSteps
+    ) => {
+      const { events, onEvent } = recordEvents();
+      const flow = createCheckoutFlow(
+        minimalConfig({ steps, router, onEvent })
+      );
+      await flow.start();
+      await flow.next();
+      expect(flow.getState().currentStepId).toBe('payment');
+      return { flow, events };
+    };
+
+    it('puts the URL back on payment when back is clicked during a payment', async () => {
+      const history = makeHistory();
+      const { flow } = await startAtPayment(history.router);
+      flow.setPaymentInProgress(true);
+      const pushesBefore = history.push.mock.calls.length;
+
+      history.browserNavigate('/cart');
+      await settle();
+
+      expect(flow.getState().currentStepId).toBe('payment');
+      expect(history.replace).toHaveBeenCalledWith('/payment');
+      expect(history.url()).toBe('/payment');
+      expect(history.push.mock.calls.length).toBe(pushesBefore);
+    });
+
+    it('puts the URL back when a guard rejects a back click', async () => {
+      const history = makeHistory();
+      let cartOpen = true;
+      const { flow, events } = await startAtPayment(history.router, [
+        { id: 'cart', path: '/cart', guard: () => cartOpen },
+        { id: 'payment', path: '/payment' },
+        { id: 'done', path: '/done' },
+      ]);
+      cartOpen = false;
+
+      history.browserNavigate('/cart');
+      await settle();
+
+      expect(flow.getState().currentStepId).toBe('payment');
+      expect(history.replace).toHaveBeenCalledWith('/payment');
+      expect(events).toContainEqual(
+        expect.objectContaining({ type: 'error', source: 'guard' })
+      );
+    });
+
+    it('does not touch the URL when the back click is allowed', async () => {
+      const history = makeHistory();
+      const { flow } = await startAtPayment(history.router);
+
+      history.browserNavigate('/cart');
+      await settle();
+
+      expect(flow.getState().currentStepId).toBe('cart');
+      expect(history.replace).not.toHaveBeenCalled();
+      expect(history.url()).toBe('/cart');
+    });
+
+    it('leaves the URL alone when the adapter has no replace', async () => {
+      const history = makeHistory(false);
+      const { flow } = await startAtPayment(history.router);
+      flow.setPaymentInProgress(true);
+
+      expect(() => history.browserNavigate('/cart')).not.toThrow();
+      await settle();
+
+      expect(flow.getState().currentStepId).toBe('payment');
+      expect(history.url()).toBe('/cart');
     });
   });
 

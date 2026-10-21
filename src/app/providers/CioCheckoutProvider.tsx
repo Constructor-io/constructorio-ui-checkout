@@ -53,6 +53,9 @@ export function CioCheckoutProvider<
             ? (cb: (path: string) => void) =>
                 propsRef.current.router!.subscribe!(cb)
             : undefined,
+          replace: props.router.replace
+            ? (path: string) => propsRef.current.router!.replace!(path)
+            : undefined,
         }
       : undefined;
 

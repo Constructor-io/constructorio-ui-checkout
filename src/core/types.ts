@@ -46,6 +46,8 @@ export interface CheckoutRouterAdapter {
   push(path: string): void;
   getCurrentPath(): string;
   subscribe?(cb: (path: string) => void): () => void;
+  /** Lets the flow undo a back or forward click it rejected, without adding a history entry. */
+  replace?(path: string): void;
 }
 
 export type CheckoutSessionUpdateReason =

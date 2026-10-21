@@ -20,7 +20,7 @@ export function createRouterBridge<
   const router = config.router;
 
   let routerUnsubscribe: (() => void) | null = null;
-  let syncingFromRouter = false;
+  let pendingRouterSyncs = 0;
 
   const findStepByPath = (path: string): CheckoutStep<TItem> | null => {
     for (const step of steps) {
@@ -36,7 +36,7 @@ export function createRouterBridge<
 
   const push = (path: string | undefined): void => {
     if (!router || path === undefined) return;
-    if (syncingFromRouter) return;
+    if (pendingRouterSyncs > 0) return;
     if (!isSafePath(path)) {
       emitError('router', new Error(`Refused to push unsafe path: ${path}`));
       return;
@@ -60,11 +60,26 @@ export function createRouterBridge<
       const matched = findStepByPath(newPath);
       if (!matched) return;
       if (matched.id === store.getState().currentStepId) return;
-      syncingFromRouter = true;
+      pendingRouterSyncs += 1;
       void Promise.resolve(onExternalPathChange(matched)).finally(() => {
-        syncingFromRouter = false;
+        pendingRouterSyncs -= 1;
+        if (pendingRouterSyncs === 0) restoreUrlIfRejected();
       });
     });
+  };
+
+  const restoreUrlIfRejected = (): void => {
+    if (isDestroyed() || !router?.replace) return;
+    const currentStepId = store.getState().currentStepId;
+    const urlStep = findStepByPath(getCurrentPath());
+    if (!urlStep || urlStep.id === currentStepId) return;
+    const currentPath = steps.find((s) => s.id === currentStepId)?.path;
+    if (currentPath === undefined || !isSafePath(currentPath)) return;
+    try {
+      router.replace(currentPath);
+    } catch (reason) {
+      emitError('router', toError(reason));
+    }
   };
 
   const teardown = (): void => {

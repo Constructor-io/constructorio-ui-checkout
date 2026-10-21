@@ -7,13 +7,10 @@ export const defaultTranslations: Required<Translations> = {
   'CioCheckout.session.errorLabel':
     'Failed to prepare checkout. Please try again.',
   'CioCheckout.session.retryLabel': 'Retry',
-  'CioCheckout.session.missingLabel':
-    'This payment step needs an onCreateSession handler.',
   'CioCheckout.fulfillment.pendingLabel': 'Verifying your order...',
   'CioCheckout.fulfillment.successLabel': 'Order confirmed',
   'CioCheckout.fulfillment.failedLabel': 'Verification failed',
   'CioCheckout.fulfillment.retryLabel': 'Retry',
-  'CioCheckout.fulfillment.errorFallbackLabel': 'Fulfillment failed',
 };
 
 export function t(

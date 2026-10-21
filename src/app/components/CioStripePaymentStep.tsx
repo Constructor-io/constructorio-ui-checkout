@@ -76,7 +76,6 @@ export function CioStripePaymentStep({
     });
   }, [flow, onError]);
 
-  // Stripe always needs a session. Report a flow without onCreateSession once.
   useEffect(() => {
     if (!missingSession || missingReportedRef.current) return;
     missingReportedRef.current = true;

@@ -7,30 +7,14 @@ import type { BuiltInPaymentProvider, PaymentSessionFor } from '@src/types';
 export interface UseCioCheckoutSessionReturn<
   TProvider extends string = BuiltInPaymentProvider,
 > {
-  /** The live payment session, or `null` while there is none. */
   session: PaymentSessionFor<TProvider> | null;
   sessionStatus: CheckoutSessionStatus;
-  /**
-   * True when the flow is `active` but holds no session object. This happens
-   * when the flow has no `onCreateSession`. Steps that need a session should
-   * treat it as a configuration error.
-   */
+  /** True when the flow is `active` with no session, because it has no `onCreateSession`. */
   missingSession: boolean;
-  /** Starts a fresh session. Same as `flow.recreate()`. */
   retry: () => Promise<PaymentSessionFor<TProvider> | null>;
 }
 
-/**
- * Bootstraps the payment session for a payment step: creates it when the
- * status is `idle` and recreates it when `expired`. Nothing else.
- *
- * @example
- * function MyPaymentStep() {
- *   const { session, sessionStatus, retry } = useCioCheckoutSession<'fiserv'>();
- *   if (sessionStatus === 'error') return <button onClick={retry}>Retry</button>;
- *   return session ? <FiservWidget session={session} /> : <Spinner />;
- * }
- */
+/** Creates the payment session when it is `idle` and recreates it when `expired`. */
 export function useCioCheckoutSession<
   TProvider extends string = BuiltInPaymentProvider,
 >(): UseCioCheckoutSessionReturn<TProvider> {

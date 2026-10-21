@@ -151,7 +151,7 @@ export function CioStripePaymentStep({
   if (missingSession) {
     return (
       <div className="cio-checkout-session-error" role="alert">
-        <p>{t(translations, 'CioCheckout.session.missingLabel')}</p>
+        <p>This payment step needs an onCreateSession handler.</p>
       </div>
     );
   }

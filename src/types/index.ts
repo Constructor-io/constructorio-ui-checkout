@@ -8,12 +8,10 @@ export interface Translations {
   'CioCheckout.checkout.preparingLabel'?: string;
   'CioCheckout.session.errorLabel'?: string;
   'CioCheckout.session.retryLabel'?: string;
-  'CioCheckout.session.missingLabel'?: string;
   'CioCheckout.fulfillment.pendingLabel'?: string;
   'CioCheckout.fulfillment.successLabel'?: string;
   'CioCheckout.fulfillment.failedLabel'?: string;
   'CioCheckout.fulfillment.retryLabel'?: string;
-  'CioCheckout.fulfillment.errorFallbackLabel'?: string;
 }
 
 export interface BaseCartItem {

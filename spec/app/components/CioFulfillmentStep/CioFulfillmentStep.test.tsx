@@ -305,7 +305,7 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
       expect(screen.getByRole('button', { name: 'Again' })).toBeInTheDocument();
     });
 
-    it('uses the custom fallback when onFulfill throws a non-Error', async () => {
+    it('uses failedLabel when onFulfill throws a non-Error', async () => {
       render(
         <CioCheckoutProvider
           provider="stripe"
@@ -318,13 +318,39 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
               // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
               onFulfill={() => Promise.reject('boom')}
               translations={{
-                'CioCheckout.fulfillment.errorFallbackLabel': 'Something broke',
+                'CioCheckout.fulfillment.failedLabel': 'Something broke',
               }}
             />
           </CioCheckoutStep>
         </CioCheckoutProvider>
       );
       expect(await screen.findByText('Something broke')).toBeInTheDocument();
+    });
+
+    it('passes the failedLabel text to render when onFulfill throws a non-Error', async () => {
+      render(
+        <CioCheckoutProvider
+          provider="stripe"
+          steps={[{ id: 'fulfill' }]}
+          onCreateSession={stubSession}
+          autoStart
+        >
+          <CioCheckoutStep id="fulfill">
+            <CioFulfillmentStep
+              // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+              onFulfill={() => Promise.reject('boom')}
+              render={({ result }) => (
+                <span data-testid="message">{result?.message}</span>
+              )}
+            />
+          </CioCheckoutStep>
+        </CioCheckoutProvider>
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId('message').textContent).toBe(
+          'Verification failed'
+        )
+      );
     });
 
     it('renders a custom success label', async () => {

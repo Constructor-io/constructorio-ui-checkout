@@ -49,10 +49,7 @@ export function CioFulfillmentStep({
   const inFlightRef = useRef(false);
   const recreatingRef = useRef(false);
   const mountedRef = useRef(true);
-  const errorFallback = t(
-    translations,
-    'CioCheckout.fulfillment.errorFallbackLabel'
-  );
+  const failedLabel = t(translations, 'CioCheckout.fulfillment.failedLabel');
 
   useEffect(() => {
     mountedRef.current = true;
@@ -71,7 +68,7 @@ export function CioFulfillmentStep({
     } catch (reason) {
       outcome = {
         success: false,
-        message: reason instanceof Error ? reason.message : errorFallback,
+        message: reason instanceof Error ? reason.message : failedLabel,
       };
     } finally {
       inFlightRef.current = false;
@@ -87,7 +84,7 @@ export function CioFulfillmentStep({
     if (outcome.success && advanceOnSuccess) {
       void flow.next();
     }
-  }, [onFulfill, onFulfillComplete, advanceOnSuccess, flow, errorFallback]);
+  }, [onFulfill, onFulfillComplete, advanceOnSuccess, flow, failedLabel]);
 
   useEffect(() => {
     if (status === 'idle') void run();
@@ -149,10 +146,7 @@ export function CioFulfillmentStep({
         className="cio-checkout-fulfillment cio-checkout-fulfillment--failed"
         role="alert"
       >
-        <p>
-          {result?.message ??
-            t(translations, 'CioCheckout.fulfillment.failedLabel')}
-        </p>
+        <p>{result?.message ?? failedLabel}</p>
         <button type="button" onClick={retry}>
           {t(translations, 'CioCheckout.fulfillment.retryLabel')}
         </button>

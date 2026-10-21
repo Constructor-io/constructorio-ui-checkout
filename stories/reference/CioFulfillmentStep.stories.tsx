@@ -39,9 +39,8 @@ const componentDocs = [
   '| --- | --- |',
   '| `CioCheckout.fulfillment.pendingLabel` | `Verifying your order...` |',
   '| `CioCheckout.fulfillment.successLabel` | `Order confirmed` (used when the result has no `message`) |',
-  '| `CioCheckout.fulfillment.failedLabel` | `Verification failed` (used when the result has no `message`) |',
+  '| `CioCheckout.fulfillment.failedLabel` | `Verification failed` (used when the result has no `message`, or `onFulfill` rejects with a non-Error) |',
   '| `CioCheckout.fulfillment.retryLabel` | `Retry` |',
-  '| `CioCheckout.fulfillment.errorFallbackLabel` | `Fulfillment failed` (used when `onFulfill` rejects with a non-Error) |',
   '',
   '**CSS classes.** `cio-checkout-fulfillment`, with `--pending`, `--success` or `--failed`.',
 ].join('\n');

@@ -69,7 +69,7 @@ These are passed to Stripe when the session loads.
 
 The step shows one of these, in this order of priority.
 
-**No `onCreateSession`.** Stripe always needs a session. When the flow has no `onCreateSession`, the step shows a configuration error with no Retry button. It also emits one `error` event with `source: 'session.create'`.
+**No `onCreateSession`.** Stripe always needs a session. When the flow has no `onCreateSession`, the step shows a configuration error with no Retry button. The text is fixed English, because only a developer should ever see it. It also emits one `error` event with `source: 'session.create'`.
 
 <Canvas of={Stories.MissingHandler} />
 
@@ -124,7 +124,6 @@ Both slots take `{ reactNode: (props) => ReactNode }`.
 | `CioCheckout.checkout.preparingLabel`       | `Preparing checkout...`                                | Loader                    |
 | `CioCheckout.session.errorLabel`            | `Failed to prepare checkout. Please try again.`        | Session error             |
 | `CioCheckout.session.retryLabel`            | `Retry`                                                | Session error button      |
-| `CioCheckout.session.missingLabel`          | `This payment step needs an onCreateSession handler.`  | No `onCreateSession`      |
 | `CioCheckout.checkout.payButtonLabel`       | `Pay`                                                  | Pay button, `'elements'`  |
 | `CioCheckout.checkout.payButtonLoadingLabel` | `Processing...`                                       | Pay button, `'elements'`  |
 

@@ -1,3 +1,4 @@
+import * as stripeCheckout from '@stripe/react-stripe-js/checkout';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
@@ -103,6 +104,56 @@ describe(`${CioStripePaymentStep.name}: client`, () => {
     await waitFor(() => {
       expect(events.at(-1)).toBe('done');
     });
+  });
+
+  it('sets paymentInProgress while Stripe confirm is running', async () => {
+    const original = vi
+      .mocked(stripeCheckout.useCheckoutForm)
+      .getMockImplementation()!;
+    let resolveConfirm!: (value: unknown) => void;
+    vi.mocked(stripeCheckout.useCheckoutForm).mockReturnValue({
+      type: 'success' as const,
+      checkout: {
+        status: { type: 'open' },
+        confirm: () => new Promise((resolve) => (resolveConfirm = resolve)),
+      },
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutForm>);
+    const states: boolean[] = [];
+    function Harness() {
+      const flow = useCioCheckout();
+      states.push(flow.state.paymentInProgress);
+      return (
+        <CioCheckoutStep id={PAYMENT_STEP}>
+          <CioStripePaymentStep />
+        </CioCheckoutStep>
+      );
+    }
+    try {
+      render(
+        <CioCheckoutProvider
+          provider="stripe"
+          steps={[{ id: PAYMENT_STEP }, { id: 'done' }]}
+          onCreateSession={stubSession}
+          autoStart
+        >
+          <Harness />
+        </CioCheckoutProvider>
+      );
+      const user = userEvent.setup();
+      await user.click(await screen.findByTestId('stripe-checkout-form'));
+      await waitFor(() => {
+        expect(states.at(-1)).toBe(true);
+      });
+      await act(async () => {
+        resolveConfirm({ type: 'error', error: { message: 'Card declined' } });
+        await Promise.resolve();
+      });
+      await waitFor(() => {
+        expect(states.at(-1)).toBe(false);
+      });
+    } finally {
+      vi.mocked(stripeCheckout.useCheckoutForm).mockImplementation(original);
+    }
   });
 
   const renderPending = (

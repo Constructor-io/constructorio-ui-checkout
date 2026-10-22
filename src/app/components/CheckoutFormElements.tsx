@@ -27,6 +27,7 @@ interface CheckoutFormElementsProps {
   onComplete: () => void;
   onError?: (error: Error) => void;
   onSessionExpired?: () => void;
+  onConfirmingChange?: (confirming: boolean) => void;
   translations?: Translations;
   componentOverrides?: CheckoutComponentOverrides;
   redirectBehavior?: CheckoutStripeRedirectBehavior;
@@ -36,6 +37,7 @@ export default function CheckoutFormElements({
   onComplete,
   onError,
   onSessionExpired,
+  onConfirmingChange,
   translations,
   componentOverrides,
   redirectBehavior = 'if_required',
@@ -87,6 +89,7 @@ export default function CheckoutFormElements({
 
     setIsSubmitting(true);
     setConfirmError(null);
+    onConfirmingChange?.(true);
     try {
       const result = await checkout.confirm({ redirect: redirectBehavior });
       if (result.type === 'success') {
@@ -101,6 +104,7 @@ export default function CheckoutFormElements({
       setConfirmError(error.message);
       onError?.(error);
     } finally {
+      onConfirmingChange?.(false);
       setIsSubmitting(false);
     }
   };

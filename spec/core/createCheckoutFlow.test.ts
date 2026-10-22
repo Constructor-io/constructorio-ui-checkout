@@ -213,31 +213,35 @@ describe(`${createCheckoutFlow.name}: client`, () => {
       { id: 'done', path: '/done' },
     ];
 
-    const makeHistory = (withReplace = true) => {
-      let current = '/cart';
+    const makeHistory = () => {
+      const stack = ['/cart'];
+      let index = 0;
       let listener: ((path: string) => void) | null = null;
       const push = vi.fn((path: string) => {
-        current = path;
-      });
-      const replace = vi.fn((path: string) => {
-        current = path;
+        stack.splice(index + 1, Infinity, path);
+        index = stack.length - 1;
       });
       const router: CheckoutRouterAdapter = {
         push,
-        getCurrentPath: () => current,
+        getCurrentPath: () => stack[index],
         subscribe: (cb) => {
           listener = cb;
           return () => {
             listener = null;
           };
         },
-        ...(withReplace ? { replace } : {}),
       };
-      const browserNavigate = (path: string) => {
-        current = path;
-        listener?.(path);
+      const browserBack = () => {
+        index -= 1;
+        listener?.(stack[index]);
       };
-      return { router, push, replace, browserNavigate, url: () => current };
+      return {
+        router,
+        push,
+        browserBack,
+        url: () => stack[index],
+        entries: () => stack.slice(0, index + 1),
+      };
     };
 
     const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -260,15 +264,28 @@ describe(`${createCheckoutFlow.name}: client`, () => {
       const history = makeHistory();
       const { flow } = await startAtPayment(history.router);
       flow.setPaymentInProgress(true);
-      const pushesBefore = history.push.mock.calls.length;
 
-      history.browserNavigate('/cart');
+      history.browserBack();
       await settle();
 
       expect(flow.getState().currentStepId).toBe('payment');
-      expect(history.replace).toHaveBeenCalledWith('/payment');
       expect(history.url()).toBe('/payment');
-      expect(history.push.mock.calls.length).toBe(pushesBefore);
+    });
+
+    it('keeps the cart entry behind payment after a rejected back click', async () => {
+      const history = makeHistory();
+      const { flow } = await startAtPayment(history.router);
+      flow.setPaymentInProgress(true);
+
+      history.browserBack();
+      await settle();
+
+      expect(history.entries()).toEqual(['/cart', '/payment']);
+      flow.setPaymentInProgress(false);
+      history.browserBack();
+      await settle();
+      expect(flow.getState().currentStepId).toBe('cart');
+      expect(history.url()).toBe('/cart');
     });
 
     it('puts the URL back when a guard rejects a back click', async () => {
@@ -281,11 +298,11 @@ describe(`${createCheckoutFlow.name}: client`, () => {
       ]);
       cartOpen = false;
 
-      history.browserNavigate('/cart');
+      history.browserBack();
       await settle();
 
       expect(flow.getState().currentStepId).toBe('payment');
-      expect(history.replace).toHaveBeenCalledWith('/payment');
+      expect(history.url()).toBe('/payment');
       expect(events).toContainEqual(
         expect.objectContaining({ type: 'error', source: 'guard' })
       );
@@ -294,24 +311,13 @@ describe(`${createCheckoutFlow.name}: client`, () => {
     it('does not touch the URL when the back click is allowed', async () => {
       const history = makeHistory();
       const { flow } = await startAtPayment(history.router);
+      const pushesBefore = history.push.mock.calls.length;
 
-      history.browserNavigate('/cart');
+      history.browserBack();
       await settle();
 
       expect(flow.getState().currentStepId).toBe('cart');
-      expect(history.replace).not.toHaveBeenCalled();
-      expect(history.url()).toBe('/cart');
-    });
-
-    it('leaves the URL alone when the adapter has no replace', async () => {
-      const history = makeHistory(false);
-      const { flow } = await startAtPayment(history.router);
-      flow.setPaymentInProgress(true);
-
-      expect(() => history.browserNavigate('/cart')).not.toThrow();
-      await settle();
-
-      expect(flow.getState().currentStepId).toBe('payment');
+      expect(history.push.mock.calls.length).toBe(pushesBefore);
       expect(history.url()).toBe('/cart');
     });
   });

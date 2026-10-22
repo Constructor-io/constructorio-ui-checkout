@@ -188,4 +188,34 @@ describe(`${CheckoutForm.name}: client`, () => {
       expect(onError).toHaveBeenCalledWith(new Error('string error'));
     });
   });
+
+  it('reports confirming true during confirm and false after', async () => {
+    let rejectConfirm!: (reason: unknown) => void;
+    const confirmMock = vi.fn(
+      () => new Promise((_, reject) => (rejectConfirm = reject))
+    );
+    vi.mocked(stripeCheckout.useCheckoutForm).mockReturnValue({
+      type: 'success' as const,
+      checkout: {
+        status: { type: 'open' },
+        confirm: confirmMock,
+      },
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutForm>);
+    const onConfirmingChange = vi.fn();
+
+    render(
+      <CheckoutForm
+        onComplete={onComplete}
+        onConfirmingChange={onConfirmingChange}
+      />
+    );
+    fireEvent.click(screen.getByTestId('stripe-checkout-form'));
+
+    expect(onConfirmingChange).toHaveBeenCalledWith(true);
+    expect(onConfirmingChange).not.toHaveBeenCalledWith(false);
+    rejectConfirm(new Error('Network failure'));
+    await waitFor(() => {
+      expect(onConfirmingChange).toHaveBeenLastCalledWith(false);
+    });
+  });
 });

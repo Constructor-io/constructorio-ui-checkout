@@ -17,6 +17,7 @@ interface CheckoutFormProps {
   onComplete: () => void;
   onError?: (error: Error) => void;
   onSessionExpired?: () => void;
+  onConfirmingChange?: (confirming: boolean) => void;
   layout?: CheckoutStripeLayout;
   redirectBehavior?: CheckoutStripeRedirectBehavior;
 }
@@ -25,6 +26,7 @@ export default function CheckoutForm({
   onComplete,
   onError,
   onSessionExpired,
+  onConfirmingChange,
   layout,
   redirectBehavior = 'if_required',
 }: CheckoutFormProps) {
@@ -71,6 +73,7 @@ export default function CheckoutForm({
   if (stripeExpired) return null;
 
   const handleConfirm = async (event: StripeCheckoutFormConfirmEvent) => {
+    onConfirmingChange?.(true);
     try {
       const result = await checkout.confirm({
         formConfirmEvent: event,
@@ -83,6 +86,8 @@ export default function CheckoutForm({
       }
     } catch (reason) {
       onError?.(reason instanceof Error ? reason : new Error(String(reason)));
+    } finally {
+      onConfirmingChange?.(false);
     }
   };
 

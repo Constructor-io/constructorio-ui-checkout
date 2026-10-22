@@ -103,6 +103,13 @@ export function CioStripePaymentStep({
     [flow]
   );
 
+  const handleConfirmingChange = useCallback(
+    (confirming: boolean) => {
+      flow.setPaymentInProgress(confirming);
+    },
+    [flow]
+  );
+
   const handleRetrySession = useCallback(() => {
     void retry();
   }, [retry]);
@@ -186,6 +193,7 @@ export function CioStripePaymentStep({
           onComplete={handleComplete}
           onError={handleConfirmError}
           onSessionExpired={handleExpired}
+          onConfirmingChange={handleConfirmingChange}
           layout={layout}
           redirectBehavior={redirectBehavior}
         />
@@ -194,6 +202,7 @@ export function CioStripePaymentStep({
           onComplete={handleComplete}
           onError={handleConfirmError}
           onSessionExpired={handleExpired}
+          onConfirmingChange={handleConfirmingChange}
           translations={translations}
           componentOverrides={componentOverrides}
           redirectBehavior={redirectBehavior}

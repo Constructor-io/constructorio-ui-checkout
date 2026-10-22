@@ -209,6 +209,39 @@ describe(`${CheckoutFormElements.name}: client`, () => {
     });
   });
 
+  it('reports confirming true during confirm and false after', async () => {
+    let resolveConfirm!: (value: unknown) => void;
+    const confirmMock = vi.fn(
+      () => new Promise((resolve) => (resolveConfirm = resolve))
+    );
+    vi.mocked(stripeCheckout.useCheckoutElements).mockReturnValue({
+      type: 'success' as const,
+      checkout: {
+        status: { type: 'open' },
+        confirm: confirmMock,
+        total: { total: { amount: '$49.99' } },
+        currencyOptions: [],
+      },
+    } as unknown as ReturnType<typeof stripeCheckout.useCheckoutElements>);
+    const onConfirmingChange = vi.fn();
+
+    render(
+      <CheckoutFormElements
+        onComplete={onComplete}
+        onConfirmingChange={onConfirmingChange}
+      />
+    );
+    fireEvent.click(screen.getByTestId('stripe-payment-element'));
+    fireEvent.click(screen.getByRole('button'));
+
+    expect(onConfirmingChange).toHaveBeenCalledWith(true);
+    expect(onConfirmingChange).not.toHaveBeenCalledWith(false);
+    resolveConfirm({ type: 'error', error: { message: 'Card declined' } });
+    await waitFor(() => {
+      expect(onConfirmingChange).toHaveBeenLastCalledWith(false);
+    });
+  });
+
   it('calls onSessionExpired when checkout state is error with expired message', () => {
     vi.mocked(stripeCheckout.useCheckoutElements).mockReturnValue({
       type: 'error' as const,

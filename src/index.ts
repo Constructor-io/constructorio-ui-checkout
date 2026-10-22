@@ -8,6 +8,7 @@ export type {
   CheckoutEventType,
   CheckoutFlowConfig,
   CheckoutFlowCore,
+  CheckoutFlowCoreBase,
   CheckoutFlowState,
   CheckoutRouterAdapter,
   CheckoutSessionDiff,
@@ -17,6 +18,8 @@ export type {
   CheckoutStep,
   CheckoutStepId,
   CheckoutStorageAdapter,
+  CreateCheckoutFlowOptions,
+  RequireAccessorsIfNeeded,
 } from './core/types';
 export { FLOW_SCHEMA_VERSION, PAYMENT_STEP } from './core/types';
 
@@ -52,7 +55,7 @@ export type {
 } from './types';
 
 // Cart item
-export type { BaseCartItem, CartItemAccessors } from './types';
+export type { BaseCartItem, CartItemAccessors, KeyOfType } from './types';
 
 // Render / SDK types
 export type {

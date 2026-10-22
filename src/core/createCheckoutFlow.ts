@@ -1,4 +1,4 @@
-import type { BaseCartItem } from '@src/types';
+import type { BaseCartItem, BuiltInPaymentProvider } from '@src/types';
 
 import { createCartManager } from './flow/cartManager';
 import type { FlowContext } from './flow/context';
@@ -24,7 +24,7 @@ import type {
 } from './types';
 
 export function createCheckoutFlow<
-  TProvider extends string = string,
+  TProvider extends string = BuiltInPaymentProvider,
   TState = unknown,
   TItem = BaseCartItem,
 >(

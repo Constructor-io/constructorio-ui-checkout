@@ -42,7 +42,6 @@ export default function ResumeCheckout() {
   const routerAdapter = useMemo<CheckoutRouterAdapter>(
     () => ({
       push: (path) => navigate(path),
-      replace: (path) => navigate(path, { replace: true }),
       getCurrentPath: () => location.pathname,
       subscribe: (cb) => {
         const handler = () => cb(location.pathname);

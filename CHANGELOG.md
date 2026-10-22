@@ -22,7 +22,8 @@ Read the [Versioning & Migration](https://constructor-io.github.io/constructorio
 - `storage` without `storageKey` now saves under `DEFAULT_STORAGE_KEY` instead of emitting an error.
 - `CioStripePaymentStep` shows a loader while the session is prepared, shows confirm errors in `'elements'` mode, and shows a configuration error when the flow has no `onCreateSession`.
 - The bundled build loads its Google Fonts with `<link>` tags instead of CSS `@import`.
-- A back or forward click the flow refuses puts the URL back on the current step, when the router adapter has `replace`.
+- A back or forward click the flow refuses puts the URL back on the current step.
+- `CioStripePaymentStep` sets `paymentInProgress` while Stripe confirms the payment.
 
 ### New
 
@@ -30,7 +31,6 @@ Read the [Versioning & Migration](https://constructor-io.github.io/constructorio
 - `useCioCheckoutSession()` hook.
 - `flow.setPaymentInProgress()` and `state.paymentInProgress`.
 - `state.cartTotal`.
-- Optional `replace(path)` on the router adapter.
 - `cioCheckoutRegistry.getFlow(provider)`.
 - `CioFulfillmentStep` props `recreateSessionOnRetry` and `translations`.
 - `DEFAULT_STORAGE_KEY`, `CheckoutLoaderRenderProps`, `UseCioCheckoutSessionReturn`, `CreateCheckoutFlowOptions`, `CheckoutFlowCoreBase`, `RequireAccessorsIfNeeded` and `KeyOfType` exports.

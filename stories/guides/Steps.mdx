@@ -190,9 +190,9 @@ function MyFulfillmentPoll() {
 
 **Browser Back and Forward.** With a router adapter, the browser buttons go through `goTo()`, not `back()`. So the target step's guard runs. If it returns `false`, the flow stays on the current step.
 
-**While a payment runs.** While `state.paymentInProgress` is `true`, `back()` and `goTo()` do nothing and emit an `error` event with `source: 'guard'`. `next()` still works. Call `flow.setPaymentInProgress(true)` when your payment widget starts a charge, and `false` when it ends.
+**While a payment runs.** While `state.paymentInProgress` is `true`, `back()` and `goTo()` do nothing and emit an `error` event with `source: 'guard'`. `next()` still works. Call `flow.setPaymentInProgress(true)` when your payment widget starts a charge, and `false` when it ends. `CioStripePaymentStep` does this for you.
 
-**When the flow refuses a browser click.** For either reason above, the flow puts the URL back on the current step, without adding a history entry. Your router adapter needs `replace` for this. See [Routing](./?path=/docs/guides-routing--docs).
+**When the flow refuses a browser click.** For either reason above, the flow pushes the current step's path again, so the URL matches the page. See [Routing](./?path=/docs/guides-routing--docs).
 
 ## Persistence and completed steps
 

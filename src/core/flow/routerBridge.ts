@@ -68,18 +68,14 @@ export function createRouterBridge<
     });
   };
 
+  // Push, not replace: the browser has already moved, so replacing would
+  // overwrite the entry the shopper came from.
   const restoreUrlIfRejected = (): void => {
-    if (isDestroyed() || !router?.replace) return;
+    if (isDestroyed()) return;
     const currentStepId = store.getState().currentStepId;
     const urlStep = findStepByPath(getCurrentPath());
     if (!urlStep || urlStep.id === currentStepId) return;
-    const currentPath = steps.find((s) => s.id === currentStepId)?.path;
-    if (currentPath === undefined || !isSafePath(currentPath)) return;
-    try {
-      router.replace(currentPath);
-    } catch (reason) {
-      emitError('router', toError(reason));
-    }
+    push(steps.find((s) => s.id === currentStepId)?.path);
   };
 
   const teardown = (): void => {

@@ -192,19 +192,15 @@ describe(`${CioCheckoutProvider.name}: client`, () => {
       expect(onEvent).toHaveBeenCalled();
     });
 
-    it('router wrap forwards replace when a back click is rejected', async () => {
+    it('router wrap pushes the current path back when a back click is rejected', async () => {
       let currentPath = '';
       const push = vi.fn((p: string) => {
-        currentPath = p;
-      });
-      const replace = vi.fn((p: string) => {
         currentPath = p;
       });
       let listener: ((p: string) => void) | null = null;
       let allowA = true;
       const router = {
         push,
-        replace,
         getCurrentPath: () => currentPath,
         subscribe: (cb: (p: string) => void) => {
           listener = cb;
@@ -248,7 +244,8 @@ describe(`${CioCheckoutProvider.name}: client`, () => {
         await new Promise((r) => setTimeout(r, 0));
       });
       expect(screen.getByText('b-view')).toBeInTheDocument();
-      expect(replace).toHaveBeenCalledWith('/b');
+      expect(push).toHaveBeenLastCalledWith('/b');
+      expect(currentPath).toBe('/b');
     });
 
     it('router wrap forwards getCurrentPath/push/subscribe through propsRef', async () => {

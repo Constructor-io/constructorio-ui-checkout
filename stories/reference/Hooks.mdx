@@ -1,0 +1,111 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Components & Utilities/Hooks" />
+
+# Hooks
+
+Both hooks must be called inside a `<CioCheckoutProvider>`. They throw outside it.
+
+## `useCioCheckout`
+
+Returns the flow and its current state. The component re-renders on every state change.
+
+```tsx
+import { useCioCheckout } from '@constructor-io/constructorio-ui-checkout';
+
+function NextButton() {
+  const flow = useCioCheckout();
+  return (
+    <button onClick={() => flow.next()} disabled={flow.state.paymentInProgress}>
+      Continue
+    </button>
+  );
+}
+```
+
+Generics: `useCioCheckout<TProvider, TState, TItem>()`. They match the ones on the provider. TypeScript cannot carry them across React context, so pass them again at each call site when you use a custom provider, custom state or a custom cart item.
+
+### `state`
+
+| Field               | Type                         | Description                                                                     |
+| ------------------- | ---------------------------- | ------------------------------------------------------------------------------- |
+| `currentStepId`     | `string \| null`             | The step the shopper is on. `null` before `start()`.                            |
+| `completedStepIds`  | `string[]`                   | Steps the shopper finished.                                                     |
+| `cartSnapshot`      | `TItem[]`                    | The cart the flow knows about.                                                  |
+| `cartTotal`         | `number`                     | Sum of `unitAmount * quantity` over `cartSnapshot`, in the cart's units. No tax or shipping. |
+| `currency`          | `string \| null`             | The `currency` passed to the provider.                                          |
+| `sessionId`         | `string \| null`             | The session id, when the provider returns one.                                  |
+| `sessionStatus`     | `'idle' \| 'creating' \| 'active' \| 'expired' \| 'error'` | See [Sessions](?path=/docs/guides-sessions--docs).                              |
+| `paymentInProgress` | `boolean`                    | `true` while you mark a payment as running. Blocks `back()` and `goTo()`.       |
+| `metadata`          | `Record<string, unknown>`    | Reserved for the library. Empty today.                                          |
+| `schemaVersion`     | `1`                          | Storage format version.                                                         |
+
+### Navigation
+
+| Method                 | Description                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| `start()`              | Enters the first step, or restores from storage, or follows a routed URL.           |
+| `next({ skip? })`      | Moves to the next step after its guard passes. Past the last step it completes the flow. |
+| `back()`               | Moves to the previous step. Blocked while `paymentInProgress`.                      |
+| `goTo(stepId)`         | Jumps to a step after the guards in between pass. Blocked while `paymentInProgress`. |
+| `complete()`           | Emits `flow.completed`.                                                             |
+| `setPaymentInProgress(value)` | Marks a payment as running. Set `true` when your widget starts a charge and `false` when it ends. |
+
+### Session
+
+| Method                 | Description                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| `getSession()`         | The live session object, or `null`.                                                 |
+| `createSession()`      | Calls `onCreateSession`. Concurrent calls share one request.                        |
+| `updateSession(patch)` | Calls `onUpdateSession`. Updates run one at a time.                                 |
+| `recreate()`           | Drops the session and creates a new one.                                            |
+| `markExpired()`        | Marks the session expired and drops it.                                             |
+
+### Cart
+
+| Method            | Description                                           |
+| ----------------- | ----------------------------------------------------- |
+| `setCart(items)`  | Updates the cart after `cartDebounceMs`.              |
+| `syncCart(items)` | Updates the cart now. Resolves with the new session.  |
+
+### State and lifecycle
+
+| Method                         | Description                                                                 |
+| ------------------------------ | --------------------------------------------------------------------------- |
+| `getState()`                   | The current state, outside React.                                           |
+| `subscribe(listener)`          | Calls `listener(state)` on every change. Returns an unsubscribe function.   |
+| `hydrate(state)`               | Replaces the state after validating it. Bad input emits a `storage` error.  |
+| `clearState()`                 | Resets the flow and clears the stored entry.                                |
+| `getIntegratorState()`         | Your custom state. See [Custom State](?path=/docs/guides-custom-state--docs). |
+| `setIntegratorState(updater)`  | Updates your custom state.                                                  |
+| `on(listener)`                 | Listens to events. Returns an unsubscribe function.                         |
+| `emitError(source, error, retry?)` | Sends an `error` event from your own code.                              |
+| `mount()`, `destroy()`, `isDestroyed()` | Lifecycle. The provider calls these for you.                       |
+| `provider`                     | The `provider` string.                                                      |
+
+## `useCioCheckoutSession`
+
+Creates the payment session when the status is `idle` and recreates it when it is `expired`. Use it in a payment step. `<CioStripePaymentStep>` uses it.
+
+```tsx
+import { useCioCheckoutSession } from '@constructor-io/constructorio-ui-checkout';
+
+function MyPaymentStep() {
+  const { session, sessionStatus, missingSession, retry } =
+    useCioCheckoutSession<'my-psp'>();
+
+  if (missingSession) return <p>This step needs an onCreateSession handler.</p>;
+  if (sessionStatus === 'error') return <button onClick={retry}>Retry</button>;
+  if (!session) return <p>Preparing checkout...</p>;
+  return <MyPspWidget session={session} />;
+}
+```
+
+| Field            | Type                                                   | Description                                                                  |
+| ---------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `session`        | `PaymentSessionFor<TProvider> \| null`                 | The live session.                                                            |
+| `sessionStatus`  | `CheckoutSessionStatus`                                | Same as `flow.state.sessionStatus`.                                          |
+| `missingSession` | `boolean`                                              | `true` when the status is `active` but there is no session object. This happens when the flow has no `onCreateSession`. |
+| `retry`          | `() => Promise<PaymentSessionFor<TProvider> \| null>`  | Calls `flow.recreate()`.                                                     |
+
+Mount it only inside the payment step. The session is then created when the shopper reaches that step. The hook does nothing during server rendering, because effects do not run there.

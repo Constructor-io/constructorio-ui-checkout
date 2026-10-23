@@ -38,6 +38,18 @@ export function validateFlowState<TItem = unknown>(
     return null;
   }
   if (!isPlainObject(input.metadata)) return null;
+  if (
+    input.cartTotal !== undefined &&
+    !(typeof input.cartTotal === 'number' && Number.isFinite(input.cartTotal))
+  ) {
+    return null;
+  }
+  if (
+    input.paymentInProgress !== undefined &&
+    typeof input.paymentInProgress !== 'boolean'
+  ) {
+    return null;
+  }
 
   return input as unknown as CheckoutFlowState<TItem>;
 }

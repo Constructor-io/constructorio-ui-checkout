@@ -19,12 +19,15 @@ import type {
 } from '@src/types';
 import { t } from '@src/utils';
 
+import CheckoutLoader from './CheckoutLoader';
+
 import './CheckoutFormElements.css';
 
 interface CheckoutFormElementsProps {
   onComplete: () => void;
   onError?: (error: Error) => void;
   onSessionExpired?: () => void;
+  onConfirmingChange?: (confirming: boolean) => void;
   translations?: Translations;
   componentOverrides?: CheckoutComponentOverrides;
   redirectBehavior?: CheckoutStripeRedirectBehavior;
@@ -34,6 +37,7 @@ export default function CheckoutFormElements({
   onComplete,
   onError,
   onSessionExpired,
+  onConfirmingChange,
   translations,
   componentOverrides,
   redirectBehavior = 'if_required',
@@ -41,10 +45,12 @@ export default function CheckoutFormElements({
   const checkoutState = useCheckoutElements();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
 
   const handlePaymentChange = useCallback(
     (event: StripePaymentElementChangeEvent) => {
       setIsPaymentComplete(event.complete);
+      setConfirmError(null);
     },
     []
   );
@@ -82,16 +88,23 @@ export default function CheckoutFormElements({
     if (isSubmitting || !checkout) return;
 
     setIsSubmitting(true);
+    setConfirmError(null);
+    onConfirmingChange?.(true);
     try {
       const result = await checkout.confirm({ redirect: redirectBehavior });
       if (result.type === 'success') {
         onComplete();
       } else if (result.type === 'error') {
+        setConfirmError(result.error.message);
         onError?.(new Error(result.error.message));
       }
     } catch (reason) {
-      onError?.(reason instanceof Error ? reason : new Error(String(reason)));
+      const error =
+        reason instanceof Error ? reason : new Error(String(reason));
+      setConfirmError(error.message);
+      onError?.(error);
     } finally {
+      onConfirmingChange?.(false);
       setIsSubmitting(false);
     }
   };
@@ -122,7 +135,18 @@ export default function CheckoutFormElements({
   return (
     <div className="cio-checkout-form">
       {showCurrencySelector && <CurrencySelectorElement />}
+      {isLoading && (
+        <CheckoutLoader
+          translations={translations}
+          componentOverrides={componentOverrides}
+        />
+      )}
       <PaymentElement onChange={handlePaymentChange} />
+      {confirmError && (
+        <div className="cio-checkout-confirm-error" role="alert">
+          {confirmError}
+        </div>
+      )}
       <RenderPropsWrapper
         props={payButtonProps}
         override={componentOverrides?.payButton?.reactNode}

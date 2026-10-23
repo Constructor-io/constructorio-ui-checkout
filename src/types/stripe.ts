@@ -14,13 +14,10 @@ export interface StripePaymentSession extends BasePaymentSession {
   publishableKey: string;
 }
 
-/** Stripe Checkout UI mode. Applies to the built-in Stripe payment step only. */
 export type CheckoutStripeUiMode = 'elements' | 'form';
 
-/** Stripe redirect behavior after payment confirmation. Applies to the built-in Stripe payment step only. */
 export type CheckoutStripeRedirectBehavior = 'always' | 'if_required';
 
-/** Stripe Payment Element layout. Applies to the built-in Stripe payment step only. */
 export type CheckoutStripeLayout = 'expanded' | 'compact';
 
 export interface CheckoutStripeOptions {

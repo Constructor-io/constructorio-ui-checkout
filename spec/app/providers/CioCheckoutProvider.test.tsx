@@ -22,6 +22,23 @@ const baseConfig: CheckoutFlowConfig = {
 
 describe(`${CioCheckoutProvider.name}: client`, () => {
   describe('lifecycle', () => {
+    it('works without onCreateSession', async () => {
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <CioCheckoutProvider
+          provider="stripe"
+          steps={[{ id: 'cart' }, { id: 'pay' }]}
+        >
+          {children}
+        </CioCheckoutProvider>
+      );
+      const { result } = renderHook(() => useCioCheckout(), { wrapper });
+      await act(async () => {
+        await result.current.createSession();
+      });
+      expect(result.current.state.sessionStatus).toBe('active');
+      expect(result.current.getSession()).toBeNull();
+    });
+
     it('destroys the flow on unmount', () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <CioCheckoutProvider {...baseConfig}>{children}</CioCheckoutProvider>
@@ -173,6 +190,62 @@ describe(`${CioCheckoutProvider.name}: client`, () => {
       });
       expect(onUpdateSession).toHaveBeenCalled();
       expect(onEvent).toHaveBeenCalled();
+    });
+
+    it('router wrap pushes the current path back when a back click is rejected', async () => {
+      let currentPath = '';
+      const push = vi.fn((p: string) => {
+        currentPath = p;
+      });
+      let listener: ((p: string) => void) | null = null;
+      let allowA = true;
+      const router = {
+        push,
+        getCurrentPath: () => currentPath,
+        subscribe: (cb: (p: string) => void) => {
+          listener = cb;
+          return () => {
+            listener = null;
+          };
+        },
+      };
+      render(
+        <CioCheckoutProvider
+          provider="stripe"
+          steps={[
+            {
+              id: 'a',
+              path: '/a',
+              guard: () => allowA,
+            },
+            { id: 'b', path: '/b' },
+          ]}
+          onCreateSession={stubSession}
+          router={router}
+          autoStart
+        >
+          <CioCheckoutStep id="a">a-view</CioCheckoutStep>
+          <CioCheckoutStep id="b">b-view</CioCheckoutStep>
+        </CioCheckoutProvider>
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      await act(async () => {
+        currentPath = '/b';
+        listener?.('/b');
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(await screen.findByText('b-view')).toBeInTheDocument();
+      allowA = false;
+      await act(async () => {
+        currentPath = '/a';
+        listener?.('/a');
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(screen.getByText('b-view')).toBeInTheDocument();
+      expect(push).toHaveBeenLastCalledWith('/b');
+      expect(currentPath).toBe('/b');
     });
 
     it('router wrap forwards getCurrentPath/push/subscribe through propsRef', async () => {

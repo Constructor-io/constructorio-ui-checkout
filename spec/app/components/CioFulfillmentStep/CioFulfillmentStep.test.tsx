@@ -191,4 +191,186 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
     );
     expect(await screen.findByText('server down')).toBeInTheDocument();
   });
+
+  describe('recreateSessionOnRetry', () => {
+    const setupFailing = (
+      onCreateSession: () => Promise<{
+        clientSecret: string;
+        publishableKey: string;
+      }>,
+      recreateSessionOnRetry?: boolean
+    ) => {
+      const onFulfill = vi.fn(() =>
+        Promise.resolve<CioFulfillmentResult>({
+          success: false,
+          message: 'Charge failed',
+        })
+      );
+      render(
+        <CioCheckoutProvider
+          provider="stripe"
+          steps={[{ id: 'fulfill' }]}
+          onCreateSession={onCreateSession}
+          autoStart
+        >
+          <CioCheckoutStep id="fulfill">
+            <CioFulfillmentStep
+              onFulfill={onFulfill}
+              recreateSessionOnRetry={recreateSessionOnRetry}
+            />
+          </CioCheckoutStep>
+        </CioCheckoutProvider>
+      );
+      return onFulfill;
+    };
+
+    it('does not recreate the session by default', async () => {
+      const onCreateSession = vi.fn(stubSession);
+      const onFulfill = setupFailing(onCreateSession);
+      await userEvent
+        .setup()
+        .click(await screen.findByRole('button', { name: 'Retry' }));
+      await waitFor(() => expect(onFulfill).toHaveBeenCalledTimes(2));
+      expect(onCreateSession).not.toHaveBeenCalled();
+    });
+
+    it('recreates the session before re-running onFulfill', async () => {
+      const order: string[] = [];
+      const onCreateSession = vi.fn(() => {
+        order.push('create');
+        return stubSession();
+      });
+      const onFulfill = setupFailing(onCreateSession, true);
+      onFulfill.mockImplementation(() => {
+        order.push('fulfill');
+        return Promise.resolve({ success: false, message: 'Charge failed' });
+      });
+      await userEvent
+        .setup()
+        .click(await screen.findByRole('button', { name: 'Retry' }));
+      await waitFor(() => expect(onFulfill).toHaveBeenCalledTimes(2));
+      expect(onCreateSession).toHaveBeenCalledTimes(1);
+      expect(order.slice(-2)).toEqual(['create', 'fulfill']);
+    });
+
+    it('stays failed when recreating the session fails', async () => {
+      const onCreateSession = vi.fn(() =>
+        Promise.reject(new Error('create failed'))
+      );
+      const onFulfill = setupFailing(onCreateSession, true);
+      await userEvent
+        .setup()
+        .click(await screen.findByRole('button', { name: 'Retry' }));
+      await waitFor(() => expect(onCreateSession).toHaveBeenCalledTimes(1));
+      expect(screen.getByRole('alert')).toHaveTextContent('Charge failed');
+      expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+      expect(onFulfill).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('translations', () => {
+    it('renders custom labels', async () => {
+      let resolveFulfill: (r: CioFulfillmentResult) => void = () => undefined;
+      const onFulfill = vi.fn(
+        () =>
+          new Promise<CioFulfillmentResult>((resolve) => {
+            resolveFulfill = resolve;
+          })
+      );
+      render(
+        <CioCheckoutProvider
+          provider="stripe"
+          steps={[{ id: 'fulfill' }]}
+          onCreateSession={stubSession}
+          autoStart
+        >
+          <CioCheckoutStep id="fulfill">
+            <CioFulfillmentStep
+              onFulfill={onFulfill}
+              translations={{
+                'CioCheckout.fulfillment.pendingLabel': 'Checking...',
+                'CioCheckout.fulfillment.failedLabel': 'Nope',
+                'CioCheckout.fulfillment.retryLabel': 'Again',
+              }}
+            />
+          </CioCheckoutStep>
+        </CioCheckoutProvider>
+      );
+      expect(await screen.findByText('Checking...')).toBeInTheDocument();
+      await act(async () => {
+        resolveFulfill({ success: false });
+        await Promise.resolve();
+      });
+      expect(await screen.findByText('Nope')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Again' })).toBeInTheDocument();
+    });
+
+    it('uses failedLabel when onFulfill throws a non-Error', async () => {
+      render(
+        <CioCheckoutProvider
+          provider="stripe"
+          steps={[{ id: 'fulfill' }]}
+          onCreateSession={stubSession}
+          autoStart
+        >
+          <CioCheckoutStep id="fulfill">
+            <CioFulfillmentStep
+              // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+              onFulfill={() => Promise.reject('boom')}
+              translations={{
+                'CioCheckout.fulfillment.failedLabel': 'Something broke',
+              }}
+            />
+          </CioCheckoutStep>
+        </CioCheckoutProvider>
+      );
+      expect(await screen.findByText('Something broke')).toBeInTheDocument();
+    });
+
+    it('passes the failedLabel text to render when onFulfill throws a non-Error', async () => {
+      render(
+        <CioCheckoutProvider
+          provider="stripe"
+          steps={[{ id: 'fulfill' }]}
+          onCreateSession={stubSession}
+          autoStart
+        >
+          <CioCheckoutStep id="fulfill">
+            <CioFulfillmentStep
+              // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+              onFulfill={() => Promise.reject('boom')}
+              render={({ result }) => (
+                <span data-testid="message">{result?.message}</span>
+              )}
+            />
+          </CioCheckoutStep>
+        </CioCheckoutProvider>
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId('message').textContent).toBe(
+          'Verification failed'
+        )
+      );
+    });
+
+    it('renders a custom success label', async () => {
+      render(
+        <CioCheckoutProvider
+          provider="stripe"
+          steps={[{ id: 'fulfill' }, { id: 'done' }]}
+          onCreateSession={stubSession}
+          autoStart
+        >
+          <CioCheckoutStep id="fulfill">
+            <CioFulfillmentStep
+              onFulfill={() => Promise.resolve({ success: true })}
+              advanceOnSuccess={false}
+              translations={{ 'CioCheckout.fulfillment.successLabel': 'Done!' }}
+            />
+          </CioCheckoutStep>
+        </CioCheckoutProvider>
+      );
+      expect(await screen.findByText('Done!')).toBeInTheDocument();
+    });
+  });
 });

@@ -3,13 +3,15 @@ import type { ComponentOverrideProps } from '@constructor-io/constructorio-ui-co
 import type { StripePaymentSession } from './stripe';
 
 export interface Translations {
-  'CioCheckout.checkout.title'?: string;
-  'CioCheckout.checkout.cancelLabel'?: string;
-  'CioCheckout.checkout.closeLabel'?: string;
-  'CioCheckout.checkout.buttonLabel'?: string;
-  'CioCheckout.checkout.buttonLoadingLabel'?: string;
   'CioCheckout.checkout.payButtonLabel'?: string;
   'CioCheckout.checkout.payButtonLoadingLabel'?: string;
+  'CioCheckout.checkout.preparingLabel'?: string;
+  'CioCheckout.session.errorLabel'?: string;
+  'CioCheckout.session.retryLabel'?: string;
+  'CioCheckout.fulfillment.pendingLabel'?: string;
+  'CioCheckout.fulfillment.successLabel'?: string;
+  'CioCheckout.fulfillment.failedLabel'?: string;
+  'CioCheckout.fulfillment.retryLabel'?: string;
 }
 
 export interface BaseCartItem {
@@ -55,8 +57,13 @@ export interface PayButtonRenderProps {
   onClick: () => void;
 }
 
+export interface CheckoutLoaderRenderProps {
+  label: string;
+}
+
 export interface CheckoutComponentOverrides {
   payButton?: ComponentOverrideProps<PayButtonRenderProps>;
+  loader?: ComponentOverrideProps<CheckoutLoaderRenderProps>;
 }
 
 export * from './stripe';

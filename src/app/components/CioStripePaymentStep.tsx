@@ -7,7 +7,9 @@ import {
 
 import CheckoutForm from '@src/app/components/CheckoutForm';
 import CheckoutFormElements from '@src/app/components/CheckoutFormElements';
+import CheckoutLoader from '@src/app/components/CheckoutLoader';
 import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
+import { useCioCheckoutSession } from '@src/app/hooks/useCioCheckoutSession';
 import stripeLoader from '@src/providers/stripe/stripeLoader';
 import type {
   CheckoutComponentOverrides,
@@ -16,6 +18,7 @@ import type {
   CheckoutStripeUiMode,
   Translations,
 } from '@src/types';
+import { t } from '@src/utils';
 
 import './CioStripePaymentStep.css';
 
@@ -49,9 +52,10 @@ export function CioStripePaymentStep({
       `<CioStripePaymentStep> must be rendered inside <CioCheckoutProvider provider="stripe">, received provider="${receivedProvider}".`
     );
   }
-  const session = flow.getSession();
-  const sessionStatus = flow.state.sessionStatus;
+  const { session, sessionStatus, missingSession, retry } =
+    useCioCheckoutSession<'stripe'>();
   const mountedRef = useRef(true);
+  const missingReportedRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -59,15 +63,6 @@ export function CioStripePaymentStep({
       mountedRef.current = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (session) return;
-    if (sessionStatus === 'idle') {
-      void flow.createSession();
-    } else if (sessionStatus === 'expired') {
-      void flow.recreate();
-    }
-  }, [flow, session, sessionStatus]);
 
   useEffect(() => {
     return flow.on((event) => {
@@ -80,6 +75,17 @@ export function CioStripePaymentStep({
       }
     });
   }, [flow, onError]);
+
+  useEffect(() => {
+    if (!missingSession || missingReportedRef.current) return;
+    missingReportedRef.current = true;
+    flow.emitError(
+      'session.create',
+      new Error(
+        '<CioStripePaymentStep> needs a session, but the flow has no onCreateSession handler.'
+      )
+    );
+  }, [flow, missingSession]);
 
   const handleComplete = useCallback(() => {
     if (!mountedRef.current) return;
@@ -97,9 +103,16 @@ export function CioStripePaymentStep({
     [flow]
   );
 
+  const handleConfirmingChange = useCallback(
+    (confirming: boolean) => {
+      flow.setPaymentInProgress(confirming);
+    },
+    [flow]
+  );
+
   const handleRetrySession = useCallback(() => {
-    void flow.recreate();
-  }, [flow]);
+    void retry();
+  }, [retry]);
 
   const stripePromise = useMemo(() => {
     if (!session) return null;
@@ -142,19 +155,32 @@ export function CioStripePaymentStep({
     defaultValues,
   ]);
 
+  if (missingSession) {
+    return (
+      <div className="cio-checkout-session-error" role="alert">
+        <p>This payment step needs an onCreateSession handler.</p>
+      </div>
+    );
+  }
+
   if (sessionStatus === 'error') {
     return (
       <div className="cio-checkout-session-error" role="alert">
-        <p>Failed to prepare checkout. Please try again.</p>
+        <p>{t(translations, 'CioCheckout.session.errorLabel')}</p>
         <button type="button" onClick={handleRetrySession}>
-          Retry
+          {t(translations, 'CioCheckout.session.retryLabel')}
         </button>
       </div>
     );
   }
 
   if (!session || !stripePromise || !providerOptions) {
-    return null;
+    return (
+      <CheckoutLoader
+        translations={translations}
+        componentOverrides={componentOverrides}
+      />
+    );
   }
 
   const Provider =
@@ -167,6 +193,7 @@ export function CioStripePaymentStep({
           onComplete={handleComplete}
           onError={handleConfirmError}
           onSessionExpired={handleExpired}
+          onConfirmingChange={handleConfirmingChange}
           layout={layout}
           redirectBehavior={redirectBehavior}
         />
@@ -175,6 +202,7 @@ export function CioStripePaymentStep({
           onComplete={handleComplete}
           onError={handleConfirmError}
           onSessionExpired={handleExpired}
+          onConfirmingChange={handleConfirmingChange}
           translations={translations}
           componentOverrides={componentOverrides}
           redirectBehavior={redirectBehavior}

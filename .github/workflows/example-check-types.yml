@@ -1,0 +1,34 @@
+name: Example App Check Types
+on:
+  pull_request:
+    branches:
+      - '**'
+concurrency:
+  group: example-check-types-${{ github.head_ref }}
+  cancel-in-progress: true
+jobs:
+  check-types:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+      - name: Install library dependencies
+        run: npm ci
+      - name: Build library
+        run: npm run build
+      - name: Install example client dependencies
+        working-directory: examples/checkout-test-server/client
+        run: npm ci
+      - name: Check example client types
+        working-directory: examples/checkout-test-server/client
+        run: npx tsc --noEmit
+      - name: Install example server dependencies
+        working-directory: examples/checkout-test-server/server
+        run: npm ci
+      - name: Check example server types
+        working-directory: examples/checkout-test-server/server
+        run: npx tsc --noEmit

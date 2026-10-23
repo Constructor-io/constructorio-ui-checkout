@@ -61,7 +61,9 @@ export function CioCheckoutProvider<
       steps: wrappedSteps,
       cart,
       router: wrappedRouter,
-      onCreateSession: (state) => propsRef.current.onCreateSession(state),
+      onCreateSession: props.onCreateSession
+        ? (state) => propsRef.current.onCreateSession!(state)
+        : undefined,
       onUpdateSession: props.onUpdateSession
         ? (patch) => propsRef.current.onUpdateSession!(patch)
         : undefined,

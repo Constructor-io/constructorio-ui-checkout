@@ -29,6 +29,7 @@
     "dist",
     "coverage",
     "storybook-static",
+    "/examples",
     "*.log",
     "package-lock.json"
   ],

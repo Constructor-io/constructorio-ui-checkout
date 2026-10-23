@@ -20,7 +20,7 @@ export function createRouterBridge<
   const router = config.router;
 
   let routerUnsubscribe: (() => void) | null = null;
-  let syncingFromRouter = false;
+  let pendingRouterSyncs = 0;
 
   const findStepByPath = (path: string): CheckoutStep<TItem> | null => {
     for (const step of steps) {
@@ -36,7 +36,7 @@ export function createRouterBridge<
 
   const push = (path: string | undefined): void => {
     if (!router || path === undefined) return;
-    if (syncingFromRouter) return;
+    if (pendingRouterSyncs > 0) return;
     if (!isSafePath(path)) {
       emitError('router', new Error(`Refused to push unsafe path: ${path}`));
       return;
@@ -60,11 +60,22 @@ export function createRouterBridge<
       const matched = findStepByPath(newPath);
       if (!matched) return;
       if (matched.id === store.getState().currentStepId) return;
-      syncingFromRouter = true;
+      pendingRouterSyncs += 1;
       void Promise.resolve(onExternalPathChange(matched)).finally(() => {
-        syncingFromRouter = false;
+        pendingRouterSyncs -= 1;
+        if (pendingRouterSyncs === 0) restoreUrlIfRejected();
       });
     });
+  };
+
+  // Push, not replace: the browser has already moved, so replacing would
+  // overwrite the entry the shopper came from.
+  const restoreUrlIfRejected = (): void => {
+    if (isDestroyed()) return;
+    const currentStepId = store.getState().currentStepId;
+    const urlStep = findStepByPath(getCurrentPath());
+    if (!urlStep || urlStep.id === currentStepId) return;
+    push(steps.find((s) => s.id === currentStepId)?.path);
   };
 
   const teardown = (): void => {

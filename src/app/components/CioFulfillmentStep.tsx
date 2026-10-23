@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
+import type { Translations } from '@src/types';
+import { t } from '@src/utils';
 
 import './CioFulfillmentStep.css';
 
@@ -23,6 +25,9 @@ export interface CioFulfillmentStepProps {
   onFulfillComplete?: (result: CioFulfillmentResult) => void;
   advanceOnSuccess?: boolean;
   render?: (props: CioFulfillmentRenderProps) => React.ReactNode;
+  /** Retry starts a fresh session first. For providers that burn the session on a failed charge. */
+  recreateSessionOnRetry?: boolean;
+  translations?: Translations;
 }
 
 /**
@@ -35,12 +40,16 @@ export function CioFulfillmentStep({
   onFulfillComplete,
   advanceOnSuccess = true,
   render,
+  recreateSessionOnRetry = false,
+  translations,
 }: CioFulfillmentStepProps) {
   const flow = useCioCheckout();
   const [status, setStatus] = useState<CioFulfillmentStatus>('idle');
   const [result, setResult] = useState<CioFulfillmentResult | null>(null);
   const inFlightRef = useRef(false);
+  const recreatingRef = useRef(false);
   const mountedRef = useRef(true);
+  const failedLabel = t(translations, 'CioCheckout.fulfillment.failedLabel');
 
   useEffect(() => {
     mountedRef.current = true;
@@ -59,8 +68,7 @@ export function CioFulfillmentStep({
     } catch (reason) {
       outcome = {
         success: false,
-        message:
-          reason instanceof Error ? reason.message : 'Fulfillment failed',
+        message: reason instanceof Error ? reason.message : failedLabel,
       };
     } finally {
       inFlightRef.current = false;
@@ -76,16 +84,28 @@ export function CioFulfillmentStep({
     if (outcome.success && advanceOnSuccess) {
       void flow.next();
     }
-  }, [onFulfill, onFulfillComplete, advanceOnSuccess, flow]);
+  }, [onFulfill, onFulfillComplete, advanceOnSuccess, flow, failedLabel]);
 
   useEffect(() => {
     if (status === 'idle') void run();
   }, [run, status]);
 
   const retry = useCallback(() => {
-    setStatus('idle');
-    setResult(null);
-  }, []);
+    if (!recreateSessionOnRetry) {
+      setStatus('idle');
+      setResult(null);
+      return;
+    }
+    if (recreatingRef.current) return;
+    recreatingRef.current = true;
+    void flow.recreate().finally(() => {
+      recreatingRef.current = false;
+      if (!mountedRef.current) return;
+      if (flow.getState().sessionStatus !== 'active') return;
+      setStatus('idle');
+      setResult(null);
+    });
+  }, [flow, recreateSessionOnRetry]);
 
   const advance = useCallback(() => {
     void flow.next();
@@ -102,7 +122,7 @@ export function CioFulfillmentStep({
         role="status"
         aria-live="polite"
       >
-        Verifying your order...
+        {t(translations, 'CioCheckout.fulfillment.pendingLabel')}
       </div>
     );
   }
@@ -114,7 +134,8 @@ export function CioFulfillmentStep({
         role="status"
         aria-live="polite"
       >
-        {result?.message ?? 'Order confirmed'}
+        {result?.message ??
+          t(translations, 'CioCheckout.fulfillment.successLabel')}
       </div>
     );
   }
@@ -125,9 +146,9 @@ export function CioFulfillmentStep({
         className="cio-checkout-fulfillment cio-checkout-fulfillment--failed"
         role="alert"
       >
-        <p>{result?.message ?? 'Verification failed'}</p>
+        <p>{result?.message ?? failedLabel}</p>
         <button type="button" onClick={retry}>
-          Retry
+          {t(translations, 'CioCheckout.fulfillment.retryLabel')}
         </button>
       </div>
     );

@@ -2,3 +2,13 @@
   display: block;
   margin: 16px auto 0;
 }
+
+.cio-checkout-confirm-error {
+  margin-top: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--cio-checkout-color-error-border);
+  border-radius: 8px;
+  background-color: var(--cio-checkout-color-error-bg);
+  color: var(--cio-checkout-color-error);
+  font-size: 14px;
+}

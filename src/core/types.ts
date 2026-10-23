@@ -25,9 +25,13 @@ export interface CheckoutFlowState<TItem = BaseCartItem> {
   currentStepId: CheckoutStepId | null;
   completedStepIds: CheckoutStepId[];
   cartSnapshot: TItem[];
+  /** Cart subtotal in the cart's units. No tax or shipping. */
+  cartTotal: number;
   currency: string | null;
   sessionId: string | null;
   sessionStatus: CheckoutSessionStatus;
+  /** Blocks `back()` and `goTo()` while true. Never persisted. */
+  paymentInProgress: boolean;
   metadata: Record<string, unknown>;
   schemaVersion: 1;
 }
@@ -123,11 +127,13 @@ export interface CheckoutFlowConfig<
 > {
   provider: TProvider;
   steps: CheckoutStep<TItem>[];
+  /** Defaults to `DEFAULT_STORAGE_KEY`. */
   storageKey?: string;
   storage?: CheckoutStorageAdapter<TItem>;
   router?: CheckoutRouterAdapter;
   authenticate?: () => Promise<CheckoutAuthResult | null>;
-  onCreateSession: (
+  /** Omit for providers that create their own session (Shop Pay). */
+  onCreateSession?: (
     state: CheckoutFlowState<TItem>
   ) => Promise<PaymentSessionFor<TProvider>>;
   onUpdateSession?: (
@@ -166,6 +172,8 @@ export interface CheckoutFlowCoreBase<
   createSession(): Promise<PaymentSessionFor<TProvider> | null>;
   recreate(): Promise<PaymentSessionFor<TProvider> | null>;
   markExpired(): void;
+  /** While true, `back()` and `goTo()` are blocked. `next()` still works. */
+  setPaymentInProgress(value: boolean): void;
   destroy(): void;
   isDestroyed(): boolean;
   emitError(
@@ -197,3 +205,4 @@ export type RequireAccessorsIfNeeded<TItem> = TItem extends BaseCartItem
 
 export const PAYMENT_STEP: CheckoutStepId = 'payment';
 export const FLOW_SCHEMA_VERSION = 1 as const;
+export const DEFAULT_STORAGE_KEY = 'cio-checkout-flow';

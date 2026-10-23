@@ -1,13 +1,16 @@
 import type { Translations } from '@src/types';
 
 export const defaultTranslations: Required<Translations> = {
-  'CioCheckout.checkout.title': 'Checkout',
-  'CioCheckout.checkout.cancelLabel': 'Cancel',
-  'CioCheckout.checkout.closeLabel': 'Close checkout',
-  'CioCheckout.checkout.buttonLabel': 'Checkout',
-  'CioCheckout.checkout.buttonLoadingLabel': 'Loading...',
   'CioCheckout.checkout.payButtonLabel': 'Pay',
   'CioCheckout.checkout.payButtonLoadingLabel': 'Processing...',
+  'CioCheckout.checkout.preparingLabel': 'Preparing checkout...',
+  'CioCheckout.session.errorLabel':
+    'Failed to prepare checkout. Please try again.',
+  'CioCheckout.session.retryLabel': 'Retry',
+  'CioCheckout.fulfillment.pendingLabel': 'Verifying your order...',
+  'CioCheckout.fulfillment.successLabel': 'Order confirmed',
+  'CioCheckout.fulfillment.failedLabel': 'Verification failed',
+  'CioCheckout.fulfillment.retryLabel': 'Retry',
 };
 
 export function t(

@@ -1,0 +1,270 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Guides/Integration Guide" />
+
+# Integration Guide
+
+A headless checkout core with a built-in Stripe payment step. The library runs the steps, the payment session, storage and routing. Your app renders the UI.
+
+## Install
+
+```bash
+npm i @constructor-io/constructorio-ui-checkout
+```
+
+Requirements:
+
+- Node.js >= 20
+- React and React DOM >= 16.12.0
+- `@stripe/stripe-js` >= 9.3.1 and `@stripe/react-stripe-js` >= 6.6.0, for the built-in Stripe step
+- `@constructor-io/constructorio-ui-components` >= 1.4.0
+
+## Three integration paths, one core
+
+- **React** — `<CioCheckoutProvider provider="stripe">` + `useCioCheckout()` + `<CioCheckoutStep>` + `<CioStripePaymentStep>` / `<CioFulfillmentStep>`
+- **Vanilla JS (npm)** — `createCheckoutFlow(config)` from `@constructor-io/constructorio-ui-checkout`
+- **Bundled script**: a `<script>` tag exposes `window.CioCheckout`, with `createCheckoutFlow` and `resume`
+
+All three wrap the framework-agnostic `createCheckoutFlow(config)` core.
+
+## Quick start (React)
+
+```tsx
+import {
+  CioCheckoutProvider,
+  CioCheckoutStep,
+  CioStripePaymentStep,
+  CioFulfillmentStep,
+  PAYMENT_STEP,
+  useCioCheckout,
+} from '@constructor-io/constructorio-ui-checkout';
+
+function App() {
+  return (
+    <CioCheckoutProvider
+      provider="stripe"
+      steps={[
+        { id: 'cart' },
+        { id: 'address' },
+        { id: PAYMENT_STEP },
+        { id: 'fulfill' },
+        { id: 'done' },
+      ]}
+      onCreateSession={() => fetch('/api/checkout').then((r) => r.json())}
+      onEvent={(event) => console.log(event)}
+    >
+      <StartButton />
+      <CioCheckoutStep id="cart">
+        <MyCart />
+      </CioCheckoutStep>
+      <CioCheckoutStep id="address">
+        <MyAddressForm />
+      </CioCheckoutStep>
+      <CioCheckoutStep id={PAYMENT_STEP}>
+        <CioStripePaymentStep uiMode="form" />
+      </CioCheckoutStep>
+      <CioCheckoutStep id="fulfill">
+        <CioFulfillmentStep
+          onFulfill={() => fetch('/api/verify').then((r) => r.json())}
+        />
+      </CioCheckoutStep>
+      <CioCheckoutStep id="done">
+        <MyConfirmation />
+      </CioCheckoutStep>
+    </CioCheckoutProvider>
+  );
+}
+
+function StartButton() {
+  const flow = useCioCheckout();
+  if (flow.state.currentStepId !== null) return null;
+  return <button onClick={() => flow.start()}>Checkout</button>;
+}
+```
+
+## Server-side setup (Stripe)
+
+Your backend creates the Stripe Checkout Session and returns `{ clientSecret, publishableKey }`. The server `ui_mode` must match the `uiMode` you pass to `<CioStripePaymentStep>`: `'form'` (beta) or `'elements'`.
+
+```js
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+app.post('/api/checkout-session', async (req, res) => {
+  const session = await stripe.checkout.sessions.create({
+    ui_mode: 'form', // use 'elements' for the elements uiMode
+    mode: 'payment',
+    line_items: [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: { name: 'Product Name' },
+          unit_amount: 4999,
+        },
+        quantity: 1,
+      },
+    ],
+    return_url:
+      'https://example.com/order-confirm?session_id={CHECKOUT_SESSION_ID}',
+  });
+
+  res.json({
+    clientSecret: session.client_secret,
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+  });
+});
+```
+
+This needs the `stripe` SDK v18 or newer. `ui_mode: 'form'` is in beta, and Stripe must enable it on your account.
+
+## When to show the trigger
+
+The button that starts checkout is yours. Place it anywhere, style it any way, and show it based on any state:
+
+```tsx
+function BuyButton() {
+  const flow = useCioCheckout();
+  const cart = useMyCartStore();
+  if (cart.items.length === 0) return null;
+  if (flow.state.sessionStatus === 'creating') return <Spinner />;
+  return <button onClick={() => flow.start()}>Buy now</button>;
+}
+```
+
+## Modal vs. inline
+
+There is no `displayMode` prop. Wrap the payment step in your own modal or render it inline:
+
+```tsx
+<CioCheckoutStep id={PAYMENT_STEP}>
+  <MyModal open>
+    <CioStripePaymentStep />
+  </MyModal>
+</CioCheckoutStep>
+```
+
+## Routed multi-step
+
+Pass a `router` adapter and give each step a `path`. The library keeps URL and state in sync, so browser back, refresh, and deep links all work:
+
+```tsx
+<CioCheckoutProvider
+  provider="stripe"
+  steps={[
+    { id: 'cart', path: '/cart' },
+    { id: 'address', path: '/checkout/address' },
+    { id: PAYMENT_STEP, path: '/checkout/payment' },
+  ]}
+  router={{
+    push: (path) => navigate(path),
+    getCurrentPath: () => location.pathname,
+    subscribe: (cb) => registerNavListener(cb),
+  }}
+  onCreateSession={...}
+>
+  ...
+</CioCheckoutProvider>
+```
+
+Steps with a `path` participate in URL sync; steps without one render inline/modal.
+
+## Persistence and resume
+
+Pass a `storage` adapter to auto-save state and hydrate on the next mount. `storageKey` is optional and defaults to `DEFAULT_STORAGE_KEY`. The default `createSessionStorageAdapter()` survives page reloads in the same tab. For B2B pause/resume (approver on a different device), supply a custom async adapter backed by your server.
+
+```tsx
+<CioCheckoutProvider
+  provider="stripe"
+  storage={createSessionStorageAdapter()}
+  storageKey={`user-${userId}`}
+  ...
+/>
+```
+
+## Cart sync
+
+Two options, both funnel through `onUpdateSession`:
+
+- `flow.syncCart(items)` — explicit, immediate
+- Reactive `cart={items}` prop on the Provider — debounced (default 400ms)
+
+## Vanilla JS
+
+```js
+import { createCheckoutFlow } from '@constructor-io/constructorio-ui-checkout';
+
+const flow = createCheckoutFlow({
+  provider: 'stripe',
+  steps: [{ id: 'cart' }, { id: 'payment' }],
+  onCreateSession: () => fetch('/api/session').then((r) => r.json()),
+});
+
+flow.subscribe((state) => renderMyUI(state));
+await flow.start();
+```
+
+## Bundled script
+
+```html
+<script src="/path/to/constructorio-ui-checkout-bundled.js"></script>
+<script>
+  const flow = CioCheckout.resume({
+    provider: 'stripe',
+    steps: [
+      { id: 'cart', path: '/cart' },
+      { id: 'payment', path: '/pay' },
+    ],
+    onCreateSession: () => fetch('/api/session').then((r) => r.json()),
+    router: {
+      push: (p) => (window.location.href = p),
+      getCurrentPath: () => window.location.pathname,
+    },
+    storageKey: 'user-123',
+  });
+  flow.start();
+</script>
+```
+
+`resume()` creates a flow with a sessionStorage adapter and registers it globally. The flow rehydrates on every page load.
+
+Using a bundler? Import the same bundle from its subpath. It has the same `CioCheckout` API:
+
+```js
+import CioCheckout from '@constructor-io/constructorio-ui-checkout/constructorio-ui-checkout-bundled';
+```
+
+| Member                                    | Description                                                         |
+| ----------------------------------------- | ------------------------------------------------------------------- |
+| `CioCheckout.VERSION`                     | Library version string                                              |
+| `CioCheckout.createCheckoutFlow`          | Creates a flow without registering it                               |
+| `CioCheckout.createSessionStorageAdapter` | The default sessionStorage `CheckoutStorageAdapter`                 |
+| `CioCheckout.resume(config)`              | Creates and registers a flow with the sessionStorage adapter        |
+| `CioCheckout.reset()`                     | Destroys the registered flow                                        |
+| `CioCheckout.cioCheckoutRegistry`         | The shared registry: `register`, `getFlow`, `hasFlow`, `clear`      |
+
+## Registry
+
+When another Constructor library on the page (for example PIA) needs the active checkout flow, register it once. Other code then reads it with `getFlow()`:
+
+```ts
+import {
+  createCheckoutFlow,
+  cioCheckoutRegistry,
+} from '@constructor-io/constructorio-ui-checkout';
+
+const flow = createCheckoutFlow({ provider: 'stripe', steps, onCreateSession });
+cioCheckoutRegistry.register(flow);
+
+// Elsewhere:
+const active = cioCheckoutRegistry.getFlow('stripe'); // null if the provider differs
+active?.syncCart(newItems);
+```
+
+## Events
+
+Subscribe through `onEvent`:
+
+- `flow.started`, `flow.completed`
+- `step.entered` / `step.exited`
+- `session.created`, `session.updated` (with `reason` and `diff`), `session.expired`, `session.recreated`
+- `state.changed`
+- `error` (discriminated by `source`: `session.create` / `session.update` / `payment.confirm` / `storage` / `router` / `guard` / `authenticate`)

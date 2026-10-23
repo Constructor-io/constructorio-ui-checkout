@@ -1,6 +1,7 @@
 import type { BaseCartItem } from '@src/types';
 
 import type { CheckoutFlowState } from '../types';
+import { DEFAULT_STORAGE_KEY } from '../types';
 
 import type { FlowContext } from './context';
 import { toError } from './helpers';
@@ -19,20 +20,23 @@ export function createStorageManager<
 ) {
   const { config, store, isDestroyed, emitError } = ctx;
   const storage = config.storage;
-  const storageKey = config.storageKey;
-  const enabled = storage !== undefined && storageKey !== undefined;
+  const storageKey = config.storageKey ?? DEFAULT_STORAGE_KEY;
+  const enabled = storage !== undefined;
   const debounceMs = config.storageSaveDebounceMs ?? 150;
 
-  if ((storage !== undefined) !== (storageKey !== undefined)) {
+  if (storage === undefined && config.storageKey !== undefined) {
     emitError(
       'storage',
       new Error(
-        storage === undefined
-          ? '`storageKey` provided without a `storage` adapter — persistence disabled'
-          : '`storage` adapter provided without a `storageKey` — persistence disabled'
+        '`storageKey` provided without a `storage` adapter — persistence disabled'
       )
     );
   }
+
+  const toPersisted = (
+    state: CheckoutFlowState<TItem>
+  ): CheckoutFlowState<TItem> =>
+    state.paymentInProgress ? { ...state, paymentInProgress: false } : state;
 
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let saveInFlight: Promise<void> | null = null;
@@ -43,7 +47,7 @@ export function createStorageManager<
 
   const flushSave = (): void => {
     if (!enabled || isDestroyed() || clearing) return;
-    const state = store.getState();
+    const state = toPersisted(store.getState());
     const serialized = JSON.stringify(state);
     if (serialized === lastSavedSerialized) return;
 

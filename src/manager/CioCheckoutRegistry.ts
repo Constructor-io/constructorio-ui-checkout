@@ -23,7 +23,8 @@ class CioCheckoutRegistry {
     TProvider extends string = BuiltInPaymentProvider,
     TState = unknown,
     TItem = BaseCartItem,
-  >(): CheckoutFlowCore<TProvider, TState, TItem> | null {
+  >(provider?: TProvider): CheckoutFlowCore<TProvider, TState, TItem> | null {
+    if (provider !== undefined && this.flow?.provider !== provider) return null;
     return this.flow as CheckoutFlowCore<TProvider, TState, TItem> | null;
   }
 

@@ -1,12 +1,6 @@
 import type { ComponentOverrideProps } from '@constructor-io/constructorio-ui-components';
-import type {
-  Appearance,
-  CssFontSource,
-  CustomFontSource,
-  SavedPaymentMethodOption,
-  StripeCheckoutContact,
-  StripeCheckoutElementsSdkOptions,
-} from '@stripe/stripe-js';
+
+import type { StripePaymentSession } from './stripe';
 
 export interface Translations {
   'CioCheckout.checkout.title'?: string;
@@ -41,11 +35,6 @@ export interface BasePaymentSession {
   sessionId?: string;
 }
 
-export interface StripePaymentSession extends BasePaymentSession {
-  clientSecret: string;
-  publishableKey: string;
-}
-
 export interface PaymentSessionMap {
   stripe: StripePaymentSession;
 }
@@ -59,30 +48,6 @@ export type PaymentSessionFor<TProvider extends string> =
     ? PaymentSessionMap[TProvider]
     : BasePaymentSession;
 
-export type CheckoutUiMode = 'elements' | 'form';
-
-export type CheckoutRedirectBehavior = 'always' | 'if_required';
-
-export type CheckoutLayout = 'expanded' | 'compact';
-
-export interface CheckoutStripeOptions {
-  appearance?: Omit<Appearance, 'rules'>;
-  loader?: 'auto' | 'always' | 'never';
-  fonts?: Array<CssFontSource | CustomFontSource>;
-  layout?: CheckoutLayout;
-  defaultValues?: {
-    billingAddress?: StripeCheckoutContact;
-    shippingAddress?: StripeCheckoutContact;
-    email?: string;
-    phoneNumber?: string;
-  };
-  savedPaymentMethod?: SavedPaymentMethodOption;
-  adaptivePricing?: StripeCheckoutElementsSdkOptions['adaptivePricing'];
-  syncAddressCheckbox?: NonNullable<
-    StripeCheckoutElementsSdkOptions['elementsOptions']
-  >['syncAddressCheckbox'];
-}
-
 export interface PayButtonRenderProps {
   isSubmitting: boolean;
   isDisabled: boolean;
@@ -93,3 +58,5 @@ export interface PayButtonRenderProps {
 export interface CheckoutComponentOverrides {
   payButton?: ComponentOverrideProps<PayButtonRenderProps>;
 }
+
+export * from './stripe';

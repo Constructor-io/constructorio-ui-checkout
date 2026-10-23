@@ -8,7 +8,7 @@ import version from './version';
 import './styles.css';
 
 const CioCheckout = {
-  VERSION: version || '0.1.0',
+  VERSION: version,
   createCheckoutFlow,
   createSessionStorageAdapter,
   cioCheckoutRegistry,

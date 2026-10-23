@@ -22,14 +22,10 @@ That is the entire surface. Nothing else on the step defines rendering — that 
 ## Two built-in step IDs
 
 ```ts
-import {
-  CREATE_SESSION_STEP,
-  PAYMENT_STEP,
-} from '@constructor-io/constructorio-ui-checkout';
+import { PAYMENT_STEP } from '@constructor-io/constructorio-ui-checkout';
 ```
 
 - **`PAYMENT_STEP`** (`'stripe'`) — the ID the built-in `<CioStripePaymentStep>` looks for. Use the constant rather than the literal string so future renames stay backwards-compatible.
-- **`CREATE_SESSION_STEP`** (`'createSession'`) — a virtual step ID used in `error` events with `source: 'session.create'`. Do not put it in the `steps` array; the flow uses it internally to describe where a session-creation error originated.
 
 All other step IDs are merchant-defined.
 

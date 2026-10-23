@@ -8,20 +8,20 @@ import {
 import CheckoutForm from '@src/app/components/CheckoutForm';
 import CheckoutFormElements from '@src/app/components/CheckoutFormElements';
 import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
-import checkoutManager from '@src/manager/CheckoutManager';
+import stripeLoader from '@src/providers/stripe/stripeLoader';
 import type {
   CheckoutComponentOverrides,
-  CheckoutRedirectBehavior,
   CheckoutStripeOptions,
-  CheckoutUiMode,
+  CheckoutStripeRedirectBehavior,
+  CheckoutStripeUiMode,
   Translations,
 } from '@src/types';
 
 import './CioStripePaymentStep.css';
 
 export interface CioStripePaymentStepProps extends CheckoutStripeOptions {
-  uiMode?: CheckoutUiMode;
-  redirectBehavior?: CheckoutRedirectBehavior;
+  uiMode?: CheckoutStripeUiMode;
+  redirectBehavior?: CheckoutStripeRedirectBehavior;
   translations?: Translations;
   componentOverrides?: CheckoutComponentOverrides;
   onError?: (error: Error) => void;
@@ -103,7 +103,7 @@ export function CioStripePaymentStep({
 
   const stripePromise = useMemo(() => {
     if (!session) return null;
-    return checkoutManager.getStripe(session.publishableKey, uiMode);
+    return stripeLoader.getStripe(session.publishableKey, uiMode);
   }, [session, uiMode]);
 
   const providerOptions = useMemo(() => {

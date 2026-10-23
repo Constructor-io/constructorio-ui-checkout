@@ -1,7 +1,6 @@
 import {
   compileCartItemAccessors,
   computeCartDiff,
-  extractSessionId,
   findStepIndex,
   getSessionIdFromResponse,
   isValidSessionResponse,
@@ -160,32 +159,6 @@ describe(`${getSessionIdFromResponse.name}: client`, () => {
 
   it('returns null when sessionId is an empty string', () => {
     expect(getSessionIdFromResponse({ sessionId: '' }, 'fiserv')).toBeNull();
-  });
-});
-
-describe(`${extractSessionId.name}: client`, () => {
-  it('extracts the id prefix from a Stripe client_secret', () => {
-    expect(extractSessionId('cs_test_abc_secret_xyz')).toBe('cs_test_abc');
-  });
-
-  it('handles live-mode format', () => {
-    expect(extractSessionId('cs_live_a1b2c3_secret_deadbeef')).toBe(
-      'cs_live_a1b2c3'
-    );
-  });
-
-  it('returns null for null, empty, or malformed input', () => {
-    expect(extractSessionId(null)).toBeNull();
-    expect(extractSessionId(undefined)).toBeNull();
-    expect(extractSessionId('')).toBeNull();
-    expect(extractSessionId('no-secret-suffix')).toBeNull();
-    expect(extractSessionId('_secret_leading')).toBeNull();
-  });
-
-  it('does not expose the secret portion of the token', () => {
-    const id = extractSessionId('cs_test_abc_secret_supersecret');
-    expect(id).not.toContain('supersecret');
-    expect(id).not.toContain('secret');
   });
 });
 

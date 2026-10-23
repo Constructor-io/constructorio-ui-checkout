@@ -8,6 +8,7 @@ export type {
   CheckoutEventType,
   CheckoutFlowConfig,
   CheckoutFlowCore,
+  CheckoutFlowCoreBase,
   CheckoutFlowState,
   CheckoutRouterAdapter,
   CheckoutSessionDiff,
@@ -17,12 +18,10 @@ export type {
   CheckoutStep,
   CheckoutStepId,
   CheckoutStorageAdapter,
+  CreateCheckoutFlowOptions,
+  RequireAccessorsIfNeeded,
 } from './core/types';
-export {
-  CREATE_SESSION_STEP,
-  FLOW_SCHEMA_VERSION,
-  PAYMENT_STEP,
-} from './core/types';
+export { FLOW_SCHEMA_VERSION, PAYMENT_STEP } from './core/types';
 
 // React adapter
 export type { CioCheckoutStepProps } from './app/components/CioCheckoutStep';
@@ -38,18 +37,12 @@ export type { CioStripePaymentStepProps } from './app/components/CioStripePaymen
 export { CioStripePaymentStep } from './app/components/CioStripePaymentStep';
 export type { UseCioCheckoutReturn } from './app/hooks/useCioCheckout';
 export { useCioCheckout } from './app/hooks/useCioCheckout';
-export { CioCheckoutContext } from './app/providers/CioCheckoutContext';
 export type { CioCheckoutProviderProps } from './app/providers/CioCheckoutProvider';
 export { CioCheckoutProvider } from './app/providers/CioCheckoutProvider';
 
 // Registry (multi-library setups)
-export {
-  CioCheckoutRegistry,
-  default as cioCheckoutRegistry,
-} from './manager/CioCheckoutRegistry';
-
-// i18n helpers
-export { defaultTranslations, t } from './utils/translate';
+export type { CioCheckoutRegistry } from './manager/CioCheckoutRegistry';
+export { default as cioCheckoutRegistry } from './manager/CioCheckoutRegistry';
 
 // Payment session
 export type {
@@ -62,15 +55,15 @@ export type {
 } from './types';
 
 // Cart item
-export type { BaseCartItem, CartItemAccessors } from './types';
+export type { BaseCartItem, CartItemAccessors, KeyOfType } from './types';
 
 // Render / SDK types
 export type {
   CheckoutComponentOverrides,
-  CheckoutLayout,
-  CheckoutRedirectBehavior,
+  CheckoutStripeLayout,
   CheckoutStripeOptions,
-  CheckoutUiMode,
+  CheckoutStripeRedirectBehavior,
+  CheckoutStripeUiMode,
   PayButtonRenderProps,
   Translations,
 } from './types';

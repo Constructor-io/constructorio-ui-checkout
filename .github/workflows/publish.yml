@@ -114,7 +114,7 @@ jobs:
           STRICT_SUCCESS: true
 
       - name: Report deployment status to Slack
-        uses: ravsamhq/notify-slack-action@v2
+        uses: ravsamhq/notify-slack-action@bca2d7f5660b833a27bda4f6b8bef389ebfefd25 # v2.3.0
         with:
           notification_title: "🏁 Constructorio-ui-checkout deployment completed"
           status: ${{ steps.workflow-conclusion.outputs.conclusion }}

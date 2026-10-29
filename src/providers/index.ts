@@ -1,5 +1,6 @@
 import type { BasePaymentSession } from '@src/types';
 
+import * as fiserv from './fiserv/session';
 import * as stripe from './stripe/session';
 
 export interface ProviderAdapter {
@@ -11,6 +12,10 @@ export const providerAdapters: Record<string, ProviderAdapter> = {
   stripe: {
     validateSession: stripe.validateSession,
     getSessionId: stripe.getSessionId,
+  },
+  fiserv: {
+    validateSession: fiserv.validateSession,
+    getSessionId: fiserv.getSessionId,
   },
 };
 

@@ -6,7 +6,17 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 The library follows semantic versioning. A major version can remove or rename public API. Minor and patch versions do not.
 
-This page covers the move from 1.x to 2.0. Most apps need a few import changes and nothing else.
+This page lists what changed in 2.1 and covers the move from 1.x to 2.0. Most apps need a few import changes and nothing else.
+
+## 2.1.0
+
+No breaking changes.
+
+- New: `<CioFiservPaymentStep>` and the `FiservPaymentSession` type. `provider="fiserv"` is now built in. See [Payment Providers](./?path=/docs/guides-payment-providers--docs#fiserv).
+- New: five `CioCheckout.fiserv.*` translation keys.
+- Fixed: every built-in step now renders the `cio-checkout-root` wrapper, so the library's styles apply without the host adding the class. Before 2.1 the Stripe and fulfillment steps rendered unstyled unless an ancestor carried `cio-checkout-root`. If you added that class yourself, you can keep it or remove it.
+- Fixed: `<CioFulfillmentStep>` awaits `flow.next()` before calling `onFulfillComplete`, so `flow.completed` fires before a callback that clears state.
+- Fixed: the `constructorio-ui-checkout-bundled` subpath now ships its types, so TypeScript no longer reports a missing declaration file for it.
 
 ## Upgrade checklist
 

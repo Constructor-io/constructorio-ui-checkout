@@ -11,6 +11,12 @@ export const defaultTranslations: Required<Translations> = {
   'CioCheckout.fulfillment.successLabel': 'Order confirmed',
   'CioCheckout.fulfillment.failedLabel': 'Verification failed',
   'CioCheckout.fulfillment.retryLabel': 'Retry',
+  'CioCheckout.fiserv.cardNumberLabel': 'Card number',
+  'CioCheckout.fiserv.nameOnCardLabel': 'Name on card',
+  'CioCheckout.fiserv.expirationLabel': 'Expiration',
+  'CioCheckout.fiserv.securityCodeLabel': 'Security code',
+  'CioCheckout.fiserv.captureFailedLabel':
+    'Those card details could not be accepted. Check them and try again.',
 };
 
 export function t(

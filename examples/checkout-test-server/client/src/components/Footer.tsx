@@ -1,5 +1,6 @@
 import { useFlowBasePath } from "../flows/shared/basePath";
 import { EXPIRY_DESCRIPTION } from "../flows/expiry/snippet";
+import { FISERV_DESCRIPTION } from "../flows/fiserv/snippet";
 import { FULL_DESCRIPTION } from "../flows/full/snippet";
 import { GUEST_DESCRIPTION } from "../flows/guest/snippet";
 import { HOOK_ONLY_DESCRIPTION } from "../flows/hookOnly/snippet";
@@ -8,7 +9,7 @@ import { ONEPAGE_DESCRIPTION } from "../flows/onePage/snippet";
 import { RESUME_DESCRIPTION } from "../flows/resume/snippet";
 import { SQUARE_DESCRIPTION } from "../flows/square/snippet";
 
-const HUB_OVERVIEW = `Eight independent React apps under /full, /guest, /resume, /expiry, /hook-only, /mixed, /one-page, /square — each one is a self-contained demo of a different way to wire @constructor-io/constructorio-ui-checkout. Every app shares the same shopping shell (browse, product page, cart, login) but owns its own CioCheckoutProvider config, storage adapter, step composition, and route layout. Pick a card above to see one end-to-end.`;
+const HUB_OVERVIEW = `Nine independent React apps under /full, /guest, /resume, /expiry, /hook-only, /mixed, /one-page, /square, /fiserv — each one is a self-contained demo of a different way to wire @constructor-io/constructorio-ui-checkout. Every app shares the same shopping shell (browse, product page, cart, login) but owns its own CioCheckoutProvider config, storage adapter, step composition, and route layout. Pick a card above to see one end-to-end.`;
 
 const DESCRIPTIONS: Record<string, { title: string; body: string }> = {
   "": { title: "How the demo works", body: HUB_OVERVIEW },
@@ -20,6 +21,7 @@ const DESCRIPTIONS: Record<string, { title: string; body: string }> = {
   "/mixed": { title: "Mixed · Routed + Inline", body: MIXED_DESCRIPTION },
   "/one-page": { title: "One-Page Checkout", body: ONEPAGE_DESCRIPTION },
   "/square": { title: "Square · Custom PSP", body: SQUARE_DESCRIPTION },
+  "/fiserv": { title: "Fiserv · Built-in Hosted Fields", body: FISERV_DESCRIPTION },
 };
 
 export default function Footer() {

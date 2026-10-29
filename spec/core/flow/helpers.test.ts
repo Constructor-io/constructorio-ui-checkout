@@ -85,10 +85,10 @@ describe(`${isValidSessionResponse.name}: client`, () => {
   });
 
   it('accepts any non-null object for non-stripe providers', () => {
-    expect(isValidSessionResponse({ sessionId: 'session_abc' }, 'fiserv')).toBe(
-      true
-    );
-    expect(isValidSessionResponse({}, 'fiserv')).toBe(true);
+    expect(
+      isValidSessionResponse({ sessionId: 'session_abc' }, 'imaginary-psp')
+    ).toBe(true);
+    expect(isValidSessionResponse({}, 'imaginary-psp')).toBe(true);
   });
 
   it('rejects stripe response missing clientSecret or publishableKey', () => {
@@ -109,12 +109,12 @@ describe(`${isValidSessionResponse.name}: client`, () => {
 
   it('rejects null', () => {
     expect(isValidSessionResponse(null, 'stripe')).toBe(false);
-    expect(isValidSessionResponse(null, 'fiserv')).toBe(false);
+    expect(isValidSessionResponse(null, 'imaginary-psp')).toBe(false);
   });
 
   it('rejects arrays', () => {
     expect(isValidSessionResponse([], 'stripe')).toBe(false);
-    expect(isValidSessionResponse([], 'fiserv')).toBe(false);
+    expect(isValidSessionResponse([], 'imaginary-psp')).toBe(false);
   });
 
   it('rejects primitives', () => {
@@ -127,7 +127,7 @@ describe(`${isValidSessionResponse.name}: client`, () => {
 describe(`${getSessionIdFromResponse.name}: client`, () => {
   it('returns an explicit sessionId when present', () => {
     expect(
-      getSessionIdFromResponse({ sessionId: 'session_abc' }, 'fiserv')
+      getSessionIdFromResponse({ sessionId: 'session_abc' }, 'imaginary-psp')
     ).toBe('session_abc');
   });
 
@@ -157,11 +157,13 @@ describe(`${getSessionIdFromResponse.name}: client`, () => {
   });
 
   it('returns null for non-Stripe providers without an explicit sessionId', () => {
-    expect(getSessionIdFromResponse({}, 'fiserv')).toBeNull();
+    expect(getSessionIdFromResponse({}, 'imaginary-psp')).toBeNull();
   });
 
   it('returns null when sessionId is an empty string', () => {
-    expect(getSessionIdFromResponse({ sessionId: '' }, 'fiserv')).toBeNull();
+    expect(
+      getSessionIdFromResponse({ sessionId: '' }, 'imaginary-psp')
+    ).toBeNull();
   });
 });
 

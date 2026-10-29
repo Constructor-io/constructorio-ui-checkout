@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 @import '@constructor-io/constructorio-ui-components/styles.css';
 
-.cio-checkout-root {
+.cio-checkout-root:not(.cio-checkout-root .cio-checkout-root) {
   --cio-checkout-font-family: 'Inter', sans-serif;
   --cio-checkout-color-border: #e5e7eb;
   --cio-checkout-color-text: #1f2937;

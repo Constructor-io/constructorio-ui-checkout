@@ -4,7 +4,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Constructor Checkout UI
 
-A headless checkout core with a built-in Stripe payment step. The library runs the steps, the payment session, storage and routing. Your app renders the UI.
+A headless checkout core with built-in Stripe and Fiserv payment steps. The library runs the steps, the payment session, storage and routing. Your app renders the UI.
 
 ```bash
 npm i @constructor-io/constructorio-ui-checkout
@@ -13,7 +13,7 @@ npm i @constructor-io/constructorio-ui-checkout
 ## How these docs are organised
 
 - **Guides** show how to do something. Start with the [Integration Guide](./?path=/docs/guides-integration-guide--docs).
-- **Components & Utilities** is the reference for the components the package exports: [CioCheckoutProvider](./?path=/docs/components-utilities-ciocheckoutprovider--docs) and [CioFulfillmentStep](./?path=/docs/components-utilities-ciofulfillmentstep--docs).
+- **Components & Utilities** is the reference for the components the package exports: [CioCheckoutProvider](./?path=/docs/components-utilities-ciocheckoutprovider--docs), [CioStripePaymentStep](./?path=/docs/components-utilities-ciostripepaymentstep--docs), [CioFiservPaymentStep](./?path=/docs/components-utilities-ciofiservpaymentstep--docs) and [CioFulfillmentStep](./?path=/docs/components-utilities-ciofulfillmentstep--docs).
 
 ## Guides
 
@@ -22,7 +22,7 @@ npm i @constructor-io/constructorio-ui-checkout
 - **[Routing](./?path=/docs/guides-routing--docs)**: adapters for React Router, Next.js App Router, TanStack Router and `window.location`
 - **[Persistence](./?path=/docs/guides-persistence--docs)**: sessionStorage or backend pause and resume
 - **[Hook-only Composition](./?path=/docs/guides-hook-only-composition--docs)**: Stripe elements split across pages, and payment providers with no built-in UI
-- **[Payment Providers](./?path=/docs/guides-payment-providers--docs)**: the `provider` prop, the built-in Stripe path, and custom providers
+- **[Payment Providers](./?path=/docs/guides-payment-providers--docs)**: the `provider` prop, the built-in Stripe and Fiserv paths, and custom providers
 
 ## Three integration paths, one core
 
@@ -43,7 +43,7 @@ All three wrap the same `createCheckoutFlow(config)` core.
 - **Payment in progress.** `flow.setPaymentInProgress(true)` blocks `back()` and `goTo()` while a charge runs.
 - **Storage.** Opt-in. Pass a `storage` adapter to save and restore the flow. `storageKey` is optional.
 - **Routing.** A router adapter keeps the URL and the current step in sync.
-- **Built-in steps.** `<CioStripePaymentStep>` with loading, error and confirm-error states, and `<CioFulfillmentStep>` with retry.
+- **Built-in steps.** `<CioStripePaymentStep>` and `<CioFiservPaymentStep>` with loading, error and confirm-error states, and `<CioFulfillmentStep>` with retry.
 - **Translations.** Every built-in label can be replaced through `translations`.
 - **Events.** Typed events for analytics and error reporting.
 

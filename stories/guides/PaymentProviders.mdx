@@ -14,10 +14,21 @@ compile time:
 
 ## Built-in providers
 
-Stripe is the only PSP the library ships payment UI for. Passing
-`provider="stripe"` narrows `onCreateSession` to return a `StripePaymentSession`
-(`{ clientSecret, publishableKey }`) and allows `<CioStripePaymentStep>` to be
-mounted.
+The library ships payment UI for Stripe and Fiserv. The `provider` value
+narrows `onCreateSession` and decides which built-in step can be mounted.
+Mounting a built-in step inside a provider with a different `provider` prop
+throws at render with a message naming both sides of the mismatch.
+
+| `provider`  | Session type            | Step                       | Script tag added by | Charge happens in                 | Steps you declare               |
+| ----------- | ----------------------- | -------------------------- | ------------------- | --------------------------------- | ------------------------------- |
+| `"stripe"`  | `StripePaymentSession`  | `<CioStripePaymentStep>`   | Stripe's npm package | Stripe's widget, in the payment step | cart, payment, done            |
+| `"fiserv"`  | `FiservPaymentSession`  | `<CioFiservPaymentStep>`   | The library         | Your server, after the card is captured | cart, payment, complete      |
+
+### Stripe
+
+Passing `provider="stripe"` narrows `onCreateSession` to return a
+`StripePaymentSession` (`{ clientSecret, publishableKey }`) and allows
+`<CioStripePaymentStep>` to be mounted.
 
 ```tsx
 <CioCheckoutProvider
@@ -40,9 +51,66 @@ Stripe references:
 - [Stripe Checkout Form (embedded form, beta)](https://docs.stripe.com/payments/checkout/how-checkout-works?payment-ui=embedded-form)
 - [Stripe Embedded Checkout quickstart](https://docs.stripe.com/checkout/embedded/quickstart)
 
-Mounting `<CioStripePaymentStep>` inside a provider whose `provider` prop is
-not `"stripe"` throws at render with a message identifying both sides of the
-mismatch.
+### Fiserv
+
+Passing `provider="fiserv"` narrows `onCreateSession` to return a
+`FiservPaymentSession` and allows `<CioFiservPaymentStep>` to be mounted.
+Your server signs Fiserv's credentials call and returns the result plus
+`apiKey`, `merchantId`, `terminalId` and `environment`. See
+[CioFiservPaymentStep](./?path=/docs/components-utilities-ciofiservpaymentstep--docs)
+for the field list.
+
+Fiserv's hosted fields store the card in a PaymentSession. They do not charge
+it. The charge is a second call your server makes with the session id, so the
+flow needs one more step than Stripe: a `<CioFulfillmentStep>` whose
+`onFulfill` calls your charge route. The step reads the session id with
+`useCioCheckout()`, so it lives in a component under the provider.
+
+```tsx
+function Complete() {
+  const flow = useCioCheckout<'fiserv'>();
+  return (
+    <CioFulfillmentStep
+      onFulfill={async () => {
+        const res = await fetch('/api/fiserv/charge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          // Your server prices the order itself. Send only what it needs to find it.
+          body: JSON.stringify({ sessionId: flow.getSession()?.sessionId }),
+        });
+        return res.json(); // { success, message }
+      }}
+    />
+  );
+}
+
+<CioCheckoutProvider
+  provider="fiserv"
+  steps={[{ id: 'cart' }, { id: PAYMENT_STEP }, { id: 'complete' }]}
+  onCreateSession={async () => {
+    const res = await fetch('/api/fiserv/session', { method: 'POST' });
+    return res.json(); // typed as FiservPaymentSession
+  }}
+>
+  <CioCheckoutStep id={PAYMENT_STEP}>
+    <CioFiservPaymentStep amount="$49.99" frameAncestors={[location.origin]} />
+  </CioCheckoutStep>
+  <CioCheckoutStep id="complete">
+    <Complete />
+  </CioCheckoutStep>
+</CioCheckoutProvider>
+```
+
+Fiserv spends a session on its first use. After a failed charge, call
+`flow.recreate()` and send the shopper back to the payment step so they enter
+the card again. The `/fiserv` flow in `examples/checkout-test-server` shows
+this, with the server routes in `server/fiserv.ts`.
+
+Fiserv references:
+
+- [CommerceHub hosted fields (Checkout SDK)](https://developer.fiserv.com/product/CommerceHub/docs/?path=docs/In-Person/Integrations/Checkout-SDK.md)
+- [CommerceHub security credentials](https://developer.fiserv.com/product/CommerceHub/api/?type=post&path=/payments-vas/v1/security/credentials)
+- [CommerceHub charges](https://developer.fiserv.com/product/CommerceHub/api/?type=post&path=/payments/v1/charges)
 
 ## Custom providers
 

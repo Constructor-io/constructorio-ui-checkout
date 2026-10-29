@@ -8,6 +8,8 @@ import prefixer from 'postcss-prefix-selector';
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const rootClass = '.cio-checkout-root';
+// The outermost root only, so nested step roots inherit the host's theme.
+const outerRoot = `${rootClass}:not(${rootClass} ${rootClass})`;
 
 // Externalize CSS @import from node_modules and remote URLs in library builds.
 // Strips those @imports before Vite inline them, then prepends them back in
@@ -67,7 +69,7 @@ export default defineConfig({
       plugins: [
         prefixer({
           prefix: rootClass,
-          exclude: [':root', 'html', 'body', rootClass],
+          exclude: [':root', 'html', 'body', rootClass, outerRoot],
           transform(_, selector, prefixedSelector, filePath) {
             if (filePath.includes('node_modules')) {
               return selector;

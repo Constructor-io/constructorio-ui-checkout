@@ -1,0 +1,111 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import * as Stories from './CioFiservPaymentStep.stories';
+
+<Meta of={Stories} />
+
+# CioFiservPaymentStep
+
+The built-in Fiserv CommerceHub payment step. It creates the session, loads Fiserv's hosted-fields SDK, mounts the four card fields, and calls `flow.next()` once Fiserv has captured the card. Mount it inside a `<CioCheckoutProvider provider="fiserv">`.
+
+Fiserv differs from Stripe in one way: submitting the card does not charge it. The card is stored in a Fiserv PaymentSession, and your server charges that session afterwards. Put the charge in a `<CioFulfillmentStep>` on the next step. See [Payment Providers](./?path=/docs/guides-payment-providers--docs#built-in-providers) for the full shape.
+
+```tsx
+import {
+  CioCheckoutProvider,
+  CioCheckoutStep,
+  CioFiservPaymentStep,
+  CioFulfillmentStep,
+  PAYMENT_STEP,
+} from '@constructor-io/constructorio-ui-checkout';
+
+<CioCheckoutProvider
+  provider="fiserv"
+  steps={[{ id: 'cart' }, { id: PAYMENT_STEP }, { id: 'complete' }]}
+  onCreateSession={() =>
+    fetch('/api/fiserv/session', { method: 'POST' }).then((r) => r.json())
+  }
+>
+  <CioCheckoutStep id={PAYMENT_STEP}>
+    <CioFiservPaymentStep amount="$49.99" frameAncestors={[location.origin]} />
+  </CioCheckoutStep>
+  <CioCheckoutStep id="complete">
+    <CioFulfillmentStep onFulfill={chargeTheSession} />
+  </CioCheckoutStep>
+</CioCheckoutProvider>;
+```
+
+The stories on this page stop before a session exists, so they never load the Fiserv SDK. To see the card fields, run the `/fiserv` flow in `examples/checkout-test-server` with CERT keys.
+
+## The session
+
+`onCreateSession` must return a `FiservPaymentSession`. Your server gets it by signing Fiserv's `POST /payments-vas/v1/security/credentials` call with the API secret, then adding the ids the SDK needs:
+
+| Field | From |
+| --- | --- |
+| `sessionId`, `accessToken`, `publicKey`, `keyId` | The credentials response |
+| `apiKey`, `merchantId`, `terminalId` | Your config. The API key is public; the secret never leaves the server. |
+| `environment` | `'cert'` or `'prod'` |
+
+Fiserv spends a session on its first use. After a charge, successful or not, a new session is needed before the card form can be used again. The step remounts the fields whenever the session changes.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `amount` | `string` | | Formatted total for the pay button, for example `$49.99`. The step does not know the cart total. Without it the button says `Pay`. |
+| `frameAncestors` | `string[]` | `[]` | Origins allowed to frame the hosted fields. Pass your page origin. |
+| `onCardBrandChange` | `(brand: string \| null) => void` | | Called when Fiserv detects a brand, for example `'visa'`. |
+| `onError` | `(error: Error) => void` | | Called for `session.create` and `payment.confirm` errors. |
+| `translations` | `Translations` | | Replaces built-in labels. See Translation keys. |
+| `componentOverrides` | `CheckoutComponentOverrides` | | Replaces the `loader` and the `payButton`. |
+
+## States
+
+**No `onCreateSession`.** The step shows a configuration error with no Retry button and emits one `error` event with `source: 'session.create'`.
+
+<Canvas of={Stories.MissingHandler} />
+
+**Session error.** `onCreateSession` rejected, returned an invalid shape, or the SDK failed to initialise. The step shows an error with a Retry button. Retry calls `flow.recreate()`.
+
+<Canvas of={Stories.SessionError} />
+
+**Preparing.** The session is being created, or the SDK is loading. The step shows a loader. The field containers stay in the DOM, hidden, so the SDK can mount into them.
+
+<Canvas of={Stories.Preparing} />
+
+**Ready.** The four fields render. The pay button enables when Fiserv reports the form valid. Clicking it calls `flow.setPaymentInProgress(true)`, submits the card, and on capture calls `flow.next()`. If Fiserv rejects the card, the message shows under the fields and an `error` event with `source: 'payment.confirm'` is emitted.
+
+## Overrides
+
+Both slots take `{ reactNode: (props) => ReactNode }`. `loader` receives `{ label }`. `payButton` receives `PayButtonRenderProps`: `isSubmitting`, `isDisabled`, `amount` (the `amount` prop or `''`), `onClick`.
+
+## Translation keys
+
+| Key | Default |
+| --- | --- |
+| `CioCheckout.checkout.preparingLabel` | `Preparing checkout...` |
+| `CioCheckout.session.errorLabel` | `Failed to prepare checkout. Please try again.` |
+| `CioCheckout.session.retryLabel` | `Retry` |
+| `CioCheckout.checkout.payButtonLabel` | `Pay` |
+| `CioCheckout.checkout.payButtonLoadingLabel` | `Processing...` |
+| `CioCheckout.fiserv.cardNumberLabel` | `Card number` |
+| `CioCheckout.fiserv.nameOnCardLabel` | `Name on card` |
+| `CioCheckout.fiserv.expirationLabel` | `Expiration` |
+| `CioCheckout.fiserv.securityCodeLabel` | `Security code` |
+| `CioCheckout.fiserv.captureFailedLabel` | `Those card details could not be accepted. Check them and try again.` |
+
+<Canvas of={Stories.CustomLabels} />
+
+## CSS classes
+
+| Class | Element |
+| --- | --- |
+| `cio-checkout-loader` | Loader |
+| `cio-checkout-session-error` | Session error and missing-handler error |
+| `cio-checkout-fiserv-fields` | Wrapper around the four fields |
+| `cio-checkout-fiserv-field` | One label plus its field container |
+| `cio-checkout-fiserv-row` | Expiration and security code side by side |
+| `cio-checkout-confirm-error` | Capture error |
+| `cio-checkout-pay-button` | Pay button |
+
+The field containers have fixed ids (`cio-fiserv-cardNumber` and so on), so mount one `<CioFiservPaymentStep>` per page.

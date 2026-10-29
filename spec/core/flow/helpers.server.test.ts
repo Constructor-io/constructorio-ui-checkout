@@ -29,9 +29,9 @@ describe(`${toError.name}: server`, () => {
 
 describe(`${isValidSessionResponse.name}: server`, () => {
   it('runs server-side without any browser globals', () => {
-    expect(isValidSessionResponse({ sessionId: 'session_abc' }, 'fiserv')).toBe(
-      true
-    );
+    expect(
+      isValidSessionResponse({ sessionId: 'session_abc' }, 'imaginary-psp')
+    ).toBe(true);
   });
 });
 

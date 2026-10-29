@@ -107,6 +107,19 @@ const SHOWCASES: Showcase[] = [
       "Web Payments SDK",
     ],
   },
+  {
+    id: "fiserv",
+    title: "Fiserv · built-in hosted fields",
+    blurb:
+      'Same routed layout as Full, but provider="fiserv" with the built-in <CioFiservPaymentStep />. Fiserv captures the card into a session; the server then charges that session from a <CioFulfillmentStep />. Shows the two-step shape a PSP needs when the charge is a separate server call.',
+    path: "/fiserv",
+    concepts: [
+      'provider="fiserv"',
+      "CioFiservPaymentStep",
+      "CioFulfillmentStep",
+      "server charge",
+    ],
+  },
 ];
 
 export default function HubPage() {

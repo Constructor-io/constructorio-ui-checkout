@@ -22,7 +22,6 @@
     "**/*.spec.tsx",
     "**/*.stories.ts",
     "**/*.stories.tsx",
-    "src/bundled.tsx",
     "**/__tests__/**",
     "**/__mocks__/**"
   ]

@@ -1,6 +1,10 @@
 import { Factory } from 'fishery';
 
-import type { BaseCartItem, StripePaymentSession } from '@src/types';
+import type {
+  BaseCartItem,
+  FiservPaymentSession,
+  StripePaymentSession,
+} from '@src/types';
 
 import {
   DEMO_CLIENT_SECRET,
@@ -24,3 +28,14 @@ export const cartItem = Factory.define<BaseCartItem>(() => {
     quantity: 1,
   };
 });
+
+export const fiservSession = Factory.define<FiservPaymentSession>(() => ({
+  sessionId: 'ps_test',
+  accessToken: 'at_test',
+  publicKey: 'pk_test',
+  keyId: 'kid_test',
+  apiKey: 'api_test',
+  merchantId: 'm_test',
+  terminalId: 't_test',
+  environment: 'cert',
+}));

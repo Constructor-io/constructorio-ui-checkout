@@ -17,6 +17,8 @@
     "checkout",
     "stripe",
     "stripe embedded checkout",
+    "fiserv",
+    "commercehub",
     "payments",
     "ecommerce",
     "react",
@@ -33,6 +35,7 @@
     },
     "./styles.css": "./dist/styles.css",
     "./constructorio-ui-checkout-bundled": {
+      "types": "./dist/types/bundled.d.ts",
       "import": "./dist/constructorio-ui-checkout-bundled.js",
       "require": "./dist/constructorio-ui-checkout-bundled.js"
     }

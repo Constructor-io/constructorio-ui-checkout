@@ -6,7 +6,7 @@ describe(`${getProviderAdapter.name}: client`, () => {
   });
 
   it('returns null for unknown providers', () => {
-    expect(getProviderAdapter('fiserv')).toBeNull();
+    expect(getProviderAdapter('imaginary-psp')).toBeNull();
   });
 
   it('returns null for Object.prototype keys', () => {

@@ -18,6 +18,14 @@ describe(`${validateSession.name}: client`, () => {
     const { keyId: _, ...noKeyId } = fiservSession.build();
     expect(validateSession(noKeyId)).toBe(false);
   });
+
+  it('rejects a missing or unknown environment', () => {
+    const { environment: _, ...noEnvironment } = fiservSession.build();
+    expect(validateSession(noEnvironment)).toBe(false);
+    expect(
+      validateSession({ ...fiservSession.build(), environment: 'CERT' })
+    ).toBe(false);
+  });
 });
 
 describe(`${getSessionId.name}: client`, () => {

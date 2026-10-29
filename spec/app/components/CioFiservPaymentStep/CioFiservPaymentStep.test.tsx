@@ -195,8 +195,19 @@ describe(`${CioFiservPaymentStep.name}: client`, () => {
       await screen.findByText('Failed to prepare checkout. Please try again.')
     ).toBeInTheDocument();
     expect(onError.mock.calls[0][0].message).toBe('bad token');
+    sdk.paymentFields.mockImplementationOnce((options) => {
+      const { parentElementId } = (
+        options as {
+          data: { fields: { cardNumber: { parentElementId: string } } };
+        }
+      ).data.fields.cardNumber;
+      // eslint-disable-next-line testing-library/no-node-access
+      expect(document.getElementById(parentElementId)).not.toBeNull();
+      return Promise.resolve({ submit: vi.fn(), destroyFields: vi.fn() });
+    });
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(sdk.init).toHaveBeenCalledTimes(2));
+    await screen.findByRole('button', { name: 'Pay' });
   });
 
   it('swaps the fields for a new session', async () => {

@@ -224,6 +224,8 @@ function CioFiservPaymentStepInner({
   }, [flow, isSubmitting, translations]);
 
   const handleRetrySession = useCallback(() => {
+    // Remount the field divs before the new session's effect looks for them.
+    setFieldsStatus('loading');
     void retry();
   }, [retry]);
 

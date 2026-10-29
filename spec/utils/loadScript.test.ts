@@ -56,5 +56,10 @@ describe(`${loadScript.name}: client`, () => {
     await expect(
       loadScript({ id: 'stale', src: SRC, isReady: () => false })
     ).rejects.toThrow('loaded but is not ready');
+
+    document.getElementById('stale')!.remove();
+    const retry = loadScript({ id: 'stale', src: SRC, isReady: () => false });
+    document.getElementById('stale')!.dispatchEvent(new Event('load'));
+    await expect(retry).resolves.toBeUndefined();
   });
 });

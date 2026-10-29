@@ -21,14 +21,13 @@ export function loadScript({
   const existing = pending.get(id);
   if (existing) return existing;
 
+  const existingTag = document.getElementById(id) as HTMLScriptElement | null;
+  // A tag that already loaded will not fire `load` again. Not cached, so a later call can retry.
+  if (existingTag?.dataset.loaded) {
+    return Promise.reject(new Error(`Script ${src} loaded but is not ready`));
+  }
+
   const promise = new Promise<void>((resolve, reject) => {
-    const existingTag = document.getElementById(id) as HTMLScriptElement | null;
-    // A tag that already loaded will not fire `load` again.
-    if (existingTag?.dataset.loaded) {
-      pending.delete(id);
-      reject(new Error(`Script ${src} loaded but is not ready`));
-      return;
-    }
     const script = existingTag ?? document.createElement('script');
     script.addEventListener(
       'load',

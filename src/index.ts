@@ -30,6 +30,8 @@ export {
 // React adapter
 export type { CioCheckoutStepProps } from './app/components/CioCheckoutStep';
 export { CioCheckoutStep } from './app/components/CioCheckoutStep';
+export type { CioFiservPaymentStepProps } from './app/components/CioFiservPaymentStep';
+export { CioFiservPaymentStep } from './app/components/CioFiservPaymentStep';
 export type {
   CioFulfillmentRenderProps,
   CioFulfillmentResult,
@@ -54,6 +56,7 @@ export { default as cioCheckoutRegistry } from './manager/CioCheckoutRegistry';
 export type {
   BasePaymentSession,
   BuiltInPaymentProvider,
+  FiservPaymentSession,
   PaymentProvider,
   PaymentSessionFor,
   PaymentSessionMap,

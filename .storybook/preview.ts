@@ -35,6 +35,7 @@ const preview: Preview = {
             'CioCheckoutProvider',
             'CioCheckoutStep',
             'CioStripePaymentStep',
+            'CioFiservPaymentStep',
             'CioFulfillmentStep',
             'Hooks',
             'Utilities',

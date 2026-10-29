@@ -80,6 +80,54 @@ describe(`${CioFulfillmentStep.name}: client`, () => {
     });
   });
 
+  it('advances and emits flow.completed before onFulfillComplete, even when the callback clears state', async () => {
+    const order: string[] = [];
+    let attempts = 0;
+    let flowRef: ReturnType<typeof useCioCheckout> | null = null;
+    function Probe() {
+      flowRef = useCioCheckout();
+      return null;
+    }
+
+    render(
+      <CioCheckoutProvider
+        provider="stripe"
+        steps={[{ id: 'fulfill' }]}
+        onCreateSession={stubSession}
+        autoStart
+        onEvent={(e) => {
+          if (e.type === 'flow.completed' || e.type === 'error') {
+            order.push(e.type);
+          }
+        }}
+      >
+        <Probe />
+        <CioCheckoutStep id="fulfill">
+          <CioFulfillmentStep
+            onFulfill={() => {
+              attempts += 1;
+              return Promise.resolve<CioFulfillmentResult>(
+                attempts === 1
+                  ? { success: true, message: 'Order #123' }
+                  : { success: false, message: 'No second order' }
+              );
+            }}
+            onFulfillComplete={(result) => {
+              order.push('onFulfillComplete');
+              if (result.success) void flowRef?.clearState();
+            }}
+          />
+        </CioCheckoutStep>
+      </CioCheckoutProvider>
+    );
+
+    await waitFor(() => {
+      expect(order).toContain('onFulfillComplete');
+    });
+    expect(order.slice(0, 2)).toEqual(['flow.completed', 'onFulfillComplete']);
+    expect(order).not.toContain('error');
+  });
+
   it('shows the failure UI with a retry button that re-runs onFulfill', async () => {
     let call = 0;
     const onFulfill = vi.fn(() => {

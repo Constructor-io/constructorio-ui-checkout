@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import CheckoutRoot from '@src/app/components/CheckoutRoot';
 import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
 import type { Translations } from '@src/types';
 import { t } from '@src/utils';
@@ -32,10 +33,11 @@ export interface CioFulfillmentStepProps {
 
 /**
  * Runs `onFulfill` once on mount, exposes status and retry via a render prop,
- * and advances the flow on success by default. Retry re-invokes `onFulfill`
- * without touching session state.
+ * and advances the flow on success by default. `onFulfillComplete` runs after
+ * the advance, so it is safe to clear state or navigate away in it. Retry
+ * re-invokes `onFulfill` without touching session state.
  */
-export function CioFulfillmentStep({
+function CioFulfillmentStepInner({
   onFulfill,
   onFulfillComplete,
   advanceOnSuccess = true,
@@ -77,12 +79,15 @@ export function CioFulfillmentStep({
     setResult(outcome);
     setStatus(outcome.success ? 'fulfilled' : 'failed');
     try {
-      onFulfillComplete?.(outcome);
-    } catch {
-      // Consumer callback must not flip the outcome.
-    }
-    if (outcome.success && advanceOnSuccess) {
-      void flow.next();
+      // Advance first so the step is recorded and `flow.completed` fires
+      // before the consumer can clear state or navigate away.
+      if (outcome.success && advanceOnSuccess) await flow.next();
+    } finally {
+      try {
+        onFulfillComplete?.(outcome);
+      } catch {
+        // Consumer callback must not flip the outcome.
+      }
     }
   }, [onFulfill, onFulfillComplete, advanceOnSuccess, flow, failedLabel]);
 
@@ -155,6 +160,14 @@ export function CioFulfillmentStep({
   }
 
   return null;
+}
+
+export function CioFulfillmentStep(props: CioFulfillmentStepProps) {
+  return (
+    <CheckoutRoot>
+      <CioFulfillmentStepInner {...props} />
+    </CheckoutRoot>
+  );
 }
 
 export default CioFulfillmentStep;

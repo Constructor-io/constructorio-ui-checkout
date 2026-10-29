@@ -11,6 +11,7 @@ config({ path: resolve(__dirname, "../.env") });
 // functions read env vars when invoked, so plain top-of-file imports are fine.
 import { createStripeRouter } from "./stripe";
 import { createSquareRouter } from "./square";
+import { createFiservRouter } from "./fiserv";
 
 const app = express();
 
@@ -213,6 +214,9 @@ if (stripeRouter) app.use(stripeRouter);
 const squareRouter = createSquareRouter();
 if (squareRouter) app.use(squareRouter);
 
+const fiservRouter = createFiservRouter();
+if (fiservRouter) app.use(fiservRouter);
+
 // ---------------------------------------------------------------------------
 // Flow-state storage — powers the "backend StorageAdapter" showcase.
 // In-memory Map keyed by user id. Restart the server to wipe it.
@@ -284,6 +288,12 @@ app.listen(PORT, () => {
     `  POST   /api/square/session               — Square session (${squareRouter ? "enabled" : "disabled — set SQUARE_*"})`,
   );
   console.log(
-    `  POST   /api/square/pay                   — Square payment via SDK PaymentsApi\n`,
+    `  POST   /api/square/pay                   — Square payment via SDK PaymentsApi`,
+  );
+  console.log(
+    `  POST   /api/fiserv/session               — Fiserv CommerceHub session (${fiservRouter ? "enabled" : "disabled — set COMMERCEHUB_*"})`,
+  );
+  console.log(
+    `  POST   /api/fiserv/charge                — Fiserv charge of a captured session\n`,
   );
 });

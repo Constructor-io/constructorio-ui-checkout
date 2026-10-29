@@ -61,7 +61,7 @@ const meta: Meta<typeof CioFulfillmentStep> = {
     },
     onFulfillComplete: {
       description:
-        'Called with the result after each attempt, success or failure. Errors thrown here are ignored.',
+        'Called with the result after each attempt, success or failure, and after the flow has advanced when `advanceOnSuccess` is on. Safe to clear state or navigate away in. Errors thrown here are ignored.',
       table: { type: { summary: '(result: CioFulfillmentResult) => void' } },
     },
     advanceOnSuccess: {

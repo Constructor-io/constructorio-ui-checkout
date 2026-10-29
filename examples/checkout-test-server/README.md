@@ -18,6 +18,7 @@ Open the client and pick a flow from the home page.
 | `/hook-only` | Hook-only, custom Stripe theme    | `useCioCheckoutSession()` and Stripe Elements without `CioStripePaymentStep` | Stripe keys  |
 | `/mixed`     | Mixed routed and inline sub-steps | Some steps change the URL and some do not                                 | Stripe keys  |
 | `/square`    | Square, custom provider           | `provider="square"`, `useCioCheckoutSession()`, `setPaymentInProgress()`  | Square keys  |
+| `/fiserv`    | Fiserv, built-in hosted fields    | `provider="fiserv"`, `CioFiservPaymentStep`, server charge from `CioFulfillmentStep` | Fiserv keys  |
 
 The store, the product pages and the PIA panel work with no payment keys.
 
@@ -62,6 +63,8 @@ All config lives in `.env` at this folder's root. The server reads all of it. Th
 | `CLIENT_URL`                                 | `http://localhost:5173`              | Server CORS and Stripe return URL |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | empty                               | Stripe flows. Test keys from https://dashboard.stripe.com/test/apikeys |
 | `SQUARE_APPLICATION_ID`, `SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID` | empty        | Square flow. Sandbox keys from https://developer.squareup.com/apps |
+| `COMMERCEHUB_API_KEY`, `COMMERCEHUB_API_SECRET`, `COMMERCEHUB_MERCHANT_ID`, `COMMERCEHUB_TERMINAL_ID` | empty | Fiserv flow. CERT keys and a test merchant from https://developer.fiserv.com (CommerceHub). Test card `4005550000000019`. |
+| `COMMERCEHUB_BASE_URL`                       | `https://connect-cert.fiservapis.com/ch` | Fiserv CERT API. Change only for production. |
 
 Never commit `.env`.
 

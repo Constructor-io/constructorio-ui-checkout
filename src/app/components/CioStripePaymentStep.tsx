@@ -8,6 +8,7 @@ import {
 import CheckoutForm from '@src/app/components/CheckoutForm';
 import CheckoutFormElements from '@src/app/components/CheckoutFormElements';
 import CheckoutLoader from '@src/app/components/CheckoutLoader';
+import CheckoutRoot from '@src/app/components/CheckoutRoot';
 import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
 import { useCioCheckoutSession } from '@src/app/hooks/useCioCheckoutSession';
 import stripeLoader from '@src/providers/stripe/stripeLoader';
@@ -30,7 +31,7 @@ export interface CioStripePaymentStepProps extends CheckoutStripeOptions {
   onError?: (error: Error) => void;
 }
 
-export function CioStripePaymentStep({
+function CioStripePaymentStepInner({
   uiMode = 'form',
   redirectBehavior,
   layout,
@@ -209,6 +210,14 @@ export function CioStripePaymentStep({
         />
       )}
     </Provider>
+  );
+}
+
+export function CioStripePaymentStep(props: CioStripePaymentStepProps) {
+  return (
+    <CheckoutRoot>
+      <CioStripePaymentStepInner {...props} />
+    </CheckoutRoot>
   );
 }
 

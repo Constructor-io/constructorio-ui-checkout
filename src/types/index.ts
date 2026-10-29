@@ -1,5 +1,6 @@
 import type { ComponentOverrideProps } from '@constructor-io/constructorio-ui-components';
 
+import type { FiservPaymentSession } from './fiserv';
 import type { StripePaymentSession } from './stripe';
 
 export interface Translations {
@@ -12,6 +13,11 @@ export interface Translations {
   'CioCheckout.fulfillment.successLabel'?: string;
   'CioCheckout.fulfillment.failedLabel'?: string;
   'CioCheckout.fulfillment.retryLabel'?: string;
+  'CioCheckout.fiserv.cardNumberLabel'?: string;
+  'CioCheckout.fiserv.nameOnCardLabel'?: string;
+  'CioCheckout.fiserv.expirationLabel'?: string;
+  'CioCheckout.fiserv.securityCodeLabel'?: string;
+  'CioCheckout.fiserv.captureFailedLabel'?: string;
 }
 
 export interface BaseCartItem {
@@ -39,6 +45,7 @@ export interface BasePaymentSession {
 
 export interface PaymentSessionMap {
   stripe: StripePaymentSession;
+  fiserv: FiservPaymentSession;
 }
 
 export type BuiltInPaymentProvider = keyof PaymentSessionMap;
@@ -66,4 +73,5 @@ export interface CheckoutComponentOverrides {
   loader?: ComponentOverrideProps<CheckoutLoaderRenderProps>;
 }
 
+export * from './fiserv';
 export * from './stripe';

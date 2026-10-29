@@ -13,6 +13,7 @@ import { CartProvider } from "./contexts/CartContext";
 import HubPage from "./pages/HubPage";
 import ReturnPage from "./ReturnPage";
 import ExpiryApp from "./flows/expiry/ExpiryApp";
+import FiservApp from "./flows/fiserv/FiservApp";
 import FullApp from "./flows/full/FullApp";
 import GuestApp from "./flows/guest/GuestApp";
 import HookOnlyApp from "./flows/hookOnly/HookOnlyApp";
@@ -46,6 +47,7 @@ function AppRoutes() {
           <Route path="/mixed/*" element={<MixedApp />} />
           <Route path="/one-page/*" element={<OnePageApp />} />
           <Route path="/square/*" element={<SquareApp />} />
+          <Route path="/fiserv/*" element={<FiservApp />} />
           <Route path="/checkout/return" element={<ReturnPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

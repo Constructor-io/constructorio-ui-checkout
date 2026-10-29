@@ -19,8 +19,9 @@ drive the flow from the hook directly.
   `CheckoutElementsProvider`, and calls `flow.next()` on confirm. Reproducible
   in roughly 30 lines.
 - **`<CioFulfillmentStep>`**: runs `onFulfill` once, offers Retry on failure,
-  and advances on success. Set `recreateSessionOnRetry` when a failed charge
-  uses up the session.
+  and advances on success. `onFulfillComplete` runs after the advance, so
+  clearing state or navigating away in it is safe. Set
+  `recreateSessionOnRetry` when a failed charge uses up the session.
 
 Bypassing them trades those 30 lines of boilerplate for full control over the
 render tree.

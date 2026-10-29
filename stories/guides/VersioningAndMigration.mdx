@@ -14,6 +14,8 @@ No breaking changes.
 
 - New: `<CioFiservPaymentStep>` and the `FiservPaymentSession` type. `provider="fiserv"` is now built in. See [Payment Providers](./?path=/docs/guides-payment-providers--docs#fiserv).
 - New: five `CioCheckout.fiserv.*` translation keys.
+- New: `<CioShopPayPaymentStep>` and the `ShopPayPaymentRequest`, `ShopPaySessionResponse` and `ShopPayReceiptStatus` types. `provider="shop-pay"` is now built in, with no `onCreateSession`. See [Payment Providers](./?path=/docs/guides-payment-providers--docs#shop-pay).
+- New: three `CioCheckout.shopPay.*` translation keys.
 - Fixed: every built-in step now renders the `cio-checkout-root` wrapper, so the library's styles apply without the host adding the class. Before 2.1 the Stripe and fulfillment steps rendered unstyled unless an ancestor carried `cio-checkout-root`. If you added that class yourself, you can keep it or remove it.
 - Fixed: `<CioFulfillmentStep>` awaits `flow.next()` before calling `onFulfillComplete`, so `flow.completed` fires before a callback that clears state.
 - Fixed: the `constructorio-ui-checkout-bundled` subpath now ships its types, so TypeScript no longer reports a missing declaration file for it.

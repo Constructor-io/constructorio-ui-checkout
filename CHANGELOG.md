@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.1.0
+
+No breaking changes. See the [Versioning & Migration](https://constructor-io.github.io/constructorio-ui-checkout/?path=/docs/guides-versioning-migration--docs) guide.
+
+### New
+
+- `CioFiservPaymentStep` and the `FiservPaymentSession` type. `provider="fiserv"` is built in.
+- Five `CioCheckout.fiserv.*` translation keys.
+- `CioShopPayPaymentStep` and the `ShopPayPaymentRequest`, `ShopPaySessionResponse` and `ShopPayReceiptStatus` types. `provider="shop-pay"` is built in and needs no `onCreateSession`.
+- Three `CioCheckout.shopPay.*` translation keys.
+
+### Fixed
+
+- Every built-in step renders the `cio-checkout-root` wrapper, so the library's styles apply without the host adding the class.
+- `CioFulfillmentStep` awaits `flow.next()` before calling `onFulfillComplete`, so `flow.completed` fires before a callback that clears state.
+- The `constructorio-ui-checkout-bundled` subpath ships its types.
+
 ## 2.0.0
 
 Read the [Versioning & Migration](https://constructor-io.github.io/constructorio-ui-checkout/?path=/docs/guides-versioning-migration--docs) guide before upgrading. It has an upgrade checklist and what to change for each item below.

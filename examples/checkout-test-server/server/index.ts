@@ -12,6 +12,7 @@ config({ path: resolve(__dirname, "../.env") });
 import { createStripeRouter } from "./stripe";
 import { createSquareRouter } from "./square";
 import { createFiservRouter } from "./fiserv";
+import { createShopPayRouter } from "./shop-pay";
 
 const app = express();
 
@@ -217,6 +218,9 @@ if (squareRouter) app.use(squareRouter);
 const fiservRouter = createFiservRouter();
 if (fiservRouter) app.use(fiservRouter);
 
+const shopPayRouter = createShopPayRouter();
+if (shopPayRouter) app.use(shopPayRouter);
+
 // ---------------------------------------------------------------------------
 // Flow-state storage — powers the "backend StorageAdapter" showcase.
 // In-memory Map keyed by user id. Restart the server to wipe it.
@@ -294,6 +298,15 @@ app.listen(PORT, () => {
     `  POST   /api/fiserv/session               — Fiserv CommerceHub session (${fiservRouter ? "enabled" : "disabled — set COMMERCEHUB_*"})`,
   );
   console.log(
-    `  POST   /api/fiserv/charge                — Fiserv charge of a captured session\n`,
+    `  POST   /api/fiserv/charge                — Fiserv charge of a captured session`,
+  );
+  console.log(
+    `  POST   /api/shop-pay/session             — Shop Pay session (${shopPayRouter ? "enabled" : "disabled — set SHOP_PAY_*"})`,
+  );
+  console.log(
+    `  POST   /api/shop-pay/submit              — Shop Pay submit, returns the receipt token`,
+  );
+  console.log(
+    `  GET    /api/shop-pay/receipt?token=…     — Shop Pay receipt status\n`,
   );
 });

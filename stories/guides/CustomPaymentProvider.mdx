@@ -118,15 +118,15 @@ import { CioFulfillmentStep } from '@constructor-io/constructorio-ui-checkout';
 
 ## Providers with no session before payment
 
-Some providers (Shop Pay, for example) create their session inside their own popup. Leave out `onCreateSession`. The flow then marks the session `active` at once, with no session object.
+Some providers create their session inside their own popup. Leave out `onCreateSession`. For Shop Pay, use the built-in [CioShopPayPaymentStep](./?path=/docs/components-utilities-cioshoppaypaymentstep--docs); the rest of this section is for other popup providers. The flow then marks the session `active` at once, with no session object.
 
 In the payment step, `useCioCheckoutSession()` returns `session: null` and `missingSession: true`. For these providers that is expected. Render the widget straight away.
 
 ```tsx
-function ShopPayStep() {
-  const flow = useCioCheckout<'shop-pay'>();
+function PopupPayStep() {
+  const flow = useCioCheckout<'my-popup-psp'>();
   return (
-    <ShopPayButton
+    <PopupPayButton
       onStart={() => flow.setPaymentInProgress(true)}
       onComplete={() => {
         flow.setPaymentInProgress(false);
@@ -147,7 +147,7 @@ With a popup provider, the popup can close before your server has the receipt. H
 - Remember the payment token you already handled. Ignore a second success callback with the same token, so one payment never advances the flow twice.
 - Call `flow.next()` once the receipt is in. On timeout, call `flow.emitError('payment.confirm', error)` and show your own retry.
 
-A built-in "confirming" phase in the core is being decided in AGI-418.
+The core has no built-in "confirming" phase. `<CioShopPayPaymentStep>` does all of the above inside the step; read its source for a worked example.
 
 ## Complete sample
 

@@ -16,6 +16,7 @@ const CHECKOUT_ENTRY: Record<string, string> = {
   "/hook-only": "/hook-only/checkout/recommendations",
   "/one-page": "/one-page/checkout",
   "/mixed": "/mixed/checkout/details",
+  "/shop-pay": "/shop-pay/checkout/payment",
 };
 
 export default function CartPage() {

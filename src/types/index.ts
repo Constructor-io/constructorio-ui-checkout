@@ -18,6 +18,9 @@ export interface Translations {
   'CioCheckout.fiserv.expirationLabel'?: string;
   'CioCheckout.fiserv.securityCodeLabel'?: string;
   'CioCheckout.fiserv.captureFailedLabel'?: string;
+  'CioCheckout.shopPay.confirmingLabel'?: string;
+  'CioCheckout.shopPay.pendingLabel'?: string;
+  'CioCheckout.shopPay.failedLabel'?: string;
 }
 
 export interface BaseCartItem {
@@ -46,6 +49,8 @@ export interface BasePaymentSession {
 export interface PaymentSessionMap {
   stripe: StripePaymentSession;
   fiserv: FiservPaymentSession;
+  /** Shop Pay starts its session in the popup, so the flow holds no session object. */
+  'shop-pay': BasePaymentSession;
 }
 
 export type BuiltInPaymentProvider = keyof PaymentSessionMap;
@@ -74,4 +79,5 @@ export interface CheckoutComponentOverrides {
 }
 
 export * from './fiserv';
+export * from './shopPay';
 export * from './stripe';

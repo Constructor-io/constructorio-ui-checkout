@@ -1,0 +1,145 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import * as Stories from './CioShopPayPaymentStep.stories';
+
+<Meta of={Stories} />
+
+# CioShopPayPaymentStep
+
+The built-in Shop Pay payment step. It loads Shopify's Payment Request SDK, renders the Shop Pay button, answers the popup's events through your server, and calls `flow.next()` once Shopify reports the payment as completed. Mount it inside a `<CioCheckoutProvider provider="shop-pay">`.
+
+Shop Pay differs from Stripe and Fiserv in two ways:
+
+- There is no `onCreateSession`. Shop Pay starts its session when the shopper clicks the button, so the flow marks the session `active` with no session object.
+- The popup collects the address, shipping and card, and charges inside the popup. Shopify creates the order after the popup closes, so the step polls your server for the receipt before it advances.
+
+This is Shop Pay Wallet, for stores that do not use Shopify's own checkout. A Shopify store already has Shop Pay in its checkout and cannot use the Wallet API.
+
+```tsx
+import {
+  CioCheckoutProvider,
+  CioCheckoutStep,
+  CioShopPayPaymentStep,
+  PAYMENT_STEP,
+} from '@constructor-io/constructorio-ui-checkout';
+
+<CioCheckoutProvider
+  provider="shop-pay"
+  steps={[{ id: 'cart' }, { id: PAYMENT_STEP }, { id: 'complete' }]}
+>
+  <CioCheckoutStep id={PAYMENT_STEP}>
+    <CioShopPayPaymentStep
+      shopId={SHOP_ID}
+      clientId={CLIENT_ID}
+      paymentRequest={toPaymentRequest(cart)}
+      onSessionRequest={() => postJson('/api/shop-pay/session', { items })}
+      onSubmitPayment={async ({ token, paymentMethod }) => {
+        const body = await postJson('/api/shop-pay/submit', { token, paymentMethod, items });
+        return body.token; // the receipt token
+      }}
+      onCheckReceipt={(receiptToken) =>
+        fetch(`/api/shop-pay/receipt?token=${receiptToken}`).then((r) => r.json())
+      }
+    />
+  </CioCheckoutStep>
+</CioCheckoutProvider>;
+```
+
+The stories on this page use a stand-in SDK, because Shopify only renders the button on the store's allowed origins. To pay with the real popup, run the `/shop-pay` flow in `examples/checkout-test-server` on localhost.
+
+## Your server
+
+The step calls three server routes through its callbacks. The `/shop-pay` example has all three in `server/shop-pay.ts`.
+
+| Callback | Server call | API |
+| --- | --- | --- |
+| `onSessionRequest` | `shopPayPaymentRequestSessionCreate`. Returns `{ token, checkoutUrl, sourceIdentifier }`. | Storefront API, public token |
+| `onSubmitPayment` | `shopPayPaymentRequestSessionSubmit` with an idempotency key. Returns the receipt token. | Storefront API, public token |
+| `onCheckReceipt` | `shopPayPaymentRequestReceipt`. Maps the state to `processing`, `completed`, `action_required` or `failed`. | Admin API |
+
+What your server owns:
+
+- **Prices.** Build the session and the submit from your own catalog prices. Never trust a total from the browser. `paymentRequest` only sets what the popup shows.
+- **Stock.** Reserve inventory before the submit. If a line sold out, throw from `onSubmitPayment`. The message shows inside the popup.
+- **Tokens.** Send the public Storefront token in `X-Shopify-Storefront-Access-Token`. The private-token header gets `403` on the Shop Pay plan. The receipt lookup needs an Admin API token.
+- **Timing.** Shopify waits 15 seconds for each reply. `onSessionRequest` and `onSubmitPayment` must answer within that.
+- **Store setup.** The store must finish the Shopify Payments sign-up, even in test mode, before the button renders anywhere.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `shopId` | `number \| string` | | Required. The Shop channel's shop id. Public. |
+| `clientId` | `string` | | Required. The Shop channel's client id. Public. |
+| `paymentRequest` | `ShopPayPaymentRequest` | | Required. What the popup shows: lines, shipping, totals. A new value starts a new session, unless the popup is open. |
+| `onSessionRequest` | `(paymentRequest) => Promise<ShopPaySessionResponse>` | | Required. Creates the Shopify session on your server. A rejection closes the popup and emits `session.create`. |
+| `onSubmitPayment` | `({ token, paymentMethod }) => Promise<string>` | | Required. Submits the payment on your server and resolves with the receipt token. A rejection shows its message in the popup. |
+| `onCheckReceipt` | `(receiptToken) => Promise<ShopPayReceiptStatus>` | | Required. Looks up the receipt on your server. |
+| `onError` | `(error: Error) => void` | | Called for `session.create` and `payment.confirm` errors. |
+| `translations` | `Translations` | | Replaces built-in labels. See Translation keys. |
+| `componentOverrides` | `CheckoutComponentOverrides` | | Replaces the `loader`. |
+
+## Address, shipping and discounts
+
+The step answers the popup's address and delivery-method events with the same `paymentRequest`, so totals do not change inside the popup. The discount-code field is turned off. If you need tax or shipping that depends on the address, ask for it: the step would get optional callbacks for these events.
+
+## States
+
+**Preparing.** The SDK is loading. The step shows a loader.
+
+**Ready.** The Shop Pay button renders. Clicking it opens the popup. When the shopper pays, the step calls `flow.setPaymentInProgress(true)` and submits through `onSubmitPayment`.
+
+<Canvas of={Stories.Ready} />
+
+**Confirming.** The popup reported success. The step checks the receipt every 2 seconds, up to 15 times, and keeps `paymentInProgress` set. A `completed` receipt calls `flow.next()`. The same receipt token is only handled once, even when both `paymentcomplete` and `windowclosed` hand it over.
+
+**Payment failed.** The receipt came back `failed` or `action_required`, or `onCheckReceipt` threw. The step shows the message, emits `payment.confirm`, and shows the button again.
+
+<Canvas of={Stories.PaymentFailed} />
+
+**Pending.** The receipt is still `processing` after the last check. The step hides the button, because a second payment could charge the shopper twice, and tells the shopper to check their email.
+
+**SDK error.** The SDK failed to load or configure. The step shows an error with a Retry button that loads it again.
+
+<Canvas of={Stories.LoadError} />
+
+## Translation keys
+
+| Key | Default |
+| --- | --- |
+| `CioCheckout.checkout.preparingLabel` | `Preparing checkout...` |
+| `CioCheckout.session.errorLabel` | `Failed to prepare checkout. Please try again.` |
+| `CioCheckout.session.retryLabel` | `Retry` |
+| `CioCheckout.shopPay.confirmingLabel` | `Confirming your payment...` |
+| `CioCheckout.shopPay.pendingLabel` | `Your payment is still processing. Check your email for the order confirmation before trying again.` |
+| `CioCheckout.shopPay.failedLabel` | `The payment could not be completed. Please try again.` |
+
+<Canvas of={Stories.CustomLabels} />
+
+## CSS classes
+
+| Class | Element |
+| --- | --- |
+| `cio-checkout-loader` | Loader |
+| `cio-checkout-session-error` | SDK error |
+| `cio-checkout-shop-pay` | Wrapper |
+| `cio-checkout-shop-pay-status` | Confirming and pending messages |
+| `cio-checkout-confirm-error` | Payment error |
+
+## More than one button on a page
+
+Shopify allows one active Shop Pay session per page. A page can still show more than one `<CioShopPayPaymentStep>`, for example a bar in a chat and a footer in an Added to Cart window. The steps take turns:
+
+- The newest step holds the session. The step before it keeps its button but pauses.
+- When the newest step unmounts, the step before it starts a new session with its current `paymentRequest`.
+- A paused step does not start a session when its `paymentRequest` changes. It uses the latest one when it resumes.
+
+You need no extra props. Each step can sit in its own `<CioCheckoutProvider provider="shop-pay">`.
+
+Mount the second step only while it covers the first, as a modal does. A paused step's button stays on screen, and clicking it does nothing. If a new step mounts while the shopper has the popup open on another step, that popup closes.
+
+## Shopify references
+
+- [Sessions and events](https://shopify.dev/docs/api/commerce-components/pay/sessions-and-events)
+- [Troubleshooting (15-second rule, idempotency)](https://shopify.dev/docs/api/commerce-components/pay/troubleshooting-guide)
+- [Button design guidelines](https://shopify.dev/docs/api/commerce-components/pay/design-guidelines)
+- [`ShopPayPaymentRequestInput`](https://shopify.dev/docs/api/storefront/latest/input-objects/ShopPayPaymentRequestInput)

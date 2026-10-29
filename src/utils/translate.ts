@@ -17,6 +17,11 @@ export const defaultTranslations: Required<Translations> = {
   'CioCheckout.fiserv.securityCodeLabel': 'Security code',
   'CioCheckout.fiserv.captureFailedLabel':
     'Those card details could not be accepted. Check them and try again.',
+  'CioCheckout.shopPay.confirmingLabel': 'Confirming your payment...',
+  'CioCheckout.shopPay.pendingLabel':
+    'Your payment is still processing. Check your email for the order confirmation before trying again.',
+  'CioCheckout.shopPay.failedLabel':
+    'The payment could not be completed. Please try again.',
 };
 
 export function t(

@@ -280,7 +280,6 @@ function Addr() {
 
 function Pay() {
   const flow = useCioCheckout<"stripe", ExpiryState, CartItem>();
-  const auth = useAuth();
   return (
     <CioCheckoutStep id="payment">
       <section className="step">
@@ -289,7 +288,6 @@ function Pay() {
         </div>
         <CioStripePaymentStep
           uiMode="elements"
-          defaultValues={auth.user ? { email: auth.user.email } : undefined}
         />
         <div className="expiry-controls">
           <p className="muted small">

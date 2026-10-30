@@ -32,8 +32,11 @@ export const SHOP_PAY_SNIPPET =
             const body = await postJson('/api/shop-pay/submit', { token, paymentMethod, items });
             return body.token; // the receipt token
           }}
-          onCheckReceipt={(receiptToken) =>
-            fetch('/api/shop-pay/receipt?token=' + receiptToken).then((r) => r.json())}
+          onCheckReceipt={async (receiptToken) => {
+            const r = await fetch('/api/shop-pay/receipt?token=' + encodeURIComponent(receiptToken));
+            if (!r.ok) throw new Error('Receipt check failed (' + r.status + ')');
+            return r.json();
+          }}
         />
       </CioCheckoutStep>
     } />

@@ -5,6 +5,9 @@ import { CioCheckoutStep } from '@src/app/components/CioCheckoutStep';
 import {
   CioShopPayPaymentStep,
   type CioShopPayPaymentStepProps,
+  RECEIPT_POLL_ATTEMPTS,
+  RECEIPT_POLL_INTERVAL_MS,
+  RECEIPT_SLOW_POLL_INTERVAL_MS,
   waitForReceipt,
 } from '@src/app/components/CioShopPayPaymentStep';
 import { useCioCheckout } from '@src/app/hooks/useCioCheckout';
@@ -253,10 +256,40 @@ describe(`${CioShopPayPaymentStep.name}: client`, () => {
         steps={steps}
       />
     );
-    await payThroughPopup(sdk);
+    const session = await payThroughPopup(sdk);
     expect(await screen.findByText('Card declined')).toBeInTheDocument();
+    await session.fire('windowclosed');
+    // The second close does not start another session.
+    expect(sdk.createSession).toHaveBeenCalledTimes(2);
     expect(onError.mock.calls[0][0].message).toBe('Card declined');
     expect(steps.at(-1)).toBe(PAYMENT_STEP);
+  });
+
+  it('keeps checking a pending receipt and advances once it completes', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const sdk = installFakeSdk();
+      const steps: string[] = [];
+      let state: ShopPayReceiptStatus['state'] = 'processing';
+      const onCheckReceipt = vi.fn(() =>
+        Promise.resolve<ShopPayReceiptStatus>({ state })
+      );
+      render(<Harness {...defaultProps({ onCheckReceipt })} steps={steps} />);
+      await payThroughPopup(sdk);
+      await act(() =>
+        vi.advanceTimersByTimeAsync(
+          RECEIPT_POLL_INTERVAL_MS * RECEIPT_POLL_ATTEMPTS
+        )
+      );
+      expect(await screen.findByText(/still processing/)).toBeInTheDocument();
+      state = 'completed';
+      await act(() =>
+        vi.advanceTimersByTimeAsync(RECEIPT_SLOW_POLL_INTERVAL_MS)
+      );
+      await waitFor(() => expect(steps.at(-1)).toBe('done'));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('clears an old error when the popup opens again', async () => {
@@ -318,6 +351,7 @@ describe(`${CioShopPayPaymentStep.name}: client`, () => {
     await session.fire('windowclosed');
     act(() => failSubmit(new Error('declined')));
     await waitFor(() => expect(inProgress.at(-1)).toBe(false));
+    expect(await screen.findByText('declined')).toBeInTheDocument();
     expect(session.completePaymentConfirmationRequest).not.toHaveBeenCalled();
   });
 
@@ -348,6 +382,10 @@ describe(`${CioShopPayPaymentStep.name}: client`, () => {
       await screen.findByText('Failed to prepare checkout. Please try again.')
     ).toBeInTheDocument();
     expect(onError.mock.calls[0][0].message).toBe('blocked');
+    sdk.render.mockImplementation((selector: string) => {
+      // eslint-disable-next-line testing-library/no-node-access
+      expect(document.querySelector(selector)).not.toBeNull();
+    });
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(sdk.render).toHaveBeenCalled());
   });
@@ -389,6 +427,64 @@ describe(`${CioShopPayPaymentStep.name}: client`, () => {
     expect(sdk.createSession).toHaveBeenCalledTimes(3);
   });
 
+  it('checks the receipt of a submit that finishes after unmount', async () => {
+    const sdk = installFakeSdk();
+    let finishSubmit: (receiptToken: string) => void = () => undefined;
+    const props = defaultProps({
+      onSubmitPayment: () =>
+        new Promise((resolve) => {
+          finishSubmit = resolve;
+        }),
+    });
+    const { unmount } = render(<Harness {...props} />);
+    await waitFor(() => expect(sdk.render).toHaveBeenCalled());
+    const session = sdk.current();
+    await session.fire('sessionrequested');
+    session.start('paymentconfirmationrequested');
+    unmount();
+    act(() => finishSubmit('receipt_late'));
+    await act(() => Promise.resolve());
+    expect(props.onCheckReceipt).toHaveBeenCalledWith('receipt_late');
+    expect(session.completePaymentConfirmationRequest).not.toHaveBeenCalled();
+  });
+
+  it('waits for an open popup before a newer step takes the session', async () => {
+    const sdk = installFakeSdk();
+    let finishSubmit: (receiptToken: string) => void = () => undefined;
+    const firstProps = defaultProps({
+      onSubmitPayment: () =>
+        new Promise((resolve) => {
+          finishSubmit = resolve;
+        }),
+    });
+    function Page({ showSecond }: { showSecond: boolean }) {
+      return (
+        <>
+          <Harness {...firstProps} />
+          {showSecond && <Harness {...defaultProps()} />}
+        </>
+      );
+    }
+    const { rerender } = render(<Page showSecond={false} />);
+    await waitFor(() => expect(sdk.render).toHaveBeenCalledTimes(1));
+    const first = sdk.current();
+    await first.fire('sessionrequested');
+    first.start('paymentconfirmationrequested');
+
+    rerender(<Page showSecond />);
+    await waitFor(() => expect(sdk.render).toHaveBeenCalledTimes(2));
+    expect(first.close).not.toHaveBeenCalled();
+    expect(sdk.createSession).toHaveBeenCalledTimes(1);
+
+    act(() => finishSubmit('receipt_1'));
+    await act(() => Promise.resolve());
+    expect(first.completePaymentConfirmationRequest).toHaveBeenCalled();
+    await first.fire('paymentcomplete');
+    expect(first.close).toHaveBeenCalled();
+    expect(sdk.createSession).toHaveBeenCalledTimes(2);
+    expect(firstProps.onCheckReceipt).toHaveBeenCalledWith('receipt_1');
+  });
+
   it('keeps a paused step from starting a session on a cart change', async () => {
     const sdk = installFakeSdk();
     const props = defaultProps();
@@ -416,22 +512,42 @@ describe(`${CioShopPayPaymentStep.name}: client`, () => {
 });
 
 describe('waitForReceipt', () => {
-  it('checks until the receipt leaves processing', async () => {
+  it('checks until the receipt is completed or failed', async () => {
     const check = vi
       .fn<(token: string) => Promise<ShopPayReceiptStatus>>()
       .mockResolvedValueOnce({ state: 'processing' })
-      .mockResolvedValueOnce({ state: 'completed' });
-    await expect(waitForReceipt(check, 'r', 5, 0)).resolves.toEqual({
-      state: 'completed',
+      .mockResolvedValueOnce({ state: 'action_required' })
+      .mockRejectedValueOnce(new Error('blip'))
+      .mockResolvedValueOnce({ state: 'failed' });
+    await expect(
+      waitForReceipt(check, 'r', { attempts: 5, intervalMs: 0 })
+    ).resolves.toEqual({
+      state: 'failed',
     });
-    expect(check).toHaveBeenCalledTimes(2);
+    expect(check).toHaveBeenCalledTimes(4);
+  });
+
+  it('stops checking once isActive turns false', async () => {
+    let active = true;
+    const check = vi.fn(() => {
+      active = false;
+      return Promise.resolve<ShopPayReceiptStatus>({ state: 'processing' });
+    });
+    await waitForReceipt(check, 'r', {
+      attempts: Infinity,
+      intervalMs: 0,
+      isActive: () => active,
+    });
+    expect(check).toHaveBeenCalledTimes(1);
   });
 
   it('returns processing after the last attempt', async () => {
     const check = vi
       .fn<(token: string) => Promise<ShopPayReceiptStatus>>()
       .mockResolvedValue({ state: 'processing' });
-    await expect(waitForReceipt(check, 'r', 3, 0)).resolves.toEqual({
+    await expect(
+      waitForReceipt(check, 'r', { attempts: 3, intervalMs: 0 })
+    ).resolves.toEqual({
       state: 'processing',
     });
     expect(check).toHaveBeenCalledTimes(3);

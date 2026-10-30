@@ -36,9 +36,11 @@ import {
         const body = await postJson('/api/shop-pay/submit', { token, paymentMethod, items });
         return body.token; // the receipt token
       }}
-      onCheckReceipt={(receiptToken) =>
-        fetch(`/api/shop-pay/receipt?token=${receiptToken}`).then((r) => r.json())
-      }
+      onCheckReceipt={async (receiptToken) => {
+        const r = await fetch(`/api/shop-pay/receipt?token=${encodeURIComponent(receiptToken)}`);
+        if (!r.ok) throw new Error(`Receipt check failed (${r.status})`);
+        return r.json();
+      }}
     />
   </CioCheckoutStep>
 </CioCheckoutProvider>;
@@ -90,13 +92,13 @@ The step answers the popup's address and delivery-method events with the same `p
 
 <Canvas of={Stories.Ready} />
 
-**Confirming.** The popup reported success. The step checks the receipt every 2 seconds, up to 15 times, and keeps `paymentInProgress` set. A `completed` receipt calls `flow.next()`. The same receipt token is only handled once, even when both `paymentcomplete` and `windowclosed` hand it over.
+**Confirming.** The popup reported success. The step checks the receipt every 2 seconds, up to 15 times, and keeps `paymentInProgress` set. A `completed` receipt calls `flow.next()`. The same receipt token is only handled once, even when both `paymentcomplete` and `windowclosed` hand it over. An `action_required` receipt and a check where `onCheckReceipt` threw count as still processing, because the payment can still go through.
 
-**Payment failed.** The receipt came back `failed` or `action_required`, or `onCheckReceipt` threw. The step shows the message, emits `payment.confirm`, and shows the button again.
+**Payment failed.** The receipt came back `failed`. The step shows the message, emits `payment.confirm`, clears `paymentInProgress`, and shows the button again.
 
 <Canvas of={Stories.PaymentFailed} />
 
-**Pending.** The receipt is still `processing` after the last check. The step hides the button, because a second payment could charge the shopper twice, and tells the shopper to check their email.
+**Pending.** The receipt is still not `completed` or `failed` after the last check. The step hides the button, because a second payment could charge the shopper twice, and tells the shopper to check their email. It keeps checking every 10 seconds while it is mounted, and moves on or fails when the receipt does.
 
 **SDK error.** The SDK failed to load or configure. The step shows an error with a Retry button that loads it again.
 
@@ -130,6 +132,7 @@ The step answers the popup's address and delivery-method events with the same `p
 Shopify allows one active Shop Pay session per page. A page can still show more than one `<CioShopPayPaymentStep>`, for example a bar in a chat and a footer in an Added to Cart window. The steps take turns:
 
 - The newest step holds the session. The step before it keeps its button but pauses.
+- If the step before it has its popup open, that popup keeps its session. The newest step starts its session when that popup closes.
 - When the newest step unmounts, the step before it starts a new session with its current `paymentRequest`.
 - A paused step does not start a session when its `paymentRequest` changes. It uses the latest one when it resumes.
 

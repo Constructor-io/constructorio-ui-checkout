@@ -8,7 +8,6 @@ import type {
   CheckoutComponentOverrides,
   ShopPayPaymentRequest,
   ShopPayReceiptStatus,
-  ShopPaySdkSession,
   ShopPaySessionResponse,
   Translations,
 } from '@src/types';
@@ -21,17 +20,29 @@ const SHOP_PAY_SDK_SCRIPT_ID = 'cio-shop-pay-sdk';
 export const RECEIPT_POLL_INTERVAL_MS = 2000;
 /** 15 checks 2 seconds apart: the step waits about 30 seconds for Shopify. */
 export const RECEIPT_POLL_ATTEMPTS = 15;
+/** After that the step shows `pending` and keeps checking at this slower pace. */
+export const RECEIPT_SLOW_POLL_INTERVAL_MS = 10000;
 
-/** Checks the receipt until it leaves `processing` or the attempts run out. */
+const isFinalReceipt = (status: ShopPayReceiptStatus) =>
+  status.state === 'completed' || status.state === 'failed';
+
+/** Checks the receipt until it is completed or failed, the attempts run out, or `isActive` turns false. */
 export async function waitForReceipt(
   checkReceipt: (receiptToken: string) => Promise<ShopPayReceiptStatus>,
   receiptToken: string,
-  attempts = RECEIPT_POLL_ATTEMPTS,
-  intervalMs = RECEIPT_POLL_INTERVAL_MS
+  {
+    attempts = RECEIPT_POLL_ATTEMPTS,
+    intervalMs = RECEIPT_POLL_INTERVAL_MS,
+    isActive = () => true,
+  }: { attempts?: number; intervalMs?: number; isActive?: () => boolean } = {}
 ): Promise<ShopPayReceiptStatus> {
   for (let attempt = 1; ; attempt += 1) {
-    const status = await checkReceipt(receiptToken);
-    if (status.state !== 'processing' || attempt >= attempts) return status;
+    // A check that throws and a buyer still verifying can both end in a charge, so the wait goes on.
+    const status = await checkReceipt(receiptToken).catch(
+      (): ShopPayReceiptStatus => ({ state: 'processing' })
+    );
+    if (isFinalReceipt(status) || attempt >= attempts || !isActive())
+      return status;
     await new Promise((resolve) => {
       setTimeout(resolve, intervalMs);
     });
@@ -40,7 +51,11 @@ export async function waitForReceipt(
 
 // Shopify allows one active session per page, but a page can show more than one step (a chat bar and
 // an Added to Cart window). The newest step holds the session, and the one before it takes it back on unmount.
-const sessionOwners: { pause: () => void; resume: () => void }[] = [];
+const sessionOwners: {
+  busy: () => boolean;
+  pause: () => void;
+  resume: () => void;
+}[] = [];
 
 export interface CioShopPayPaymentStepProps {
   /** The Shop channel's shop id. Public: the browser SDK sends it to Shopify. */
@@ -102,6 +117,13 @@ function CioShopPayPaymentStepInner({
   // paymentcomplete and a later windowclosed can both hand over the same receipt.
   const confirmedTokenRef = useRef<string | null>(null);
   const restartIdleRef = useRef<(() => void) | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const [status, setStatus] = useState<StepStatus>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -134,17 +156,25 @@ function CioShopPayPaymentStepInner({
       confirmedTokenRef.current = receiptToken;
       setError(null);
       setStatus('confirming');
+      const check = (token: string) => propsRef.current.onCheckReceipt(token);
+      const isMounted = () => mountedRef.current;
       try {
-        const receipt = await waitForReceipt(
-          propsRef.current.onCheckReceipt,
-          receiptToken
-        );
+        let receipt = await waitForReceipt(check, receiptToken, {
+          isActive: isMounted,
+        });
+        if (!isFinalReceipt(receipt) && isMounted()) {
+          // Offering the button again could charge the shopper twice, so keep checking more slowly.
+          setStatus('pending');
+          receipt = await waitForReceipt(check, receiptToken, {
+            attempts: Infinity,
+            intervalMs: RECEIPT_SLOW_POLL_INTERVAL_MS,
+            isActive: isMounted,
+          });
+        }
+        if (!isMounted()) return;
         if (receipt.state === 'completed') {
           flowRef.current.setPaymentInProgress(false);
           void flowRef.current.next();
-        } else if (receipt.state === 'processing') {
-          // Offering the button again could charge the shopper twice.
-          setStatus('pending');
         } else {
           fail(
             new Error(
@@ -165,7 +195,7 @@ function CioShopPayPaymentStepInner({
 
   useEffect(() => {
     let active = true;
-    let session: ShopPaySdkSession | null = null;
+    let closeSession: (() => void) | null = null;
     // The session must stay while the popup is open. Its close starts a new one.
     let popupOpen = false;
     let ownsSession = false;
@@ -174,20 +204,29 @@ function CioShopPayPaymentStepInner({
     function startSession() {
       const sdk = window.ShopPay;
       if (!active || !sdk || !ownsSession) return;
-      popupOpen = false;
       const request = sdk.PaymentRequest.build(propsRef.current.paymentRequest);
       const sdkSession = sdk.PaymentRequest.createSession({
         paymentRequest: request,
       });
-      session = sdkSession;
       let sessionToken: string | null = null;
       let receiptToken: string | null = null;
       let closed = false;
 
-      const restart = () => {
+      // Marks the session closed first, so a submit still running confirms its receipt.
+      const close = () => {
         closed = true;
+        popupOpen = false;
+        closeSession = null;
         sdkSession.close();
-        startSession();
+      };
+      closeSession = close;
+
+      const restart = () => {
+        if (closed) return;
+        close();
+        if (ownsSession) startSession();
+        // A newer step waited for this popup to close.
+        else sessionOwners.at(-1)?.resume();
       };
 
       // paymentcomplete and windowclosed both end the popup.
@@ -254,8 +293,12 @@ function CioShopPayPaymentStepInner({
           }
           sdkSession.completePaymentConfirmationRequest();
         } catch (reason) {
+          if (closed) {
+            fail(reason);
+            return;
+          }
           flowRef.current.setPaymentInProgress(false);
-          if (!closed) reject(toError(reason).message);
+          reject(toError(reason).message);
         }
       });
 
@@ -264,14 +307,17 @@ function CioShopPayPaymentStepInner({
     }
 
     const owner = {
+      busy: () => popupOpen,
       pause: () => {
         ownsSession = false;
-        session?.close();
-        session = null;
+        // An open popup keeps its session until the shopper closes it.
+        if (!popupOpen) closeSession?.();
       },
       resume: () => {
         ownsSession = true;
-        startSession();
+        // Shopify allows one session per page, so wait for another step's open popup.
+        const othersBusy = sessionOwners.some((o) => o !== owner && o.busy());
+        if (!closeSession && !othersBusy) startSession();
       },
     };
 
@@ -298,7 +344,7 @@ function CioShopPayPaymentStepInner({
         owner.resume();
         restartIdleRef.current = () => {
           if (popupOpen) return;
-          session?.close();
+          closeSession?.();
           startSession();
         };
         sdk.PaymentRequest.createButton().render(`#${containerId}`);
@@ -313,13 +359,14 @@ function CioShopPayPaymentStepInner({
     return () => {
       active = false;
       restartIdleRef.current = null;
-      session?.close();
+      closeSession?.();
       const index = sessionOwners.indexOf(owner);
       if (index === -1) return;
       sessionOwners.splice(index, 1);
-      if (index === sessionOwners.length) sessionOwners.at(-1)?.resume();
+      // Starts a session only for a step that has none.
+      sessionOwners.at(-1)?.resume();
     };
-  }, [containerId, shopId, clientId, confirm, loadAttempt]);
+  }, [containerId, shopId, clientId, confirm, fail, loadAttempt]);
 
   // A session keeps the request it started with, so a new request needs a new session.
   const requestKey = JSON.stringify(paymentRequest);
@@ -334,7 +381,14 @@ function CioShopPayPaymentStepInner({
     return (
       <div className="cio-checkout-session-error" role="alert">
         <p>{t(translations, 'CioCheckout.session.errorLabel')}</p>
-        <button type="button" onClick={() => setLoadAttempt((n) => n + 1)}>
+        <button
+          type="button"
+          onClick={() => {
+            // Mount the button div before the effect renders into it.
+            setStatus('loading');
+            setLoadAttempt((n) => n + 1);
+          }}
+        >
           {t(translations, 'CioCheckout.session.retryLabel')}
         </button>
       </div>

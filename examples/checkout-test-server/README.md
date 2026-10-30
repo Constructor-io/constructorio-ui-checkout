@@ -23,6 +23,8 @@ Open the client and pick a flow from the home page.
 
 The store, the product pages and the PIA panel work with no payment keys.
 
+Every store page has an ASA chat. The buttons under an answer use `checkoutTriggers`: "Add top 3 to cart" adds the answer's first three products, and "Buy the top pick" puts the first one alone in the cart and opens it. Checkout then runs in that flow.
+
 ## Setup
 
 Requires Node.js 20 or newer, and [overmind](https://github.com/DarthSim/overmind) for `npm run dev` (`brew install overmind`).

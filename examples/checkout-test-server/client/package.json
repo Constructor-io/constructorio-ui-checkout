@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@constructor-io/constructorio-client-javascript": "^2.71.1",
+    "@constructor-io/constructorio-ui-asa": "^1.12.0",
     "@constructor-io/constructorio-ui-checkout": "file:../../..",
     "@constructor-io/constructorio-ui-components": "^1.5.0",
     "@constructor-io/constructorio-ui-pia": "^2.18.1",

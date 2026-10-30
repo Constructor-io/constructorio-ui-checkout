@@ -26,6 +26,7 @@ import SquareApp from "./flows/square/SquareApp";
 import "@constructor-io/constructorio-ui-components/styles.css";
 import "@constructor-io/constructorio-ui-checkout/styles.css";
 import "@constructor-io/constructorio-ui-pia/styles.css";
+import "@constructor-io/constructorio-ui-asa/styles.css";
 import "./styles.css";
 
 function AppRoutes() {

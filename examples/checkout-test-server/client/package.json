@@ -9,10 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@constructor-io/constructorio-client-javascript": "^2.71.1",
+    "@constructor-io/constructorio-client-javascript": "^2.93.1",
     "@constructor-io/constructorio-ui-asa": "^1.12.0",
     "@constructor-io/constructorio-ui-checkout": "file:../../..",
-    "@constructor-io/constructorio-ui-components": "^1.5.0",
+    "@constructor-io/constructorio-ui-components": "^1.6.0",
     "@constructor-io/constructorio-ui-pia": "^2.18.1",
     "@stripe/react-stripe-js": "^6.6.0",
     "@stripe/stripe-js": "^9.3.1",

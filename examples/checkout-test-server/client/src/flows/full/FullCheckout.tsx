@@ -266,7 +266,6 @@ function Addr() {
 
 function Pay() {
   const flow = useCioCheckout<"stripe", FullState, CartItem>();
-  const auth = useAuth();
 
   return (
     <CioCheckoutStep id="payment">

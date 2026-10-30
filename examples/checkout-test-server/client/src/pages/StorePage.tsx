@@ -67,13 +67,13 @@ export default function StorePage() {
   // Each button gets every product of the answer it renders under, all groups
   // flattened, so it picks the ones to buy.
   const asaTriggers: CheckoutTrigger[] = useMemo(() => {
-    const addAll = (picks: Product[]) =>
-      picks.forEach((p) =>
+    const addToCart = (products: Product[]) =>
+      products.forEach((product) =>
         cart.add({
-          id: p.id,
-          name: p.name,
-          price: Number(p.salePrice ?? p.price) || 0,
-          imageUrl: p.imageUrl,
+          id: product.id,
+          name: product.name,
+          price: Number(product.price) || 0,
+          imageUrl: product.imageUrl,
         }),
       );
 
@@ -81,14 +81,14 @@ export default function StorePage() {
       {
         id: "asa-add-top-three",
         label: "Add top 3 to cart",
-        onTrigger: ({ products: answer }) => addAll(answer.slice(0, 3)),
+        onTrigger: ({ products }) => addToCart(products.slice(0, 3)),
       },
       {
         id: "asa-buy-top-pick",
         label: "Buy the top pick",
-        onTrigger: ({ products: answer }) => {
+        onTrigger: ({ products }) => {
           cart.clear();
-          addAll(answer.slice(0, 1));
+          addToCart(products.slice(0, 1));
           nav(`${base}/cart`);
         },
       },

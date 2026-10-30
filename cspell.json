@@ -12,16 +12,22 @@
     "commande",
     "confirmée",
     "constructorio",
+    "deliverymethodchanged",
     "Fermer",
     "Finaliser",
     "Klarna",
     "minzipped",
+    "paymentcomplete",
+    "paymentconfirmationrequested",
     "prefixer",
     "publishable",
+    "sessionrequested",
+    "shippingaddresschanged",
     "Terminé",
     "Traitement",
     "Turbopack",
-    "Vérification"
+    "Vérification",
+    "windowclosed"
   ],
   "flagWords": [],
   "ignorePaths": [

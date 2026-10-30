@@ -3,6 +3,8 @@ import { Factory } from 'fishery';
 import type {
   BaseCartItem,
   FiservPaymentSession,
+  ShopPayPaymentRequest,
+  ShopPaySessionResponse,
   StripePaymentSession,
 } from '@src/types';
 
@@ -38,4 +40,36 @@ export const fiservSession = Factory.define<FiservPaymentSession>(() => ({
   merchantId: 'm_test',
   terminalId: 't_test',
   environment: 'cert',
+}));
+
+const usd = (amount: number) => ({ amount, currencyCode: 'USD' });
+
+export const shopPayPaymentRequest = Factory.define<ShopPayPaymentRequest>(
+  () => ({
+    lineItems: [
+      {
+        label: 'Shirt',
+        quantity: 2,
+        originalItemPrice: usd(25),
+        finalItemPrice: usd(25),
+        originalLinePrice: usd(50),
+        finalLinePrice: usd(50),
+        requiresShipping: true,
+      },
+    ],
+    shippingLines: [],
+    deliveryMethods: [],
+    totalShippingPrice: { finalTotal: usd(0) },
+    discountCodes: [],
+    subtotal: usd(50),
+    total: usd(50),
+    locale: 'en',
+    presentmentCurrency: 'USD',
+  })
+);
+
+export const shopPaySession = Factory.define<ShopPaySessionResponse>(() => ({
+  token: 'spt_test',
+  checkoutUrl: 'https://shop.app/checkout/test',
+  sourceIdentifier: 'src_test',
 }));

@@ -4,7 +4,7 @@
 [![NPM Version](https://img.shields.io/npm/v/@constructor-io/constructorio-ui-checkout)](https://www.npmjs.com/package/@constructor-io/constructorio-ui-checkout)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Constructor-io/constructorio-ui-checkout/blob/main/LICENSE)
 
-A headless checkout core with built-in Stripe and Fiserv payment steps. The library runs the steps, the payment session, storage and routing. Your app renders the cart, address, review and confirmation views.
+A headless checkout core with built-in Stripe, Fiserv and Shop Pay payment steps. The library runs the steps, the payment session, storage and routing. Your app renders the cart, address, review and confirmation views.
 
 It works with React, with plain JavaScript, or as a `<script>` tag bundle. Other payment providers plug in through the same core.
 

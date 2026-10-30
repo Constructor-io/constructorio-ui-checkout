@@ -7,9 +7,10 @@ import { HOOK_ONLY_DESCRIPTION } from "../flows/hookOnly/snippet";
 import { MIXED_DESCRIPTION } from "../flows/mixed/snippet";
 import { ONEPAGE_DESCRIPTION } from "../flows/onePage/snippet";
 import { RESUME_DESCRIPTION } from "../flows/resume/snippet";
+import { SHOP_PAY_DESCRIPTION } from "../flows/shopPay/snippet";
 import { SQUARE_DESCRIPTION } from "../flows/square/snippet";
 
-const HUB_OVERVIEW = `Nine independent React apps under /full, /guest, /resume, /expiry, /hook-only, /mixed, /one-page, /square, /fiserv — each one is a self-contained demo of a different way to wire @constructor-io/constructorio-ui-checkout. Every app shares the same shopping shell (browse, product page, cart, login) but owns its own CioCheckoutProvider config, storage adapter, step composition, and route layout. Pick a card above to see one end-to-end.`;
+const HUB_OVERVIEW = `Ten independent React apps under /full, /guest, /resume, /expiry, /hook-only, /mixed, /one-page, /square, /fiserv, /shop-pay — each one is a self-contained demo of a different way to wire @constructor-io/constructorio-ui-checkout. Every app shares the same shopping shell (browse, product page, cart, login) but owns its own CioCheckoutProvider config, storage adapter, step composition, and route layout. Pick a card above to see one end-to-end.`;
 
 const DESCRIPTIONS: Record<string, { title: string; body: string }> = {
   "": { title: "How the demo works", body: HUB_OVERVIEW },
@@ -22,6 +23,7 @@ const DESCRIPTIONS: Record<string, { title: string; body: string }> = {
   "/one-page": { title: "One-Page Checkout", body: ONEPAGE_DESCRIPTION },
   "/square": { title: "Square · Custom PSP", body: SQUARE_DESCRIPTION },
   "/fiserv": { title: "Fiserv · Built-in Hosted Fields", body: FISERV_DESCRIPTION },
+  "/shop-pay": { title: "Shop Pay · Built-in Popup", body: SHOP_PAY_DESCRIPTION },
 };
 
 export default function Footer() {

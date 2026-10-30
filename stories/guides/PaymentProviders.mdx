@@ -14,7 +14,7 @@ compile time:
 
 ## Built-in providers
 
-The library ships payment UI for Stripe and Fiserv. The `provider` value
+The library ships payment UI for Stripe, Fiserv and Shop Pay. The `provider` value
 narrows `onCreateSession` and decides which built-in step can be mounted.
 Mounting a built-in step inside a provider with a different `provider` prop
 throws at render with a message naming both sides of the mismatch.
@@ -23,6 +23,7 @@ throws at render with a message naming both sides of the mismatch.
 | ----------- | ----------------------- | -------------------------- | ------------------- | --------------------------------- | ------------------------------- |
 | `"stripe"`  | `StripePaymentSession`  | `<CioStripePaymentStep>`   | Stripe's npm package | Stripe's widget, in the payment step | cart, payment, done            |
 | `"fiserv"`  | `FiservPaymentSession`  | `<CioFiservPaymentStep>`   | The library         | Your server, after the card is captured | cart, payment, complete      |
+| `"shop-pay"` | None (no `onCreateSession`) | `<CioShopPayPaymentStep>` | The library      | Shop Pay's popup, in the payment step | cart, payment, complete      |
 
 ### Stripe
 
@@ -112,6 +113,49 @@ Fiserv references:
 - [CommerceHub security credentials](https://developer.fiserv.com/product/CommerceHub/api/?type=post&path=/payments-vas/v1/security/credentials)
 - [CommerceHub charges](https://developer.fiserv.com/product/CommerceHub/api/?type=post&path=/payments/v1/charges)
 
+### Shop Pay
+
+Passing `provider="shop-pay"` allows `<CioShopPayPaymentStep>` to be mounted.
+Leave out `onCreateSession`: Shop Pay starts its own session when the shopper
+clicks the button. The step takes three callbacks instead, one per server
+route: session create, submit, and receipt lookup. See
+[CioShopPayPaymentStep](./?path=/docs/components-utilities-cioshoppaypaymentstep--docs)
+for what each one returns.
+
+The popup collects the address, shipping and card, and charges inside the
+popup, so the flow needs no fulfillment step. Shopify creates the order after
+the popup closes. The step polls the receipt and only calls `flow.next()` once
+it is `completed`.
+
+```tsx
+<CioCheckoutProvider
+  provider="shop-pay"
+  steps={[{ id: 'cart' }, { id: PAYMENT_STEP }, { id: 'complete' }]}
+>
+  <CioCheckoutStep id={PAYMENT_STEP}>
+    <CioShopPayPaymentStep
+      shopId={SHOP_ID}
+      clientId={CLIENT_ID}
+      paymentRequest={toPaymentRequest(cart)}
+      onSessionRequest={createShopPaySession}
+      onSubmitPayment={submitShopPayPayment}
+      onCheckReceipt={checkShopPayReceipt}
+    />
+  </CioCheckoutStep>
+</CioCheckoutProvider>
+```
+
+Shop Pay Wallet is for stores that do not use Shopify's own checkout. The
+button only renders on the store's allowed origins, so a PR preview or this
+Storybook shows nothing. The `/shop-pay` flow in
+`examples/checkout-test-server` runs on localhost, with the server routes in
+`server/shop-pay.ts`.
+
+Shop Pay references:
+
+- [Sessions and events](https://shopify.dev/docs/api/commerce-components/pay/sessions-and-events)
+- [Troubleshooting guide](https://shopify.dev/docs/api/commerce-components/pay/troubleshooting-guide)
+
 ## Custom providers
 
 `provider` accepts any string. For an unofficial PSP (Adyen, Braintree,
@@ -137,7 +181,7 @@ Use `useCioCheckoutSession()` inside your payment step to create the session
 when the shopper reaches it. See
 [Sessions](./?path=/docs/guides-sessions--docs#bootstrapping-the-session-in-a-step).
 
-If your PSP creates its session inside its own widget (Shop Pay), leave out
+If your PSP creates its session inside its own widget, as Shop Pay does, leave out
 `onCreateSession`. The flow then marks the session `active` with no session
 object.
 

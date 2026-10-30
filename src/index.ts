@@ -39,6 +39,8 @@ export type {
   CioFulfillmentStepProps,
 } from './app/components/CioFulfillmentStep';
 export { CioFulfillmentStep } from './app/components/CioFulfillmentStep';
+export type { CioShopPayPaymentStepProps } from './app/components/CioShopPayPaymentStep';
+export { CioShopPayPaymentStep } from './app/components/CioShopPayPaymentStep';
 export type { CioStripePaymentStepProps } from './app/components/CioStripePaymentStep';
 export { CioStripePaymentStep } from './app/components/CioStripePaymentStep';
 export type { UseCioCheckoutReturn } from './app/hooks/useCioCheckout';
@@ -75,5 +77,12 @@ export type {
   CheckoutStripeRedirectBehavior,
   CheckoutStripeUiMode,
   PayButtonRenderProps,
+  ShopPayDeliveryMethod,
+  ShopPayLineItem,
+  ShopPayMoney,
+  ShopPayPaymentRequest,
+  ShopPayReceiptState,
+  ShopPayReceiptStatus,
+  ShopPaySessionResponse,
   Translations,
 } from './types';

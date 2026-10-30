@@ -20,6 +20,7 @@ import HookOnlyApp from "./flows/hookOnly/HookOnlyApp";
 import MixedApp from "./flows/mixed/MixedApp";
 import OnePageApp from "./flows/onePage/OnePageApp";
 import ResumeApp from "./flows/resume/ResumeApp";
+import ShopPayApp from "./flows/shopPay/ShopPayApp";
 import SquareApp from "./flows/square/SquareApp";
 
 import "@constructor-io/constructorio-ui-components/styles.css";
@@ -48,6 +49,7 @@ function AppRoutes() {
           <Route path="/one-page/*" element={<OnePageApp />} />
           <Route path="/square/*" element={<SquareApp />} />
           <Route path="/fiserv/*" element={<FiservApp />} />
+          <Route path="/shop-pay/*" element={<ShopPayApp />} />
           <Route path="/checkout/return" element={<ReturnPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

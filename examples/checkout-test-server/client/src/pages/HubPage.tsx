@@ -120,6 +120,19 @@ const SHOWCASES: Showcase[] = [
       "server charge",
     ],
   },
+  {
+    id: "shop-pay",
+    title: "Shop Pay · built-in popup",
+    blurb:
+      'provider="shop-pay" with the built-in <CioShopPayPaymentStep /> and no onCreateSession. The Shop Pay popup collects address, shipping and card, and charges inside the popup. The step polls the receipt and only completes once Shopify has made the order. Runs on localhost only.',
+    path: "/shop-pay",
+    concepts: [
+      'provider="shop-pay"',
+      "CioShopPayPaymentStep",
+      "no onCreateSession",
+      "receipt polling",
+    ],
+  },
 ];
 
 export default function HubPage() {

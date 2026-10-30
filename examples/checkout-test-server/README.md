@@ -19,6 +19,7 @@ Open the client and pick a flow from the home page.
 | `/mixed`     | Mixed routed and inline sub-steps | Some steps change the URL and some do not                                 | Stripe keys  |
 | `/square`    | Square, custom provider           | `provider="square"`, `useCioCheckoutSession()`, `setPaymentInProgress()`  | Square keys  |
 | `/fiserv`    | Fiserv, built-in hosted fields    | `provider="fiserv"`, `CioFiservPaymentStep`, server charge from `CioFulfillmentStep` | Fiserv keys  |
+| `/shop-pay`  | Shop Pay, built-in popup          | `provider="shop-pay"` with no `onCreateSession`, `CioShopPayPaymentStep`, receipt polling | Shop Pay tokens, localhost |
 
 The store, the product pages and the PIA panel work with no payment keys.
 
@@ -65,8 +66,17 @@ All config lives in `.env` at this folder's root. The server reads all of it. Th
 | `SQUARE_APPLICATION_ID`, `SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID` | empty        | Square flow. Sandbox keys from https://developer.squareup.com/apps |
 | `COMMERCEHUB_API_KEY`, `COMMERCEHUB_API_SECRET`, `COMMERCEHUB_MERCHANT_ID`, `COMMERCEHUB_TERMINAL_ID` | empty | Fiserv flow. CERT keys and a test merchant from https://developer.fiserv.com (CommerceHub). Test card `4005550000000019`. |
 | `COMMERCEHUB_BASE_URL`                       | `https://connect-cert.fiservapis.com/ch` | Fiserv CERT API. Change only for production. |
+| `SHOP_PAY_STORE_DOMAIN`, `SHOP_PAY_STOREFRONT_TOKEN`, `SHOP_PAY_ADMIN_API` | empty | Shop Pay flow. The store's `*.myshopify.com` domain (a full URL also works), its public Storefront token, and an Admin API token for the receipt lookup. The store must be a Shop Pay Wallet store with Shopify Payments in test mode. |
 
 Never commit `.env`.
+
+## Shop Pay test payments
+
+Shop Pay only renders on the store's allowed origins, which include `localhost`. To pay in the `/shop-pay` flow:
+
+1. On https://shop.app, sign in and add a verified phone number to your Shop account.
+2. Save the card `4242 4242 4242 4242` (any future expiry, any CVC, a two-word name) with the nickname `test_card`. Without that nickname Shop Pay treats it as a real card.
+3. In the popup, sign in with the same account, pick `test_card` and pay. The order shows up in the store's Shopify admin as a test order.
 
 ## Type check
 

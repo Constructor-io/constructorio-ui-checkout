@@ -298,7 +298,6 @@ function Pay() {
         </div>
         <CioStripePaymentStep
           uiMode="elements"
-          defaultValues={auth.user ? { email: auth.user.email } : undefined}
         />
         <div className="step-actions">
           <Button type="button" variant="outline" onClick={() => flow.back()}>

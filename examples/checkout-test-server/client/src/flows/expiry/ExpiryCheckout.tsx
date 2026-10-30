@@ -289,7 +289,6 @@ function Pay() {
         </div>
         <CioStripePaymentStep
           uiMode="elements"
-          defaultValues={auth.user ? { email: auth.user.email } : undefined}
         />
         <div className="expiry-controls">
           <p className="muted small">

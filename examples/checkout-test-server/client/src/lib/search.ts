@@ -37,7 +37,7 @@ interface RawItem {
   data?: RawItemData;
 }
 
-function extractPrice(dataObj: RawItemData): number {
+export function extractPrice(dataObj: RawItemData): number {
   if (typeof dataObj.price === "number") return dataObj.price;
   if (typeof dataObj.sale_price === "number") return dataObj.sale_price;
   const pricingRaw = dataObj.Pricing;

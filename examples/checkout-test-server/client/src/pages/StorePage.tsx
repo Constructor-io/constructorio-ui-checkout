@@ -1,13 +1,39 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
+import {
+  Chat,
+  CioAsaProvider,
+  normalizeItemToProduct,
+} from "@constructor-io/constructorio-ui-asa";
+import type {
+  CheckoutTrigger,
+  Product,
+} from "@constructor-io/constructorio-ui-asa";
 import { Button } from "@constructor-io/constructorio-ui-components";
 
 import ProductCard from "../components/ProductCard";
+import { useCart } from "../contexts/CartContext";
 import { useFlowBasePath } from "../flows/shared/basePath";
-import { browseProducts, searchProducts, StoreProduct } from "../lib/search";
+import { ASA_DOMAIN, CIO_API_KEY } from "../lib/constants";
+import {
+  browseProducts,
+  extractPrice,
+  searchProducts,
+  StoreProduct,
+} from "../lib/search";
+
+// The demo index keeps its price in a `Pricing` field, which ASA's default
+// mapping does not read.
+const normalizeAsaItem: typeof normalizeItemToProduct = (item, options) => ({
+  ...normalizeItemToProduct(item, options),
+  price: extractPrice(item.data ?? {}),
+});
 
 export default function StorePage() {
   const base = useFlowBasePath();
+  const nav = useNavigate();
+  const cart = useCart();
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -38,6 +64,37 @@ export default function StorePage() {
     setLoading(false);
   };
 
+  // Each button gets every product of the answer it renders under, all groups
+  // flattened, so it picks the ones to buy.
+  const asaTriggers: CheckoutTrigger[] = useMemo(() => {
+    const addToCart = (products: Product[]) =>
+      products.forEach((product) =>
+        cart.add({
+          id: product.id,
+          name: product.name,
+          price: Number(product.price) || 0,
+          imageUrl: product.imageUrl,
+        }),
+      );
+
+    return [
+      {
+        id: "asa-add-top-three",
+        label: "Add top 3 to cart",
+        onTrigger: ({ products }) => addToCart(products.slice(0, 3)),
+      },
+      {
+        id: "asa-buy-top-pick",
+        label: "Buy the top pick",
+        onTrigger: ({ products }) => {
+          cart.clear();
+          addToCart(products.slice(0, 1));
+          nav(`${base}/cart`);
+        },
+      },
+    ];
+  }, [cart, nav, base]);
+
   return (
     <main className="page-store">
       <div className="store-header">
@@ -57,6 +114,19 @@ export default function StorePage() {
           </Button>
         </form>
       </div>
+
+      <section className="asa-panel">
+        <h2>Ask the shopping assistant</h2>
+        <CioAsaProvider
+          apiKey={CIO_API_KEY}
+          staticRequestConfigs={{ domain: ASA_DOMAIN }}
+        >
+          <Chat
+            checkoutTriggers={asaTriggers}
+            normalizeItem={normalizeAsaItem}
+          />
+        </CioAsaProvider>
+      </section>
 
       {loading ? (
         <div className="muted">Loading products…</div>

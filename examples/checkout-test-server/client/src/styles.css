@@ -227,11 +227,11 @@ pre { margin: 0; }
 .product-hero-price { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
 .product-hero-cta { display: flex; gap: 12px; margin-top: 16px; }
 
-.pia-panel, .cross-sell {
+.pia-panel, .cross-sell, .asa-panel {
   background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
   padding: 24px; margin-bottom: 24px;
 }
-.pia-panel h2, .cross-sell h2 { margin: 0 0 4px; font-size: 18px; }
+.pia-panel h2, .cross-sell h2, .asa-panel h2 { margin: 0 0 4px; font-size: 18px; }
 
 /* PIA custom "Add to cart" button rendered inside the recommendation carousel. */
 .pia-add-to-cart {
